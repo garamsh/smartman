@@ -27,7 +27,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 - **A cut reply keeps what it finished.** When OpenRouter reports `finish_reason: "length"` and the reply is not whole JSON, the function closes it after the last card its JSON completed (`closeCutReply` in `cards.ts`) and reads those cards by the same rules (`parseReply`). A reply cut before any card is whole is invalid output, and retried as ADR 0130 decides; a reply with kept cards is not retried.
 - **The answer says so.** A `200` carries `partial`, `true` when the cards came from a cut reply and `false` otherwise. The field is additive: an app built before it ignores it.
 - **The record says so.** Migration `20261101075233_extraction_truncated.sql` adds `truncated`, nullable, to `private.extraction_calls`, and `finish_extraction` takes it as an eighth argument defaulting to null, so a function deployed before the migration records as before. A check allows `true` only on `ok` or `invalid_output`. No existing row changes.
-- **The web says so** under the photo's cards in the review list: one sentence, "사진의 일부만 읽었어요", in the style of the other photo import messages. The app's sentence waits for #530, which owns the app's string and test files this would change.
+- **The web says so** under the photo's cards in the review list: one sentence, "사진의 일부만 읽었어요", in the style of the other photo import messages. It is an interim state: #535 reads the whole page and replaces it. The app gets no sentence of its own, since #535 replaces the state on both clients.
 - **The eval measures the three ways**, none deployed: `tools/eval/dense.ts` implements them, `extractCards` takes the reply form and a follow-up text as a seam (`CallOptions`), and `run.ts --alternatives today,lean,cap,continue` runs each as rows of its own.
   - **(a) `lean`**: the card schema with only `kind`, `front` and `topic` required on a card and `meaning` on a sense, and the output contract with its fields rule replaced by one asking to leave out every field at its default; a left-out field is filled with its default and the card read by `parseReply`.
   - **(b) `cap`**: 18,000 tokens. At the measured 320 tokens a second, 19,200 tokens end at the 60 s timeout; 18,000 leaves about 4 s to read the prompt. A higher cap with a longer timeout leaves no time for ADR 0130's retry.
@@ -39,7 +39,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 ## Consequences
 
 - A dense page no longer fails whole: the user gets the cards the model finished and is told the photo was read in part.
-- The app shows the cut reply's cards without saying they are a part until its sentence lands after #530.
+- The app shows the cut reply's cards without saying they are a part until #535 lands.
 - `admin_extraction_calls` does not return `truncated` yet; the column is read in SQL until the admin area shows it.
 - The deployed folder holds the seam the eval uses, `CallOptions`, which the function's own call leaves at its defaults.
 
@@ -48,3 +48,26 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 - Cut replies are frequent on pages users do not consider dense: the cap or the shape is wrong for ordinary pages, not only for 100 entries.
 - Users often edit or leave out the last cards kept from a cut reply: the cards just before the cut are less reliable than the rest.
 - Users retake the same page after "사진의 일부만 읽었어요" and get the same part: the sentence asks for something the import cannot do, so the rest must be read another way.
+
+## Measured result
+
+The PM's paid runs of 2026-11-01 at `e3a8e337997a2a3c1e2fd7e7b446f6e80d31ce59`, Claude Haiku 5.5, prompt v9 (`docs/eval/extract-cards.md`, `tools/eval/spend.json`).
+
+- **On the owner's photo of 100 entries**, kept only in the PM's scratchpad (#535):
+
+  | Way | Cards read | Cut at the cap | Cost |
+  |---|---|---|---|
+  | `today`, with the cut reply's cards kept | 85 | yes | $0.0095 |
+  | `lean` | 100 | no | $0.0078 |
+  | `cap` 18,000 | 98 | yes | $0.0103 |
+  | `continue` | 100 | no | $0.0123 |
+
+- **On the 90 samples**, `today` against `lean`, $0.4115:
+  - vocabulary F1 is 99.4 for `today` and 92.9 for `lean`;
+  - `lean` had 3 invalid outputs and dropped 6 cards by `vocabulary_senses`; `today` had 1 model error and dropped 1 card by `cloze_blanks`;
+  - neither had a cut reply: both read sample 90 whole, at F1 100.0.
+- **The PM's decision:**
+  - `lean` is not adopted: it read the owner's page whole but lost 6.5 points of vocabulary F1 on the samples.
+  - The cap stays at 16,384: 18,000 still cut the owner's page.
+  - Keeping a cut reply's cards ships as decided above.
+  - Reading the whole page is #535, by continuation.
