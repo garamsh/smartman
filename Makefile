@@ -1,4 +1,4 @@
-.PHONY: lint format test build ci lint-repo lint-code bridge test-app test-db test-sync test-web build-ios build-apk build-engine-web preview-migrations
+.PHONY: lint format test build ci lint-repo lint-code bridge test-app test-db test-sync test-web build-ios build-apk build-engine-web preview-migrations brand
 
 # lint and test are each the sum of their parts, run in this order. CI runs the parts as parallel
 # jobs; lint-repo reads only the repository's files and needs no toolchain, so CI runs it on every
@@ -89,6 +89,13 @@ test-db:
 	./supabase/senses-dry-run.test.sh
 	./supabase/migration-preview.test.sh
 	./deno.sh test
+
+# Writes the brand's SVGs and PNGs from tools/brand/, then the launcher icons and the splash from
+# them. Not part of make ci, which checks them through web.sh lint. Revert the two edits the
+# generators make beyond their output (design.md §Brand).
+brand:
+	node tools/brand/generate.mjs
+	cd app && dart run flutter_launcher_icons && dart run flutter_native_splash:create
 
 # Writes $(PREVIEW).json and $(PREVIEW).md: what the migrations this branch adds do to main's
 # schema holding supabase/preview-seed.sql (server.md). Not part of make ci: it reports, it checks nothing.

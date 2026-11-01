@@ -19,7 +19,7 @@ function FirstRun({
 }) {
   return (
     <section aria-labelledby={id} className="flex flex-col items-center gap-2 pt-10 text-center">
-      {mascot && <Mascot className="mb-4 size-mascot-large bg-surface" />}
+      {mascot && <Mascot className="mb-4 size-mascot-large" />}
       <h2 id={id} className="text-body-strong">
         {title}
       </h2>

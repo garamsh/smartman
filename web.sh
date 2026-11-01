@@ -89,6 +89,8 @@ lint)
 		exit 1
 	fi
 	echo "checked that the $froms FROM lines of web/Dockerfile run Node $want, as web/.nvmrc does"
+
+	node tools/brand/generate.mjs --check
 	;;
 format)
 	sources=$(files "$format_scope")

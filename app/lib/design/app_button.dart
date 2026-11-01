@@ -4,11 +4,11 @@ import 'theme.dart';
 
 /// What a button does, which decides how prominent it is.
 enum AppButtonVariant {
-  /// The screen's or the sheet's one primary action: the navy fill, inverted
+  /// The screen's or the sheet's one primary action: the ink fill, inverted
   /// in the dark theme.
   primary,
 
-  /// The study coach's action: a white fill with a navy label.
+  /// The study coach's action: a coral fill with a cocoa label.
   onHero,
 
   /// An action beside the primary one: an outline on the surface.
@@ -23,7 +23,7 @@ enum AppButtonVariant {
   /// A quiet action, such as one in a top bar: ink text.
   text,
 
-  /// A quiet action on the navy hero surface, such as the study coach's
+  /// A quiet action on the hero surface, such as the study coach's
   /// "건너뛰기": text in the colour drawn on the hero.
   onHeroText,
 }

@@ -538,7 +538,7 @@ class _TopBar extends StatelessWidget {
   }
 }
 
-/// The notice that the session goes on with the day, [text], on the navy
+/// The notice that the session goes on with the day, [text], on the hero
 /// surface in the top bar's row while it is not null, clear of the cards and
 /// announced to a screen reader as it appears; [otherwise], the progress bar,
 /// in its place. It slides in and out, or fades under reduce motion.
