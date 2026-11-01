@@ -6,8 +6,8 @@ import { readUserId } from "@/supabase/session";
 import { selectAll } from "@/supabase/select-all";
 import { requestTimeoutMs } from "@/supabase/failure";
 import { field } from "@/supabase/row";
-import { cardKey, parseDraft } from "./authoring";
-import { parseContent } from "./card-content";
+import { cardKey, mergeBack, parseDraft, type StoredCard } from "./authoring";
+import { parseContent, plainText } from "./card-content";
 import { parseCardId, parseDeckId } from "./library";
 
 /**
@@ -16,6 +16,13 @@ import { parseCardId, parseDeckId } from "./library";
  */
 export type SaveCardsResult =
   { saved: true } | { saved: false; message: string; duplicate?: string; at?: number };
+const malformed = { saved: false as const, message: "카드 내용을 확인해 주세요" };
+const failed = { saved: false as const, message: "카드를 저장하지 못했어요. 다시 시도해 주세요." };
+
+/** What a card does when a card in its deck already has its key, as the phone's `DuplicateChoice`. */
+type OnDuplicate = "refuse" | "add" | "merge";
+type Client = Awaited<ReturnType<typeof createClient>>;
+
 /** Inserts explicit reviewed cards under the current owner, using stable ids for safe retries. */
 export async function saveCards(
   deckId: string,
@@ -23,14 +30,30 @@ export async function saveCards(
   source: "manual" | "import",
   allowDuplicate = false,
 ): Promise<SaveCardsResult> {
-  const malformed = { saved: false as const, message: "카드 내용을 확인해 주세요" };
+  if (typeof allowDuplicate !== "boolean") return malformed;
+  return writeCards(deckId, input, source, allowDuplicate ? "add" : "refuse");
+}
+
+/**
+ * Saves a photo's reviewed cards as the phone's `addCards` does: a card whose key the deck, or an
+ * earlier card of [input], holds merges its back into that card. A retry skips what is stored.
+ */
+export async function savePhotoCards(deckId: string, input: unknown): Promise<SaveCardsResult> {
+  return writeCards(deckId, input, "import", "merge");
+}
+
+async function writeCards(
+  deckId: string,
+  input: unknown,
+  source: "manual" | "import",
+  onDuplicate: OnDuplicate,
+): Promise<SaveCardsResult> {
   if (
     !parseDeckId(deckId) ||
     !Array.isArray(input) ||
     input.length < 1 ||
     input.length > 100 ||
     !["manual", "import"].includes(source) ||
-    typeof allowDuplicate !== "boolean" ||
     !boundedJson(input)
   )
     return malformed;
@@ -60,10 +83,11 @@ export async function saveCards(
       .range(from, to)
       .abortSignal(AbortSignal.timeout(requestTimeoutMs)),
   );
-  if ("failure" in existing)
-    return { saved: false, message: "카드를 저장하지 못했어요. 다시 시도해 주세요." };
+  if ("failure" in existing) return failed;
   const now = new Date().toISOString();
   const rows = [];
+  const merges: { into: string; back: string }[] = [];
+  const storedIds = new Set(existing.rows.map((row) => field(row, "id")));
   const keys = new Map(
     existing.rows.flatMap((row) => {
       const key = field(row, "card_key");
@@ -79,7 +103,12 @@ export async function saveCards(
     if (!front) return malformed;
     const key = cardKey(front);
     const duplicate = keys.get(key);
-    if (!allowDuplicate && duplicate && duplicate !== card.id)
+    if (onDuplicate === "merge" && storedIds.has(card.id)) continue;
+    if (onDuplicate === "merge" && duplicate) {
+      merges.push({ into: duplicate, back: plainText(parseContent(card.back) ?? []) });
+      continue;
+    }
+    if (onDuplicate === "refuse" && duplicate && duplicate !== card.id)
       return { saved: false, message: "이 덱에 이미 있는 카드예요", duplicate, at };
     keys.set(key, card.id);
     rows.push({
@@ -94,12 +123,49 @@ export async function saveCards(
       updated_at: now,
     });
   }
-  const write = await client
-    .from("cards")
-    .upsert(rows, { onConflict: "id", ignoreDuplicates: true })
-    .abortSignal(AbortSignal.timeout(requestTimeoutMs));
-  if (write.error)
-    return { saved: false, message: "카드를 저장하지 못했어요. 다시 시도해 주세요." };
+  const read = await readCards(client, userId, deckId, [
+    ...new Set(merges.map(({ into }) => into).filter((into) => storedIds.has(into))),
+  ]);
+  if (!read) return failed;
+  const targets = new Map(read);
+  for (const row of rows)
+    targets.set(row.id, {
+      front: row.front,
+      back: row.back,
+      template: row.template,
+      templateVersion: row.template_version,
+    });
+  for (const { into, back } of merges) {
+    const target = targets.get(into);
+    const merged = target && mergeBack(target, back);
+    if (!merged) return failed;
+    targets.set(into, merged);
+  }
+  const inserted = rows.map((row) => ({ ...row, back: targets.get(row.id)?.back ?? row.back }));
+  const updated = [...read].flatMap(([id, card]) => {
+    const merged = targets.get(id);
+    return merged && merged !== card ? [{ id, ...merged }] : [];
+  });
+  const written = [...inserted, ...updated];
+  if (written.length === 0) return { saved: true };
+  if (inserted.length > 0) {
+    const write = await client
+      .from("cards")
+      .upsert(inserted, { onConflict: "id", ignoreDuplicates: true })
+      .abortSignal(AbortSignal.timeout(requestTimeoutMs));
+    if (write.error) return failed;
+  }
+  for (const { id, front, back, template, templateVersion } of updated) {
+    const write = await client
+      .from("cards")
+      .update({ front, back, template, template_version: templateVersion, updated_at: now })
+      .eq("id", id)
+      .eq("user_id", userId)
+      .eq("deck_id", deckId)
+      .is("deleted_at", null)
+      .abortSignal(AbortSignal.timeout(requestTimeoutMs));
+    if (write.error) return failed;
+  }
   const persisted = await client
     .from("cards")
     .select("id,deck_id,front,back")
@@ -108,13 +174,13 @@ export async function saveCards(
     .is("deleted_at", null)
     .in(
       "id",
-      rows.map((row) => row.id),
+      written.map((row) => row.id),
     )
     .abortSignal(AbortSignal.timeout(requestTimeoutMs));
   if (
     persisted.error ||
     !Array.isArray(persisted.data) ||
-    !rows.every((row) =>
+    !written.every((row) =>
       persisted.data.some(
         (saved: unknown) =>
           field(saved, "id") === row.id &&
@@ -125,9 +191,39 @@ export async function saveCards(
       ),
     )
   )
-    return { saved: false, message: "카드를 저장하지 못했어요. 다시 시도해 주세요." };
+    return failed;
   revalidatePath("/", "layout");
   return { saved: true };
+}
+
+/** The live cards [ids] of the deck, as stored, by id; null when the read fails. */
+async function readCards(
+  client: Client,
+  userId: string,
+  deckId: string,
+  ids: string[],
+): Promise<Map<string, StoredCard> | null> {
+  if (ids.length === 0) return new Map();
+  const read = await client
+    .from("cards")
+    .select("id,front,back,template,template_version")
+    .eq("user_id", userId)
+    .eq("deck_id", deckId)
+    .is("deleted_at", null)
+    .in("id", ids)
+    .abortSignal(AbortSignal.timeout(requestTimeoutMs));
+  if (read.error || !Array.isArray(read.data)) return null;
+  return new Map(
+    read.data.map((row: unknown) => [
+      String(field(row, "id")),
+      {
+        front: field(row, "front"),
+        back: field(row, "back"),
+        template: field(row, "template"),
+        templateVersion: field(row, "template_version"),
+      },
+    ]),
+  );
 }
 
 function boundedJson(value: unknown): boolean {

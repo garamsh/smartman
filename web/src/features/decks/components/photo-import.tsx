@@ -4,7 +4,7 @@ import { useEffect, useEffectEvent, useRef, useState, useTransition } from "reac
 import { useRouter } from "next/navigation";
 import { Check, CircleAlert, Clock, ImagePlus, LoaderCircle } from "lucide-react";
 import { v7 } from "uuid";
-import { createDeck, readAllowance, readCardKeys, saveCards } from "../actions";
+import { createDeck, readAllowance, readCardKeys, savePhotoCards } from "../actions";
 import { cardKey } from "../authoring";
 import { parseContent } from "../card-content";
 import { preparePhoto, sendPhoto } from "../extract-photo";
@@ -82,7 +82,7 @@ export function PhotoImport({
   useEffect(() => {
     if (target === "new") return;
     let current = true;
-    // A deck whose keys cannot be read marks nothing, and a duplicate is still refused on saving.
+    // A deck whose keys cannot be read marks nothing, and a duplicate merges on saving.
     void readCardKeys(target)
       .catch(() => null)
       .then((keys) => {
@@ -260,6 +260,8 @@ export function PhotoImport({
       .filter((card) => included(card, section))
       .flatMap((card) => cardsOf(card, formOf(section))),
   );
+  // One per card key, as the phone's `cardCount`: cards of one key merge into one.
+  const cardCount = new Set(toSave.map((card) => cardKey(parseContent(card.front) ?? []))).size;
   /** Chooses the deck the cards go into, taking that deck's remembered forms where it has them. */
   function chooseTarget(next: string) {
     setForms(
@@ -340,12 +342,9 @@ export function PhotoImport({
         }
         setNaming(false);
         for (let offset = 0; offset < toSave.length; offset += 25) {
-          const result = await saveCards(deckId, toSave.slice(offset, offset + 25), "import");
+          const result = await savePhotoCards(deckId, toSave.slice(offset, offset + 25));
           if (!result.saved) {
-            setMessage(
-              result.message +
-                (result.duplicate ? ". 같은 앞면의 카드는 선택을 해제해 주세요." : ""),
-            );
+            setMessage(result.message);
             return;
           }
         }
@@ -560,7 +559,7 @@ export function PhotoImport({
               onClick={add}
               className="pressable min-h-cta w-full rounded-button bg-primary px-4 text-label text-on-primary disabled:opacity-50"
             >
-              {pending ? "저장 중" : `카드 ${String(toSave.length)}장 추가`}
+              {pending ? "저장 중" : `카드 ${String(cardCount)}장 추가`}
             </button>
           </div>
         </div>

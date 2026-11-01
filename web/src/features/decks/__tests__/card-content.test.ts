@@ -9,6 +9,7 @@ import {
   describeContent,
   holdsBlank,
   parseContent,
+  plainText,
   spokenContent,
   upcastPayload,
 } from "../card-content";
@@ -69,6 +70,42 @@ describe("a card side's blocks", () => {
 });
 
 // The cases of the app's senses tests in `content_test.dart`.
+describe("a card side's plain text", () => {
+  it("gives each block's text on lines of its own, as the phone's plainText, leaving out an unknown block", () => {
+    const side = parseContent([
+      { type: "text", payload: { text: "first" } },
+      cloze,
+      table(rows, cell),
+      { type: "senses", payload: { senses: [{ labels: [], meaning: "뜻", examples: [] }] } },
+      { type: "later", payload: {} },
+      {
+        type: "image",
+        payload: {
+          media: "photo",
+          width: 1,
+          height: 1,
+          boxes: [
+            { id: "a", x: 0, y: 0, w: 1, h: 1, answer: "답" },
+            { id: "b", x: 0, y: 0, w: 1, h: 1 },
+          ],
+        },
+      },
+      { type: "audio", payload: { media: "sound", duration_ms: 1 } },
+    ]);
+    if (!side) throw new Error("expected the side to parse");
+    expect(plainText(side).split("\n")).toEqual([
+      "first",
+      "Paris is in France",
+      "Capital | Country",
+      "Paris | France",
+      "뜻",
+      "photo",
+      "답",
+      "sound",
+    ]);
+  });
+});
+
 describe("a senses block", () => {
   const sense = (fields: Record<string, unknown> = {}) => ({
     labels: [],

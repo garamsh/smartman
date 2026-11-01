@@ -7,8 +7,8 @@
  * intrinsic size and the boxes over it (ADR 0109); or a sound by its media id, with how long it
  * plays in milliseconds (ADR 0112). A block of another type, or of a known
  * type at a version above the one this build reads, is shown as a placeholder naming it, so a
- * card a later version wrote is shown, not lost. Authoring inserts new cards and leaves stored
- * cards unchanged.
+ * card a later version wrote is shown, not lost. Authoring inserts new cards, and a merged back
+ * is appended after a stored card's blocks, which stay as read.
  */
 export type Content =
   | { kind: "text"; text: string }
@@ -431,6 +431,28 @@ export function describeContent(blocks: Content[]): string {
 }
 
 /**
+ * A card side as the phone's `plainText` gives it, one block's text after another on lines of
+ * their own: a filled cloze or table, a photo's or a sound's media id, and no line for a block
+ * this build does not know.
+ */
+export function plainText(blocks: Content[]): string {
+  return blocks
+    .flatMap((block) => {
+      switch (block.kind) {
+        case "image":
+          return [block.media, ...block.boxes.flatMap(({ answer }) => answer ?? [])];
+        case "audio":
+          return [block.media];
+        case "unsupported":
+          return [];
+        default:
+          return [describeContent([block])];
+      }
+    })
+    .join("\n");
+}
+
+/**
  * A card side as a screen reader reads it, as on the phone: each blank as its answer only when
  * [revealed], else as "빈칸", a table row by row, its cells joined by commas, a span in its
  * cell's text, and the blocks as sentences.
@@ -508,7 +530,7 @@ function isUnknown(block: Content): boolean {
 }
 
 /** The version of each type a 칸 list stores with fields of its own, as the phone's `_frameVersions`. */
-const frameVersions = new Map([
+export const frameVersions = new Map([
   ["text", 2],
   ["senses", 2],
   ["image", 2],
@@ -776,8 +798,13 @@ const cardFrameVersion = 2;
 /** The templates earlier builds wrote, at version 1 or none (ADR 0114). */
 const earlierTemplates: ReadonlySet<unknown> = new Set([freeTemplate, "flip", "cloze", "table"]);
 
+/** Whether a card of [template] at [version] stores a list of 칸. */
+export function isFramed(template: unknown, version: unknown): boolean {
+  return template === freeTemplate && version === cardFrameVersion;
+}
+
 /** Whether a card of [template] at [version] is one a build wrote as two side lists. */
-function isEarlier(template: unknown, version: unknown): boolean {
+export function isEarlier(template: unknown, version: unknown): boolean {
   if (template === undefined || template === null) return true;
   return earlierTemplates.has(template) && (typeof version !== "number" || version <= 1);
 }
@@ -796,7 +823,7 @@ export function parseCardContent(stored: {
   template: unknown;
   templateVersion: unknown;
 }): CardContent | null {
-  if (stored.template === freeTemplate && stored.templateVersion === cardFrameVersion) {
+  if (isFramed(stored.template, stored.templateVersion)) {
     const cells = parseCells(stored.front);
     return cells && { cells, ...sidesOf(cells) };
   }

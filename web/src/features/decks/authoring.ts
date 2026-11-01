@@ -3,8 +3,13 @@ import { v7 } from "uuid";
 import {
   type Content,
   describeContent,
+  frameVersions,
+  isEarlier,
+  isFramed,
+  parseCardContent,
   parseContent,
   partsOfSpeech,
+  plainText,
   type SenseLabel,
 } from "./card-content";
 
@@ -14,10 +19,52 @@ export type Block = { type: string; v: number; id: string; payload: Record<strin
 export type CardDraft = { id: string; front: Block[]; back: Block[] };
 /** A vocabulary meaning in the editor. */
 export type Meaning = { labels: SenseLabel[]; meaning: string; examples: string[] };
+/** The columns of a card a merge reads and writes, as they are stored. */
+export type StoredCard = {
+  front: unknown;
+  back: unknown;
+  template: unknown;
+  templateVersion: unknown;
+};
 
 /** The phone's NFKC, whitespace and lowercase duplicate key. */
 export function cardKey(front: Content[]): string {
   return describeContent(front).normalize("NFKC").trim().replace(/\s+/gu, " ").toLowerCase();
+}
+/**
+ * Whether a line of [side] holds [back] under the card key normalization, as the phone's
+ * `mergeBack`, or each of [back]'s lines is held, as a back of several lines is once merged, so a
+ * retried save does not append it again.
+ */
+export function holdsBack(side: Content[], back: string): boolean {
+  const key = (text: string) => cardKey([{ kind: "text", text }]);
+  const lines = new Set(plainText(side).split("\n").map(key));
+  return lines.has(key(back)) || back.split("\n").every((line) => lines.has(key(line)));
+}
+/**
+ * [stored] with [back] merged in, as the phone's `addCards` merges a duplicate, its other blocks
+ * as stored: a 칸 list takes a 글 of a back alone; two sides take a text block on the back and
+ * record `free` version 1, a later build's template kept. [stored] itself when there is nothing
+ * to merge, and null when it cannot be read.
+ */
+export function mergeBack(stored: StoredCard, back: string): StoredCard | null {
+  const framed = isFramed(stored.template, stored.templateVersion);
+  const read = parseCardContent(stored);
+  const side = framed ? read?.back : parseContent(stored.back);
+  if (!read || !side) return null;
+  if (back.trim() === "" || holdsBack(side, back)) return stored;
+  if (framed) {
+    const payload = { front: "", back };
+    const cell = { type: "text", v: frameVersions.get("text"), id: v7(), payload };
+    return { ...stored, front: [...(stored.front as unknown[]), cell] };
+  }
+  return {
+    ...stored,
+    back: [...(stored.back as unknown[]), block("text", { text: back })],
+    ...(isEarlier(stored.template, stored.templateVersion)
+      ? { template: "free", templateVersion: 1 }
+      : {}),
+  };
 }
 /** A block at the version the phone writes. */
 export function block(type: string, payload: Record<string, unknown>): Block {
