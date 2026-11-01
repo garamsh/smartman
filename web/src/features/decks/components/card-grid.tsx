@@ -30,6 +30,7 @@ export function CardGrid({ cards }: { cards: Card[] }) {
       blocks: card.front,
       backBlocks: card.back,
       cells: card.cells,
+      front: whole ? spokenCells(card.cells, false) : spokenContent(card.front, false),
       whole,
       faces: [card.front, card.back].map(describeContent),
       back: whole ? spokenCells(card.cells, true) : describeContent(card.back),
@@ -99,11 +100,7 @@ export function CardGrid({ cards }: { cards: Card[] }) {
                 <button
                   type="button"
                   aria-expanded={open}
-                  aria-label={
-                    open
-                      ? `${spokenContent(row.blocks, false)}, 뒷면 ${row.back}`
-                      : `${spokenContent(row.blocks, false)}, 뒷면 가려짐`
-                  }
+                  aria-label={open ? `${row.front}, 뒷면 ${row.back}` : `${row.front}, 뒷면 가려짐`}
                   onClick={() => {
                     const next = new Set(apart);
                     if (next.has(row.id)) next.delete(row.id);

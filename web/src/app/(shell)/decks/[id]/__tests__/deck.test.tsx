@@ -456,6 +456,24 @@ describe("the deck page", () => {
     expect(rows()).toContain("Chat, 뒷면 Chat back");
   });
 
+  it("reads a whole card holding a block this build does not know by its 칸, its back blank among them", async () => {
+    postgrest.seed("cards", {
+      ...cardRow("c-unknown", "d-fr", "unknown", day / 2),
+      front: side("Fill it"),
+      back: [
+        { type: "chart", payload: {} },
+        { type: "cloze", v: 1, payload: { text: "___ is blue.", answers: ["Sky"] } },
+      ],
+    });
+    await open("d-fr");
+
+    expect(rows()).toContain(
+      "Fill it. 빈칸 is blue.. [이 버전에서 표시할 수 없는 내용: chart], 뒷면 가려짐",
+    );
+    // Control: a split card's row reads its front alone.
+    expect(rows()).toContain("Chat, 뒷면 가려짐");
+  });
+
   it("lists and searches a free v2 card by its 칸, split and whole, as the same card stored earlier", async () => {
     const glue = (front: string, back: string) => ({
       type: "text",

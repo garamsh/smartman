@@ -253,11 +253,12 @@ describe("a whole card's 칸", () => {
     expect(parts[0]?.className).not.toContain("text-ink-2");
   });
 
-  it("draws an added part muted in a list row", () => {
+  it("draws an added part at regular weight in ink-2 in a list row, keeping the row's size", () => {
     const { parts } = draw(true, true);
-    expect(parts[1]?.className).toContain("text-muted");
+    expect(parts[1]?.className).toContain("font-normal");
+    expect(parts[1]?.className).toContain("text-ink-2");
     expect(parts[1]?.className).not.toContain("text-back");
     // Control: a first part keeps the row's style.
-    expect(parts[0]?.className).not.toContain("text-muted");
+    expect(parts[0]?.className).not.toContain("text-ink-2");
   });
 });

@@ -63,7 +63,7 @@ function WholeParts({
   revealed: boolean;
   inRow: boolean;
 }) {
-  const addedStyle = inRow ? "text-secondary text-muted" : "text-back text-ink-2";
+  const addedStyle = inRow ? "font-normal text-ink-2" : "text-back text-ink-2";
   return (
     <span
       role="group"

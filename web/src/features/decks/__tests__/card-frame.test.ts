@@ -223,8 +223,10 @@ describe("parseCardContent", () => {
     const unknown = parseCardContent(stored([text("a")], [chart, cloze], "free", 1));
     expect(unknown?.front).toEqual([{ kind: "text", text: "a" }]);
     expect(unknown?.back).toHaveLength(2);
-    // Its blank still makes it whole, so no answer is drawn at the prompt.
+    // Its blank still makes it whole, so no answer is drawn at the prompt, and what this build
+    // cannot show follows the rest, as the phone's `cellsToDraw` keeps it.
     expect(holdsBlank(unknown?.cells ?? [])).toBe(true);
+    expect(unknown?.cells.map(({ kind }) => kind)).toEqual(["text", "blank", "unknown"]);
 
     const later = parseCardContent(stored([text("a")], [text("b")], "free", 3));
     expect(later?.front).toEqual([{ kind: "text", text: "a" }]);

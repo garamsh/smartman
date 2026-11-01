@@ -503,6 +503,10 @@ export type Cell =
   | { kind: "placed"; block: Content; side: CellSide }
   | { kind: "unknown"; block: Content };
 
+function isUnknown(block: Content): boolean {
+  return block.kind === "unsupported";
+}
+
 /** The version of each type a 칸 list stores with fields of its own, as the phone's `_frameVersions`. */
 const frameVersions = new Map([
   ["text", 2],
@@ -657,13 +661,18 @@ function addBack(cells: Cell[], block: Content, frontBlank: boolean): void {
       cells.push({ kind: "placed", block, side: "back" });
       break;
     case "unsupported":
-      cells.push({ kind: "unknown", block });
+      // `cellsFromSides` leaves a card holding one as it is.
       break;
   }
 }
 
-/** A card's two side lists as 칸, a block this build does not know kept in place. */
-function readSides(front: Content[], back: Content[]): Cell[] {
+/**
+ * A card's two side lists as its 칸 list, by the rule of ADR 0137 as amended by ADR 0140, on the
+ * fixtures the phone's `cellsFromSides` reads; null when either holds a block this build does not
+ * know, which stays as it is.
+ */
+export function cellsFromSides(front: Content[], back: Content[]): Cell[] | null {
+  if ([...front, ...back].some(isUnknown)) return null;
   const cells = front.map(frontCell);
   if (isDerived(front, back)) return cells;
   const [only] = back;
@@ -680,13 +689,15 @@ function readSides(front: Content[], back: Content[]): Cell[] {
 }
 
 /**
- * A card's two side lists as its 칸 list, by the rule of ADR 0137 as amended by ADR 0140, on the
- * fixtures the phone's `cellsFromSides` reads; null when either holds a block this build does not
- * know, which stays as it is.
+ * The 칸 a card of [front] and [back] is drawn from, as the phone's `cellsToDraw`: what this build
+ * knows converted, and each block it cannot show kept after them.
  */
-export function cellsFromSides(front: Content[], back: Content[]): Cell[] | null {
-  const known = [...front, ...back].every((block) => block.kind !== "unsupported");
-  return known ? readSides(front, back) : null;
+function cellsToDraw(front: Content[], back: Content[]): Cell[] {
+  const known = (side: Content[]) => side.filter((block) => !isUnknown(block));
+  return [
+    ...(cellsFromSides(known(front), known(back)) ?? []),
+    ...[...front, ...back].filter(isUnknown).map(frontCell),
+  ];
 }
 
 /** A part of a 칸: a block, and whether the reveal adds it. */
@@ -795,5 +806,5 @@ export function parseCardContent(stored: {
   const cells = isEarlier(stored.template, stored.templateVersion)
     ? cellsFromSides(front, back)
     : null;
-  return cells ? { cells, ...sidesOf(cells) } : { cells: readSides(front, back), front, back };
+  return cells ? { cells, ...sidesOf(cells) } : { cells: cellsToDraw(front, back), front, back };
 }
