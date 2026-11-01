@@ -4,7 +4,6 @@ import 'package:flutter/material.dart' hide Card;
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/deck/deck.dart';
-import 'package:smartman/deck/src/block_list.dart';
 import 'package:smartman/deck/src/card_preview_screen.dart';
 import 'package:smartman/deck/src/cloze_block.dart';
 import 'package:smartman/design/app_chip.dart';
@@ -23,7 +22,7 @@ Future<Card> _stored(DeckScreens screens) async =>
     (await screens.cards()).single;
 
 /// The line: the first field of the front's blocks.
-final _line = blockField(CardSide.front);
+final _line = blockField();
 
 /// The line field's controller.
 TextEditingController _controller(WidgetTester tester) =>
@@ -58,13 +57,11 @@ Finder _action(String label) => find.widgetWithText(AppChip, label);
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
 
-  /// A new card's editor whose front is one Cloze sentence block and whose
-  /// back holds none, as a cloze studied on one face needs.
+  /// A new card's editor whose one 칸 is a Cloze sentence.
   Future<DeckScreens> openCloze(WidgetTester tester, {DeckScreens? on}) async {
     final screens = on ?? await DeckScreens.open(tester);
     await screens.push((deck) => CardEditorScreen(deck: deck));
-    await replaceFirstBlock(screens, CardSide.front, 'Cloze sentence');
-    await actOnBlock(screens, CardSide.back, 1, 'Delete');
+    await replaceFirstBlock(screens, 'Cloze sentence');
     return screens;
   }
 
@@ -535,7 +532,7 @@ void main() {
         }
 
         expect(blocks(), isEmpty, reason: 'the blanks empty, as study asks');
-        expect(shownText('Tap the card to fill in its blanks'), findsOneWidget);
+        expect(shownText('Tap the card to see the answer'), findsOneWidget);
         await screens.tap(preview);
         expect(blocks(), ['cat', '']);
         expect(shownText('Tap again to empty its blanks'), findsOneWidget);
@@ -756,31 +753,6 @@ void main() {
         );
         if (action == 'Insert blank') await insertBlank(screens);
       }
-      await screens.close();
-    },
-  );
-
-  testWidgets(
-    'a card with a cloze and nothing on its back says the back may stay empty, and says nothing once the back holds text',
-    (tester) async {
-      const hint =
-          'A card with blanks is answered on its front. Its back can stay empty.';
-      // Control: a card of two sides with its back empty is not told so.
-      final screens = await DeckScreens.open(tester);
-      await screens.push((deck) => CardEditorScreen(deck: deck));
-      await typeBlock(tester, CardSide.front, 'Chat');
-      expect(shownText(hint), findsNothing, reason: 'control: no cloze');
-      await screens.tap(find.byTooltip('Close'));
-      await screens.tap(find.text('Discard'));
-
-      await openCloze(tester, on: screens);
-      await typeLine(tester, 'The cat sat');
-      await select(tester, 4, 7);
-      await insertBlank(screens);
-      expect(shownText(hint), findsOneWidget);
-      await addBlock(screens, CardSide.back, 'Text');
-      await typeBlock(tester, CardSide.back, 'A cat sat');
-      expect(shownText(hint), findsNothing);
       await screens.close();
     },
   );

@@ -160,25 +160,16 @@ class AppLocalizationsKo extends AppLocalizations {
   String get clozeBlankMarker => '줄에서 ___를 빼 주세요';
 
   @override
-  String get addToFront => '앞면에 추가';
-
-  @override
-  String get addToBack => '뒷면에 추가';
-
-  @override
-  String get addBlock => '추가';
+  String get addBlock => '칸 추가';
 
   @override
   String get blockText => '글';
 
   @override
-  String get blockTextDescription => '단어, 문장, 설명';
+  String get blockSenses => '단어';
 
   @override
-  String get blockSenses => '뜻 목록';
-
-  @override
-  String get blockSensesDescription => '라벨과 뜻을 여러 개 적어요';
+  String get blockSensesDescription => '단어와 뜻을 함께 적어요';
 
   @override
   String get blockTable => '표';
@@ -304,15 +295,24 @@ class AppLocalizationsKo extends AppLocalizations {
   String get autoplayAudio => '앞면 소리 자동 재생';
 
   @override
-  String blockMenu(String side, int number) {
-    return '$side $number번째 블록 메뉴';
+  String blockMenu(int number) {
+    return '$number번째 칸 메뉴';
   }
 
   @override
-  String get deleteBlock => '삭제';
+  String get cardNothingBefore => '앞면에 보일 내용을 하나 이상 넣어 주세요';
 
   @override
-  String get sideBlockRequired => '블록을 하나 이상 넣어 주세요';
+  String get cardNothingAdded => '뒷면이나 빈칸을 하나 이상 넣어 주세요';
+
+  @override
+  String get wordTerm => '단어';
+
+  @override
+  String get wordAskFirst => '앞면에 보일 것';
+
+  @override
+  String get deleteBlock => '삭제';
 
   @override
   String get tableToolbar => '표 도구';
@@ -387,13 +387,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get previewTapToFront => '다시 탭하면 앞면으로 돌아가요';
 
   @override
-  String get previewTapToReveal => '카드를 탭하면 빈칸이 채워져요';
+  String get previewTapToReveal => '카드를 탭하면 답이 보여요';
 
   @override
   String get previewTapToHide => '다시 탭하면 빈칸으로 돌아가요';
-
-  @override
-  String get clozeBackHint => '빈칸 카드는 앞면에서 바로 답을 맞혀요. 뒷면은 비워 둬도 돼요.';
 
   @override
   String get senseLabelHint => '라벨';
