@@ -6,7 +6,10 @@ import {
   OUTPUT_CONTRACT,
   parseReply,
 } from "../../supabase/functions/extract-cards/cards.ts";
-import { continueAfter } from "../../supabase/functions/extract-cards/continuation.ts";
+import {
+  CONFIRM_AFTER_CARDS,
+  continueAfter,
+} from "../../supabase/functions/extract-cards/continuation.ts";
 import { RETRY_START_LIMIT_MS } from "../../supabase/functions/extract-cards/handler.ts";
 import {
   MAX_OUTPUT_TOKENS,
@@ -202,6 +205,21 @@ Deno.test("the function's way reads a cut page on until a reply ends it, past a 
       `call ${call} asks for the entries after those read`,
     );
   }
+  // A whole reply of many cards is read on once to confirm the page ends.
+  const many = Array.from(
+    { length: CONFIRM_AFTER_CARDS },
+    (_, i) => full(`mot${i}`, "뜻"),
+  );
+  const confirming: Sent[] = [];
+  const confirmed = await extractWhole(
+    PHOTO,
+    {},
+    MODEL,
+    "prompt",
+    deps(fake([whole(many), whole([])], confirming)),
+  );
+  assert.equal(confirming.length, 2);
+  assert.equal(confirmed.kind === "cards" && confirmed.cards.length, 40);
   // Control: a whole first reply is answered after one call.
   const once: Sent[] = [];
   const answered = await extractWhole(

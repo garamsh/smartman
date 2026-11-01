@@ -7,6 +7,18 @@
 import type { Card, CardRule } from "./cards.ts";
 import type { Attempt, Extraction } from "./openrouter.ts";
 
+/**
+ * The fewest cards after which a whole reply is still read on, to confirm the page ends there: a
+ * model may stop a dense page early by its own choice. Twice the 21 entries of the eval's largest
+ * ordinary page, so an ordinary page makes no such call.
+ */
+export const CONFIRM_AFTER_CARDS = 40;
+
+/** Whether a reply of [cards] cards, [cut] at the output cap or not, is read on after. */
+export function readsOn(cut: boolean, cards: number): boolean {
+  return cut || cards >= CONFIRM_AFTER_CARDS;
+}
+
 /** The most cards one photo may produce, over every call and request that reads it. */
 export const MAX_PHOTO_CARDS = 500;
 
@@ -89,9 +101,9 @@ export function decodeCursor(text: string): Cursor | null {
 
 /** The text sent after the photo asking for the entries after the [read] cards read so far. */
 export function continueAfter(read: number, fronts: readonly string[]): string {
-  return `A reply to this material was cut off at the output limit. ${read} cards were already read, ending with the entries ${
+  return `${read} cards were already read from this material, ending with the entries ${
     fronts.map((front) => JSON.stringify(front)).join(", ")
-  }. Answer with the cards of the entries that come after the last of them only, in the material's order, and no card for an entry already read.`;
+  }. Answer with the cards of the entries that come after the last of them only, in the material's order, and no card for an entry already read. When no entry comes after them, answer an empty card list.`;
 }
 
 /** A card's front as a continuation compares it with the fronts already read. */
@@ -106,7 +118,7 @@ export type ReadOn = {
   readonly attempts: readonly Attempt[];
   /** The continuing calls made. */
   readonly calls: number;
-  /** Whether the page was read to its end: a reply was not cut, or it added no card. */
+  /** Whether the page was read to its end: a reply added no card, or few and was not cut. */
   readonly done: boolean;
   /** Whether every call failed, so the request read nothing on. */
   readonly failed: boolean;
@@ -157,7 +169,7 @@ export async function readOn(
     for (const one of added) seen.add(key(one.front));
     cards.push(...added);
     dropped.push(...next.dropped);
-    done = !next.cut || added.length === 0;
+    done = added.length === 0 || !readsOn(next.cut, added.length);
   }
   return {
     cards,

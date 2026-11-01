@@ -15,6 +15,7 @@ import {
   lastFronts,
   MAX_CONTINUATIONS,
   readOn,
+  readsOn,
 } from "../../supabase/functions/extract-cards/continuation.ts";
 import {
   CARD_LIST,
@@ -143,7 +144,9 @@ export async function extractWhole(
   deps: ExtractDeps,
 ): Promise<Extraction> {
   const first = await extractCards(image, languages, model, prompt, deps);
-  if (first.kind !== "cards" || !first.cut) return first;
+  if (first.kind !== "cards" || !readsOn(first.cut, first.cards.length)) {
+    return first;
+  }
   const on = await readOn(
     (followUp) =>
       extractCards(image, languages, model, prompt, deps, { followUp }),

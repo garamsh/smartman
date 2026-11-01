@@ -11,6 +11,7 @@ import {
   MAX_PHOTO_CARDS,
   type ReadOn,
   readOn,
+  readsOn,
 } from "./continuation.ts";
 import {
   type Attempt,
@@ -238,8 +239,10 @@ async function handle(
       extraction.kind === "invalid_output"
     ? extraction
     : null;
-  // A cut reply is read on after its last card, in this request while time allows (ADR 0138).
-  const on: ReadOn | null = extraction.kind === "cards" && extraction.cut
+  // A cut reply, or a whole one of many cards, is read on after its last card, in this request
+  // while time allows (ADR 0138).
+  const on: ReadOn | null = extraction.kind === "cards" &&
+      readsOn(extraction.cut, extraction.cards.length)
     ? await readOn(extract, {
       read: firstRead.length,
       fronts: lastFronts(firstRead.map((card) => card.front)),

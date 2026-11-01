@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { composeInstructions } from "./cards.ts";
 import { readConfig } from "./config.ts";
 import {
+  CONFIRM_AFTER_CARDS,
   continueAfter,
   type CursorToken,
   cursorToken,
@@ -814,6 +815,54 @@ Deno.test("a reply cut twice is read on to the page's end in the same request, n
   const whole = await run({ replies: [cardsReply(twoCards)] });
   assert.equal(whole.modelCalls.length, 1);
   assert.equal(whole.fake.finishes[0].continuations, 0);
+});
+
+/** [count] vocabulary cards as the model writes them, their fronts `[prefix]0`, `[prefix]1`... */
+const words = (prefix: string, count: number) =>
+  Array.from({ length: count }, (_, i) => ({
+    ...twoCards[1],
+    front: `${prefix}${i}`,
+  }));
+
+Deno.test("a whole reply of many cards is read on to confirm the page ends, while it adds cards, and an ordinary page is not", async () => {
+  const fronts = (r: Run) =>
+    (r.body.cards as { front: string }[]).map((card) => card.front);
+  const confirmed = await run({
+    replies: [cardsReply(words("a", CONFIRM_AFTER_CARDS)), cardsReply([])],
+  });
+  assert.equal(confirmed.status, 200);
+  assert.equal(confirmed.body.partial, false);
+  assert.deepEqual(fronts(confirmed), words("a", 40).map((w) => w.front));
+  assert.equal(confirmed.modelCalls.length, 2);
+  assert.equal(
+    followUp(confirmed.modelCalls[1]),
+    continueAfter(40, words("a", 40).map((w) => w.front)),
+  );
+  assert.equal(confirmed.fake.finishes[0].continuations, 1);
+  // A model that stopped early is read on while each reply adds many cards.
+  const early = await run({
+    replies: [
+      cardsReply(words("a", 40)),
+      cardsReply([...words("a", 2), ...words("b", 40)]),
+      cardsReply(words("c", 3)),
+    ],
+  });
+  assert.equal(early.modelCalls.length, 3);
+  assert.deepEqual(
+    fronts(early),
+    [
+      ...words("a", 40),
+      ...words("b", 40),
+      ...words("c", 3),
+    ].map((w) => w.front),
+  );
+  assert.equal(early.body.partial, false);
+  // Control: a page of one card fewer makes one call.
+  const ordinary = await run({
+    replies: [cardsReply(words("a", CONFIRM_AFTER_CARDS - 1)), cardsReply([])],
+  });
+  assert.equal(ordinary.modelCalls.length, 1);
+  assert.equal(ordinary.fake.finishes[0].continuations, 0);
 });
 
 Deno.test("a page the time budget ends before is answered with its cards so far, read in part, and a cursor the record keeps", async () => {
