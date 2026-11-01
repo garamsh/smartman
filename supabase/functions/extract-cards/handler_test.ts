@@ -4,8 +4,8 @@ import assert from "node:assert/strict";
 import { composeInstructions } from "./cards.ts";
 import { readConfig } from "./config.ts";
 import {
+  askForMissing,
   CONFIRM_AFTER_CARDS,
-  continueAfter,
   type CursorToken,
   cursorToken,
   decodeCursor,
@@ -795,8 +795,8 @@ Deno.test("a reply cut twice is read on to the page's end in the same request, n
   assert.deepEqual(r.body, { cards: twoAnswered, partial: false });
   assert.equal(r.modelCalls.length, 3);
   assert.equal(followUp(r.modelCalls[0]), undefined);
-  assert.equal(followUp(r.modelCalls[1]), continueAfter(1, ["run"]));
-  assert.equal(followUp(r.modelCalls[2]), continueAfter(2, ["run", "river"]));
+  assert.equal(followUp(r.modelCalls[1]), askForMissing(1, ["run"]));
+  assert.equal(followUp(r.modelCalls[2]), askForMissing(2, ["run", "river"]));
   assert.equal(usageCalls(r).length, 1, "the photo counts once");
   assert.deepEqual(r.fake.finishes, [{
     usage_id: USAGE_ID,
@@ -836,7 +836,7 @@ Deno.test("a whole reply of many cards is read on to confirm the page ends, whil
   assert.equal(confirmed.modelCalls.length, 2);
   assert.equal(
     followUp(confirmed.modelCalls[1]),
-    continueAfter(40, words("a", 40).map((w) => w.front)),
+    askForMissing(40, words("a", 40).map((w) => w.front)),
   );
   assert.equal(confirmed.fake.finishes[0].continuations, 1);
   // A model that stopped early is read on while each reply adds many cards.
@@ -919,7 +919,7 @@ Deno.test("a cursor sent back goes on reading the photo by its first read's mode
     r.modelCalls[0].messages[0].content,
     composeInstructions(SYSTEM_PROMPT),
   );
-  assert.equal(followUp(r.modelCalls[0]), continueAfter(2, ["run", "river"]));
+  assert.equal(followUp(r.modelCalls[0]), askForMissing(2, ["run", "river"]));
   assert.deepEqual(r.fake.finishes, []);
   assert.deepEqual(r.fake.resumedRecords, [{
     usage_id: USAGE_ID,

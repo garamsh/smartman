@@ -99,11 +99,17 @@ export function decodeCursor(text: string): Cursor | null {
   return { token: parsed, fronts };
 }
 
-/** The text sent after the photo asking for the entries after the [read] cards read so far. */
-export function continueAfter(read: number, fronts: readonly string[]): string {
-  return `${read} cards were already read from this material, ending with the entries ${
+/**
+ * The text sent after the photo asking for every entry the [read] cards read so far missed,
+ * wherever it is on the page; [fronts] are theirs, or their last when they are too many to name.
+ */
+export function askForMissing(read: number, fronts: readonly string[]): string {
+  const named = fronts.length === read
+    ? "for the entries"
+    : `the last ${fronts.length} for the entries`;
+  return `${read} cards were already read from this material, ${named} ${
     fronts.map((front) => JSON.stringify(front)).join(", ")
-  }. Answer with the cards of the entries that come after the last of them only, in the material's order, and no card for an entry already read. When no entry comes after them, answer an empty card list.`;
+  }. Answer with the cards of every entry of the material that is not in that list, wherever it is on the page, in the material's order, and no card for an entry in the list. When no entry is missing, answer an empty card list.`;
 }
 
 /** A card's front as a continuation compares it with the fronts already read. */
@@ -154,7 +160,7 @@ export async function readOn(
       ...cards.map((one) => one.front),
     ]);
     const next = await extract(
-      continueAfter(from.read + cards.length, named),
+      askForMissing(from.read + cards.length, named),
     );
     calls++;
     attempts.push(...next.attempts);

@@ -7,8 +7,8 @@ import {
   parseReply,
 } from "../../supabase/functions/extract-cards/cards.ts";
 import {
+  askForMissing,
   CONFIRM_AFTER_CARDS,
-  continueAfter,
 } from "../../supabase/functions/extract-cards/continuation.ts";
 import { RETRY_START_LIMIT_MS } from "../../supabase/functions/extract-cards/handler.ts";
 import {
@@ -194,8 +194,8 @@ Deno.test("the function's way reads a cut page on until a reply ends it, past a 
   assert.equal(extraction.attempts.length, 3);
   for (
     const [call, text] of [
-      [1, continueAfter(2, ["maison", "chat"])],
-      [2, continueAfter(3, ["maison", "chat", "livre"])],
+      [1, askForMissing(2, ["maison", "chat"])],
+      [2, askForMissing(3, ["maison", "chat", "livre"])],
     ] as const
   ) {
     assert.ok(
