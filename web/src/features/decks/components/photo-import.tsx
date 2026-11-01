@@ -25,6 +25,8 @@ import { AuthoringSheet } from "./authoring-sheet";
 import { CardFields } from "./card-fields";
 import { ImportList } from "./import-list";
 
+import { Mascot } from "@/design/brand";
+
 /** A photo's place in the job, as the phone's `PhotoState`. */
 type PhotoState =
   | { kind: "waiting" }
@@ -390,9 +392,12 @@ export function PhotoImport({
     <AuthoringSheet title={title} close={unfinished && !failure ? cancel : leave}>
       {failure ? (
         <div className="flex min-w-0 flex-col">
-          <p aria-live="polite" className="py-10 text-center text-body-strong break-keep">
-            {describeFailure(failure)}
-          </p>
+          <div className="flex flex-col items-center gap-4 py-10">
+            <Mascot expression="sad" className="size-mascot-medium" />
+            <p aria-live="polite" className="text-center text-body-strong break-keep">
+              {describeFailure(failure)}
+            </p>
+          </div>
           {note && !jobFailure && (
             <p className="pb-4 text-center text-body break-keep text-ink-2">{note}</p>
           )}
@@ -413,7 +418,7 @@ export function PhotoImport({
                   onClick={() => {
                     retry(single);
                   }}
-                  className="pressable min-h-cta flex-1 rounded-button bg-ink px-4 text-label text-on-primary"
+                  className="pressable min-h-cta flex-1 rounded-button bg-primary px-4 text-label text-on-primary"
                 >
                   다시 시도
                 </button>
@@ -432,6 +437,7 @@ export function PhotoImport({
             >
               <div className="h-full w-full rounded-full bg-ink motion-safe:animate-skeleton" />
             </div>
+            <Mascot expression="thinking" className="size-mascot-guide shrink-0" />
           </div>
           {note && <p className="text-body break-keep text-ink-2">{note}</p>}
           <div aria-hidden className="flex flex-col gap-row-gap">
@@ -453,13 +459,18 @@ export function PhotoImport({
           <p role="status" className="sr-only">
             {readingTitle}
           </p>
-          <div aria-hidden className="h-2 overflow-hidden rounded-full bg-hairline">
-            <div
-              className="h-full rounded-full bg-ink transition-[width]"
-              style={{
-                width: `${String(photos.length ? (100 * read.length) / photos.length : 0)}%`,
-              }}
-            />
+          <div className="flex items-center gap-4">
+            <div aria-hidden className="h-2 flex-1 overflow-hidden rounded-full bg-hairline">
+              <div
+                className="h-full rounded-full bg-ink transition-[width]"
+                style={{
+                  width: `${String(photos.length ? (100 * read.length) / photos.length : 0)}%`,
+                }}
+              />
+            </div>
+            {waiting && failed === 0 && (
+              <Mascot expression="thinking" className="size-mascot-guide shrink-0" />
+            )}
           </div>
           {note && <p className="text-body break-keep text-ink-2">{note}</p>}
           <ul className="flex flex-col gap-row-gap">
@@ -547,7 +558,7 @@ export function PhotoImport({
               type="button"
               disabled={pending || toSave.length === 0}
               onClick={add}
-              className="pressable min-h-cta w-full rounded-button bg-ink px-4 text-label text-on-primary disabled:opacity-50"
+              className="pressable min-h-cta w-full rounded-button bg-primary px-4 text-label text-on-primary disabled:opacity-50"
             >
               {pending ? "저장 중" : `카드 ${String(toSave.length)}장 추가`}
             </button>
@@ -621,7 +632,7 @@ export function PhotoImport({
             )}
             <button
               disabled={pending || !name.trim()}
-              className="pressable min-h-cta rounded-button bg-ink px-5 text-label text-on-primary disabled:opacity-50"
+              className="pressable min-h-cta rounded-button bg-primary px-5 text-label text-on-primary disabled:opacity-50"
             >
               {pending ? "만드는 중" : "만들기"}
             </button>
@@ -647,7 +658,7 @@ export function PhotoImport({
               changeCandidate(editing);
               setEditing(null);
             }}
-            className="pressable mt-5 min-h-cta w-full rounded-button bg-ink text-label text-on-primary"
+            className="pressable mt-5 min-h-cta w-full rounded-button bg-primary text-label text-on-primary"
           >
             완료
           </button>
@@ -676,7 +687,7 @@ export function PhotoImport({
             <button
               type="button"
               onClick={close}
-              className="pressable min-h-button rounded-button bg-dont-know text-label text-on-primary"
+              className="pressable min-h-button rounded-button bg-dont-know text-label text-on-ink"
             >
               버리기
             </button>
@@ -723,7 +734,7 @@ function CancelBar({ cancel, retryFailed }: { cancel: () => void; retryFailed?: 
         <button
           type="button"
           onClick={retryFailed}
-          className="pressable min-h-cta flex-[2] rounded-button bg-ink px-4 text-label break-keep text-on-primary"
+          className="pressable min-h-cta flex-[2] rounded-button bg-primary px-4 text-label break-keep text-on-primary"
         >
           실패한 사진 다시 시도
         </button>
@@ -828,7 +839,7 @@ function PhotoPicker({
 }) {
   return (
     <label
-      className={`pressable flex min-h-cta flex-1 cursor-pointer items-center justify-center gap-2 rounded-button px-4 text-label focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ink ${primary ? "bg-ink text-on-primary" : "border border-outline bg-surface"}`}
+      className={`pressable flex min-h-cta flex-1 cursor-pointer items-center justify-center gap-2 rounded-button px-4 text-label focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ink ${primary ? "bg-primary text-on-primary" : "border border-outline bg-surface"}`}
     >
       {icon && <ImagePlus aria-hidden className="size-small-icon" />}
       {label}

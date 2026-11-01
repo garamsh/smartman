@@ -117,18 +117,14 @@ abstract final class AppSize {
   /// The stacked lockup's width on the sign-in screen.
   static const stackedLockupWidth = 200.0;
 
-  /// The mascot's circle on the empty home screen.
+  /// The mascot where it heads the first-run home or a cardless 오늘 tab.
   static const mascotLarge = 128.0;
 
-  /// The mascot's circle on the study completion card.
-  static const mascotMedium = 84.0;
+  /// The mascot over a card's or a screen's words.
+  static const mascotMedium = 96.0;
 
-  /// The mascot on the 오늘 tab's backlog card.
+  /// The mascot beside words: the backlog card's, or a photo being read.
   static const mascotGuide = 64.0;
-
-  /// A small mascot. No app screen draws it; the web's sizes mirror this
-  /// set.
-  static const mascotSmall = 28.0;
 
   /// The symbol in the today card's corner.
   static const heroSymbol = 120.0;
@@ -310,8 +306,9 @@ abstract final class AppBrand {
   static String stacked(Brightness brightness) =>
       'assets/brand/knowno-stacked-${brightness.name}.png';
 
-  /// The mascot on its cream circle, the same on either ground.
-  static const circle = 'assets/brand/knowno-circle.png';
+  /// The mascot in its [expression], the same on either ground.
+  static String mascot(String expression) =>
+      'assets/brand/knowno-$expression.png';
 }
 
 /// The shadows the app draws, in the theme's [AppColors.shadow].
@@ -350,6 +347,8 @@ final class AppColors extends ThemeExtension<AppColors> {
     required this.surface,
     required this.raised,
     required this.ink,
+    required this.onInk,
+    required this.primary,
     required this.onPrimary,
     required this.ink2,
     required this.muted,
@@ -390,7 +389,9 @@ final class AppColors extends ThemeExtension<AppColors> {
     surface: Color(0xFFFFFCF7),
     raised: Color(0xFFFFFFFF),
     ink: Color(0xFF3B2118),
-    onPrimary: Color(0xFFFFFFFF),
+    onInk: Color(0xFFFFFFFF),
+    primary: Color(0xFFFB7262),
+    onPrimary: Color(0xFF3B2118),
     ink2: Color(0xFF64483D),
     muted: Color(0xFF80695E),
     hairline: Color(0xFFF2E6D6),
@@ -430,6 +431,8 @@ final class AppColors extends ThemeExtension<AppColors> {
     surface: Color(0xFF2B1E1A),
     raised: Color(0xFF382823),
     ink: Color(0xFFFFF1E3),
+    onInk: Color(0xFF3B2118),
+    primary: Color(0xFFFB7262),
     onPrimary: Color(0xFF3B2118),
     ink2: Color(0xFFDCCABB),
     muted: Color(0xFFBDA89A),
@@ -472,10 +475,16 @@ final class AppColors extends ThemeExtension<AppColors> {
   /// A surface raised over [surface], such as a study card in the dark theme.
   final Color raised;
 
-  /// Primary text, and the primary fill.
+  /// Primary text, and the quiet fills: a bar, a selection, an avatar.
   final Color ink;
 
-  /// Text and icons on the primary fill, [ink].
+  /// Text and icons on an [ink] fill.
+  final Color onInk;
+
+  /// The primary action's fill: the mascot's coral, in both themes.
+  final Color primary;
+
+  /// A primary action's label, the brand's cocoa, on [primary].
   final Color onPrimary;
 
   /// Text one step quieter than [ink], such as a card's back in a list.
@@ -585,6 +594,8 @@ final class AppColors extends ThemeExtension<AppColors> {
     Color? surface,
     Color? raised,
     Color? ink,
+    Color? onInk,
+    Color? primary,
     Color? onPrimary,
     Color? ink2,
     Color? muted,
@@ -621,6 +632,8 @@ final class AppColors extends ThemeExtension<AppColors> {
     surface: surface ?? this.surface,
     raised: raised ?? this.raised,
     ink: ink ?? this.ink,
+    onInk: onInk ?? this.onInk,
+    primary: primary ?? this.primary,
     onPrimary: onPrimary ?? this.onPrimary,
     ink2: ink2 ?? this.ink2,
     muted: muted ?? this.muted,
@@ -663,6 +676,8 @@ final class AppColors extends ThemeExtension<AppColors> {
       surface: mix(surface, other.surface),
       raised: mix(raised, other.raised),
       ink: mix(ink, other.ink),
+      onInk: mix(onInk, other.onInk),
+      primary: mix(primary, other.primary),
       onPrimary: mix(onPrimary, other.onPrimary),
       ink2: mix(ink2, other.ink2),
       muted: mix(muted, other.muted),
@@ -708,7 +723,7 @@ ThemeData _theme(Brightness brightness, AppColors colors) {
   final scheme = ColorScheme(
     brightness: brightness,
     primary: colors.ink,
-    onPrimary: colors.onPrimary,
+    onPrimary: colors.onInk,
     secondary: colors.ink2,
     onSecondary: colors.surface,
     error: colors.dontKnowText,
@@ -725,7 +740,7 @@ ThemeData _theme(Brightness brightness, AppColors colors) {
     outlineVariant: colors.hairline,
     shadow: colors.shadow,
     inverseSurface: colors.ink,
-    onInverseSurface: colors.onPrimary,
+    onInverseSurface: colors.onInk,
   );
   final control = RoundedRectangleBorder(
     borderRadius: BorderRadius.circular(AppRadius.button),
@@ -817,7 +832,7 @@ ThemeData _theme(Brightness brightness, AppColors colors) {
         minimumSize: const Size(AppSize.tapTarget, AppSize.button),
         textStyle: AppType.label,
         foregroundColor: colors.ink,
-        selectedForegroundColor: colors.onPrimary,
+        selectedForegroundColor: colors.onInk,
         selectedBackgroundColor: colors.ink,
         backgroundColor: colors.surface,
         side: BorderSide(color: colors.outline),
@@ -828,9 +843,8 @@ ThemeData _theme(Brightness brightness, AppColors colors) {
     // on the ground.
     switchTheme: SwitchThemeData(
       thumbColor: WidgetStateProperty.resolveWith(
-        (states) => states.contains(WidgetState.selected)
-            ? colors.onPrimary
-            : colors.muted,
+        (states) =>
+            states.contains(WidgetState.selected) ? colors.onInk : colors.muted,
       ),
       trackColor: WidgetStateProperty.resolveWith(
         (states) =>
@@ -844,7 +858,7 @@ ThemeData _theme(Brightness brightness, AppColors colors) {
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
       shape: control,
-      contentTextStyle: AppType.secondary.copyWith(color: colors.onPrimary),
+      contentTextStyle: AppType.secondary.copyWith(color: colors.onInk),
     ),
     popupMenuTheme: PopupMenuThemeData(
       color: colors.surface,

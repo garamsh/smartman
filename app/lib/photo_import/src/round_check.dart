@@ -26,7 +26,7 @@ class RoundCheck extends StatelessWidget {
           ? Icon(
               LucideIcons.check,
               size: AppSize.checkIcon,
-              color: colors.onPrimary,
+              color: colors.onInk,
             )
           : null,
     );

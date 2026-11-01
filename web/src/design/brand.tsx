@@ -44,11 +44,20 @@ export function BrandMark({
   );
 }
 
-/** The mascot on its cream circle, sized by [className], decorative. */
-export function Mascot({ className }: { className: string }) {
+/** The moods of the mascot, each the same drawing (ADR 0141). */
+export type MascotExpression = "thinking" | "happy" | "sad" | "sleepy";
+
+/** The mascot in its [expression], on no ground of its own, sized by [className], decorative. */
+export function Mascot({
+  expression,
+  className,
+}: {
+  expression: MascotExpression;
+  className: string;
+}) {
   return (
     <Image
-      src="/brand/knowno-circle.svg"
+      src={`/brand/knowno-${expression}.svg`}
       alt=""
       width={128}
       height={128}

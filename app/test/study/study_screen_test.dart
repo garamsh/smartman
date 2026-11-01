@@ -13,10 +13,10 @@ import 'package:smartman/database/database.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/design/app_button.dart';
 import 'package:smartman/design/app_section_label.dart';
-import 'package:smartman/home/src/mascot.dart';
 import 'package:smartman/design/streak_flame.dart';
 import 'package:smartman/study/src/completion_card.dart';
 import 'package:smartman/study/src/study_coach.dart';
+import 'package:smartman/design/mascot.dart';
 import 'package:smartman/design/theme.dart';
 import 'package:smartman/design/word_break.dart';
 import 'package:smartman/l10n/app_localizations.dart';
@@ -1469,21 +1469,30 @@ void main() {
     (tester) async {
       final study = await _open(tester, ['a', 'b']);
 
+      // Never on a study card: only the completion card draws the mascot.
+      expect(study.current, 'a front');
+      expect(find.byType(Mascot), findsNothing);
       await study.dontKnow(elapsed: const Duration(seconds: 10));
       await study.know(elapsed: const Duration(seconds: 10));
       expect(study.current, 'a front');
+      expect(find.byType(Mascot), findsNothing);
       await study.know(elapsed: const Duration(seconds: 45));
 
       expect(shownText('Done for today'), findsOneWidget);
       expect(_currentCard, findsNothing);
-      // The heading leads the card, with no mascot over it.
+      // The happy mascot over the heading, the screen's one.
       expect(
-        find.descendant(
-          of: find.byType(CompletionCard),
-          matching: find.byType(Mascot),
-        ),
-        findsNothing,
+        tester
+            .widget<Mascot>(
+              find.descendant(
+                of: find.byType(CompletionCard),
+                matching: find.byType(Mascot),
+              ),
+            )
+            .expression,
+        MascotExpression.happy,
       );
+      expect(find.byType(Mascot), findsOneWidget);
       expect(
         find.bySemanticsLabel("Know 2, don't know 1, 2 min, 1-day streak"),
         findsOneWidget,
@@ -1809,6 +1818,10 @@ void main() {
       );
       expect(stored, hasLength(1));
       expect(shownText('No cards to study today'), findsOneWidget);
+      expect(
+        tester.widget<Mascot>(find.byType(Mascot)).expression,
+        MascotExpression.sleepy,
+      );
       expect(shownText('Done for today'), findsNothing);
       expect(shownText('Study'), findsNothing);
       expect(study.current, isNull);

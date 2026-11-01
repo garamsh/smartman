@@ -12,8 +12,8 @@ import 'package:smartman/deck/deck.dart';
 import 'package:smartman/design/app_button.dart';
 import 'package:smartman/design/app_chip.dart';
 import 'package:smartman/design/app_list_row.dart';
-import 'package:smartman/home/src/mascot.dart';
 import 'package:smartman/design/streak_flame.dart';
+import 'package:smartman/design/mascot.dart';
 import 'package:smartman/design/theme.dart';
 import 'package:smartman/home/src/deck_screen.dart';
 import 'package:smartman/home/src/home_screen.dart';
@@ -1373,7 +1373,7 @@ void main() {
     );
 
     testWidgets(
-      'the done card\'s goal and more-today chips are words alone, its streak chip keeps the flame, and its mascot has no z\'s',
+      'the done card\'s goal and more-today chips are words alone, its streak chip keeps the flame, and its mascot is happy with no z\'s',
       (tester) async {
         final list = await _open(
           tester,
@@ -1398,7 +1398,10 @@ void main() {
           ),
           findsOneWidget,
         );
-        expect(find.byType(Mascot), findsOneWidget);
+        expect(
+          tester.widget<Mascot>(find.byType(Mascot)).expression,
+          MascotExpression.happy,
+        );
         expect(find.text('z'), findsNothing);
         await list.close();
       },
@@ -1414,8 +1417,12 @@ void main() {
 
       final lead = rowOf('Pick up where you left off');
       expect(
-        find.descendant(of: lead, matching: find.byType(Mascot)),
-        findsOneWidget,
+        tester
+            .widget<Mascot>(
+              find.descendant(of: lead, matching: find.byType(Mascot)),
+            )
+            .expression,
+        MascotExpression.thinking,
       );
       expect(
         find.descendant(of: lead, matching: find.byType(Icon)),
@@ -1425,16 +1432,22 @@ void main() {
     });
 
     testWidgets(
-      'a 오늘 tab with no card says how to start without the mascot, which the first-run home keeps',
+      'a 오늘 tab with no card says how to start under the happy mascot, and the first-run home under the thinking one',
       (tester) async {
         var list = await _open(tester, decks: ['Alpha']);
         expect(shownText('Make your first card?'), findsOneWidget);
-        expect(find.byType(Mascot), findsNothing);
+        expect(
+          tester.widget<Mascot>(find.byType(Mascot)).expression,
+          MascotExpression.happy,
+        );
         await list.close();
 
         list = await _open(tester, decks: []);
         expect(shownText('Shall we make your first deck?'), findsOneWidget);
-        expect(find.byType(Mascot), findsOneWidget);
+        expect(
+          tester.widget<Mascot>(find.byType(Mascot)).expression,
+          MascotExpression.thinking,
+        );
         await list.close();
       },
     );

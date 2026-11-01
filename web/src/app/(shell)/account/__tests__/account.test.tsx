@@ -16,8 +16,8 @@ import AccountPage from "../page";
 
 vi.mock("next/headers", () => import("@/testing/next-headers"));
 
-/** The mascot's drawing, as `Mascot` draws it from the brand's circled mark. */
-const mascot = 'img[src*="knowno-circle"]';
+/** The mark's drawing, as `Mascot` draws its thinking expression. */
+const mascot = 'img[src*="knowno-thinking"]';
 
 describe("the account page", () => {
   beforeEach(async () => {

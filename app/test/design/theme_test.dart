@@ -259,7 +259,8 @@ void main() {
           (colors.muted, colors.surface),
           (colors.muted, colors.ground),
           (colors.muted, colors.raised),
-          (colors.onPrimary, colors.ink),
+          (colors.onPrimary, colors.primary),
+          (colors.onInk, colors.ink),
           (colors.ink, colors.brandTint),
           (colors.onHero, colors.hero),
           (colors.brand, colors.onHero),
@@ -334,6 +335,7 @@ void main() {
         colors.onDontKnowTint,
       ]) {
         expect(apart(red, colors.onHero), greaterThanOrEqualTo(20));
+        expect(apart(red, colors.primary), greaterThanOrEqualTo(20));
       }
     }
   });
