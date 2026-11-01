@@ -377,7 +377,7 @@ final class UnsupportedContent extends Content {
 /// each stored with one or more, or an image with a box over it
 /// (ADR 0109); a cloze still being written before its first blank counts,
 /// so the editor's preview draws it as it will be.
-bool _hasBlank(Content block) => switch (block) {
+bool hasBlank(Content block) => switch (block) {
   ClozeContent() || TableContent() => true,
   ImageContent(:final boxes) => boxes.isNotEmpty,
   TextContent() ||
@@ -393,17 +393,24 @@ bool _hasBlank(Content block) => switch (block) {
 /// back's, so the front stays the prompt (ADR 0108). No stored field says
 /// which, so the content and the mode cannot disagree.
 List<Content>? oneFaceOf(List<Content> front, List<Content> back) =>
-    front.any(_hasBlank)
+    front.any(hasBlank)
     ? front
-    : back.any(_hasBlank)
+    : back.any(hasBlank)
     ? [...front, ...back]
     : null;
 
-/// The media ids of the images and sounds in [blocks], in order.
+/// The media ids of the images and sounds in [blocks], in order, those of
+/// a later version's image or sound among them (ADR 0137), since a file is
+/// released once no block names it.
 Set<MediaId> mediaOf(List<Content> blocks) => {
   for (final block in blocks)
     if (block case ImageContent(:final media) || AudioContent(:final media))
-      media,
+      media
+    else if (block case UnsupportedContent(
+      type: _imageType || _audioType,
+      payload: {'media': final String media},
+    ))
+      MediaId(media),
 };
 
 /// The sounds in [blocks], in order (ADR 0112).
@@ -608,10 +615,12 @@ List<Content> decodeContent(String encoded) {
   if (decoded is! List<Object?>) {
     throw FormatException('content is not a list', encoded);
   }
-  return [for (final block in decoded) _decodeBlock(block, encoded)];
+  return [for (final block in decoded) decodeBlock(block, encoded)];
 }
 
-Content _decodeBlock(Object? block, String source) {
+/// One stored block as [decodeContent] reads it, named [source] in a
+/// [FormatException].
+Content decodeBlock(Object? block, String source) {
   if (block is! Map<String, Object?>) {
     throw FormatException('content block is not an object', source);
   }

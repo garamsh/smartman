@@ -1,0 +1,70 @@
+[
+  {
+    "name": "a 글 with both sides",
+    "blocks": [{"type": "text", "v": 2, "payload": {"front": "a", "back": "b"}}],
+    "problem": null
+  },
+  {
+    "name": "a 글 with both parts empty breaks its shape",
+    "blocks": [{"type": "text", "v": 2, "payload": {"front": " ", "back": ""}}],
+    "problem": "shape"
+  },
+  {
+    "name": "a 글 with a front alone adds nothing",
+    "blocks": [{"type": "text", "v": 2, "payload": {"front": "a", "back": ""}}],
+    "problem": "nothing_added"
+  },
+  {
+    "name": "a 글 with a back alone shows nothing first",
+    "blocks": [{"type": "text", "v": 2, "payload": {"front": "", "back": "b"}}],
+    "problem": "nothing_before"
+  },
+  {
+    "name": "a 빈칸 문장 alone counts for both",
+    "blocks": [{"type": "cloze", "v": 1, "payload": {"text": "___", "answers": ["x"]}}],
+    "problem": null
+  },
+  {
+    "name": "a 단어 with a term and senses",
+    "blocks": [{"type": "senses", "v": 2, "payload": {"term": "apple", "ask": "term", "senses": [{"labels": [], "meaning": "사과", "examples": []}]}}],
+    "problem": null
+  },
+  {
+    "name": "a 단어 with no term adds nothing when it asks the meaning",
+    "blocks": [{"type": "senses", "v": 2, "payload": {"term": "", "ask": "meaning", "senses": [{"labels": [], "meaning": "사과", "examples": []}]}}],
+    "problem": "nothing_added"
+  },
+  {
+    "name": "a 단어 of an unknown ask breaks its shape",
+    "blocks": [{"type": "senses", "v": 2, "payload": {"term": "a", "ask": "both", "senses": [{"labels": [], "meaning": "b", "examples": []}]}}],
+    "problem": "shape"
+  },
+  {
+    "name": "a 사진 without a box and without a side breaks its shape",
+    "blocks": [{"type": "image", "v": 2, "payload": {"media": "m", "width": 9, "height": 9, "boxes": []}}],
+    "problem": "shape"
+  },
+  {
+    "name": "a 사진 with a box and a side breaks its shape",
+    "blocks": [{"type": "image", "v": 2, "payload": {"media": "m", "width": 9, "height": 9, "boxes": [{"id": "x", "x": 0, "y": 0, "w": 1, "h": 1}], "side": "front"}}],
+    "problem": "shape"
+  },
+  {
+    "name": "a 사진 with a box and no side counts for both",
+    "blocks": [{"type": "image", "v": 2, "payload": {"media": "m", "width": 9, "height": 9, "boxes": [{"id": "x", "x": 0, "y": 0, "w": 1, "h": 1}]}}],
+    "problem": null
+  },
+  {
+    "name": "a 소리 on the front with a 글's back",
+    "blocks": [
+      {"type": "audio", "v": 2, "payload": {"media": "m", "duration_ms": 9, "side": "front"}},
+      {"type": "text", "v": 2, "payload": {"front": "", "back": "b"}}
+    ],
+    "problem": null
+  },
+  {
+    "name": "a 소리 of an unknown side breaks its shape",
+    "blocks": [{"type": "audio", "v": 2, "payload": {"media": "m", "duration_ms": 9, "side": "top"}}],
+    "problem": "shape"
+  }
+]
