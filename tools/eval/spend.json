@@ -175,6 +175,26 @@
       "date": "2026-11-01",
       "spentUsd": 0.013158,
       "note": "prompt v9"
+    },
+    {
+      "date": "2026-11-01",
+      "spentUsd": 0.014,
+      "note": "prompt v9 (samples 90, 91; #536 d354b1e)"
+    },
+    {
+      "date": "2026-11-01",
+      "spentUsd": 0.0125,
+      "note": "prompt v9 (owner's photo as sample 90; #536 d354b1e)"
+    },
+    {
+      "date": "2026-11-01",
+      "spentUsd": 0.0306,
+      "note": "prompt v9 (samples 01, 13, 90, 91; #536 ab84c4b)"
+    },
+    {
+      "date": "2026-11-01",
+      "spentUsd": 0.0125,
+      "note": "prompt v9 (owner's photo as sample 90; #536 ab84c4b)"
     }
   ]
 }
