@@ -53,6 +53,7 @@ vi.mock("next/cache", () => ({
 const notFound = { digest: "NEXT_HTTP_ERROR_FALLBACK;404" };
 const french = "d0000000-0000-4000-8000-0000000000f1";
 const diary = "d0000000-0000-4000-8000-0000000000f2";
+const stored = "d0000000-0000-4000-8000-0000000000f3";
 
 /** Signs the next request in as [user], with the browser's zone UTC. */
 async function signIn(user: typeof testUser | typeof otherUser = testUser) {
@@ -362,6 +363,44 @@ describe("a deck's page", () => {
       "chien개",
     ]);
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+  });
+
+  it("describes a card by every 칸, for an earlier card and a free v2 card", async () => {
+    const senses = [{ labels: [], meaning: "사과", examples: [] }];
+    admin.seedDeck({
+      id: stored,
+      name: "Stored",
+      cards: [
+        { id: "earlier", front: "chat", back: "고양이" },
+        {
+          id: "glue",
+          front: [{ type: "text", v: 2, payload: { front: "chien", back: "개" } }],
+          back: [],
+        },
+        {
+          id: "word",
+          front: [{ type: "senses", v: 2, payload: { term: "apple", ask: "term", senses } }],
+          back: [],
+        },
+        {
+          id: "blank",
+          front: [
+            { type: "cloze", v: 1, payload: { text: "___ is red.", answers: ["Rose"] } },
+            { type: "text", v: 2, payload: { front: "", back: "A flower." } },
+          ],
+          back: [],
+        },
+      ],
+    });
+    await render(DeckContent, { params: Promise.resolve({ id: stored }) });
+
+    const cards = within(screen.getByRole("region", { name: "카드" }));
+    expect(cards.getAllByRole("listitem").map((card) => card.textContent)).toEqual([
+      "chat고양이",
+      "chien개",
+      "apple사과",
+      "Rose is red.A flower.",
+    ]);
   });
 
   it("shows a private deck no one reported, read-only, and is not found for an id that is no deck's", async () => {

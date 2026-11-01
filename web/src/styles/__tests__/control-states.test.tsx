@@ -105,6 +105,7 @@ describe("the controls' pointer, hover and pressed states", () => {
               createdAt: 0,
               front: [{ kind: "text", text: "chat" }],
               back: [{ kind: "text", text: "cat" }],
+              cells: [{ kind: "text", front: "chat", back: "cat" }],
             },
           ]}
         />

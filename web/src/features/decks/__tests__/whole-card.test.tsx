@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 
 import { blanksUnder } from "@/testing/whole-cards";
 
-import type { Content } from "../card-content";
-import { WholeCard } from "../components/whole-card";
+import type { Cell, Content } from "../card-content";
+import { WholeCard, WholeCells } from "../components/whole-card";
 
 // A wide photo and a tall one, each with a box near the top left holding an answer and one near
 // the bottom right without, as the app's `image_block_test.dart` draws them (ADR 0109).
@@ -186,5 +186,78 @@ describe("a sound on a whole card", () => {
     expect(container.querySelector("[role=group]")?.getAttribute("aria-label")).toBe(
       "빈칸 says meow. 소리",
     );
+  });
+});
+
+// A card of several 칸 drawn whole, each in place (ADR 0137).
+describe("a whole card's 칸", () => {
+  const cells: Cell[] = [
+    { kind: "text", front: "Colour", back: "A flower." },
+    { kind: "blank", block: { kind: "cloze", text: "___ is red.", answers: ["Rose"] } },
+    { kind: "text", front: "", back: "After." },
+    {
+      kind: "word",
+      term: "apple",
+      ask: "term",
+      senses: [{ labels: [], meaning: "사과", examples: [] }],
+    },
+    { kind: "placed", block: { kind: "audio", media: "before", durationMs: 1000 }, side: "front" },
+    { kind: "placed", block: { kind: "audio", media: "after", durationMs: 2000 }, side: "back" },
+  ];
+  const draw = (revealed: boolean, inRow?: boolean) => {
+    const { container, unmount } = render(
+      <WholeCells cells={cells} revealed={revealed} inRow={inRow} />,
+    );
+    const group = container.querySelector<HTMLElement>("[role=group]");
+    if (!group) throw new Error("no group drawn");
+    return { group, parts: [...group.children] as HTMLElement[], unmount };
+  };
+
+  it("draws what shows before the reveal in order, with its blank empty and nothing of an added part", () => {
+    const { group, parts } = draw(false);
+
+    expect(parts.map((part) => part.textContent)).toEqual([
+      "Colour",
+      "Rose is red.",
+      "apple",
+      "소리 0:01",
+    ]);
+    expect(blanksUnder(group)).toEqual({ Rose: false });
+    expect(group.getAttribute("aria-label")).toBe("Colour. 빈칸 is red.. apple. 소리");
+    expect(group.querySelector("[data-audio=after]")).toBeNull();
+  });
+
+  it("draws every 칸 revealed in place, an added part under its first part at the back's size and colour", () => {
+    const { group, parts } = draw(true);
+
+    expect(parts.map((part) => part.textContent)).toEqual([
+      "Colour",
+      "A flower.",
+      "Rose is red.",
+      "After.",
+      "apple",
+      "사과",
+      "소리 0:01",
+      "소리 0:02",
+    ]);
+    expect(blanksUnder(group)).toEqual({ Rose: true });
+    expect(group.getAttribute("aria-label")).toBe(
+      "Colour. A flower.. Rose is red.. After.. apple. 사과. 소리. 소리",
+    );
+    for (const at of [1, 3, 5]) {
+      expect(parts[at]?.className).toContain("text-back");
+      expect(parts[at]?.className).toContain("text-ink-2");
+    }
+    // Control: a first part keeps the title's style.
+    expect(parts[0]?.className).toContain("text-headline");
+    expect(parts[0]?.className).not.toContain("text-ink-2");
+  });
+
+  it("draws an added part muted in a list row", () => {
+    const { parts } = draw(true, true);
+    expect(parts[1]?.className).toContain("text-muted");
+    expect(parts[1]?.className).not.toContain("text-back");
+    // Control: a first part keeps the row's style.
+    expect(parts[0]?.className).not.toContain("text-muted");
   });
 });
