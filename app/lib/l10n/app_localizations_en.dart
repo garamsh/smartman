@@ -161,25 +161,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clozeBlankMarker => 'Remove ___ from the line';
 
   @override
-  String get addToFront => 'Add to front';
-
-  @override
-  String get addToBack => 'Add to back';
-
-  @override
-  String get addBlock => 'Add';
+  String get addBlock => 'Add block';
 
   @override
   String get blockText => 'Text';
 
   @override
-  String get blockTextDescription => 'A word, a sentence or a note';
+  String get blockSenses => 'Word';
 
   @override
-  String get blockSenses => 'Meanings';
-
-  @override
-  String get blockSensesDescription => 'Write labels and one or more meanings';
+  String get blockSensesDescription => 'A word and its meanings';
 
   @override
   String get blockTable => 'Table';
@@ -307,15 +298,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get autoplayAudio => 'Play front sound automatically';
 
   @override
-  String blockMenu(String side, int number) {
-    return '$side block $number menu';
+  String blockMenu(int number) {
+    return 'Block $number menu';
   }
 
   @override
-  String get deleteBlock => 'Delete';
+  String get cardNothingBefore => 'Add something to show on the front';
 
   @override
-  String get sideBlockRequired => 'Add at least one block';
+  String get cardNothingAdded => 'Add a back or a blank';
+
+  @override
+  String get wordTerm => 'Word';
+
+  @override
+  String get wordAskFirst => 'Shown on the front';
+
+  @override
+  String get deleteBlock => 'Delete';
 
   @override
   String get tableToolbar => 'Table tools';
@@ -390,14 +390,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get previewTapToFront => 'Tap again to go back to the front';
 
   @override
-  String get previewTapToReveal => 'Tap the card to fill in its blanks';
+  String get previewTapToReveal => 'Tap the card to see the answer';
 
   @override
   String get previewTapToHide => 'Tap again to empty its blanks';
-
-  @override
-  String get clozeBackHint =>
-      'A card with blanks is answered on its front. Its back can stay empty.';
 
   @override
   String get senseLabelHint => 'Label';

@@ -40,8 +40,7 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: CardPreviewScreen(
-            front: [TextContent(front)],
-            back: const [TextContent('광합성')],
+            cells: [TextCell(front: front, back: '광합성')],
           ),
         ),
       );
@@ -79,20 +78,18 @@ void main() {
       'tap, and names no side, where a split card names its side', (
     tester,
   ) async {
-    Widget preview(List<Content> front, List<Content> back) => MaterialApp(
+    Widget preview(List<Cell> cells) => MaterialApp(
       theme: lightTheme,
       locale: const Locale('en'),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      home: CardPreviewScreen(key: UniqueKey(), front: front, back: back),
+      home: CardPreviewScreen(key: UniqueKey(), cells: cells),
     );
     await tester.pumpWidget(
-      preview(
-        const [
-          ClozeContent('___ is red.', ['Rose']),
-        ],
-        const [TextContent('A flower.')],
-      ),
+      preview(const [
+        BlankCell(ClozeContent('___ is red.', ['Rose'])),
+        TextCell(back: 'A flower.'),
+      ]),
     );
     await tester.pumpAndSettle();
     expect(find.text('A flower.'), findsNothing);
@@ -105,7 +102,7 @@ void main() {
 
     // Control: a split card names its side.
     await tester.pumpWidget(
-      preview(const [TextContent('Rose')], const [TextContent('A flower.')]),
+      preview(const [TextCell(front: 'Rose', back: 'A flower.')]),
     );
     await tester.pumpAndSettle();
     expect(find.text('Front'), findsOneWidget);

@@ -260,13 +260,14 @@ class DeckRepository {
     };
   });
 
-  /// Adds a manual card, of the template every card is written in. A card in
-  /// the same deck with an equal key blocks the save unless [allowDuplicate]
-  /// is set.
+  /// Adds a manual card, in the frame when given its [cells], of which [front]
+  /// and [back] are then the projection. A card in the same deck with an
+  /// equal key blocks the save unless [allowDuplicate] is set.
   Future<SaveCardResult> addCard(
     DeckId deckId, {
     required List<Content> front,
     required List<Content> back,
+    List<Cell>? cells,
     bool allowDuplicate = false,
   }) {
     final key = CardKey.fromFront(plainText(front));
@@ -282,12 +283,18 @@ class DeckRepository {
         final row = CardRow(
           id: _newId(),
           deckId: deckId.value,
-          front: encodeContent(_withIds(front, const [])),
-          back: encodeContent(_withIds(back, const [])),
+          front: cells == null
+              ? encodeContent(_withIds(front, const []))
+              : encodeCells(cells, newId: _newBlockId),
+          back: cells == null
+              ? encodeContent(_withIds(back, const []))
+              : encodeContent(const []),
           cardKey: key.value,
           source: CardSource.manual.name,
           template: freeTemplate,
-          templateVersion: cardTemplateVersion,
+          templateVersion: cells == null
+              ? cardTemplateVersion
+              : cardFrameVersion,
           createdAt: now,
           updatedAt: now,
           dirty: true,
@@ -298,14 +305,16 @@ class DeckRepository {
     );
   }
 
-  /// Replaces [card]'s front and back, recording the template every card is
-  /// written in. Another card in the same deck with an equal key blocks the
-  /// save unless [allowDuplicate] is set. Content that cannot be read back is
-  /// not stored: the save fails as [UnreadableCard].
+  /// Replaces [card]'s content, in the frame when given its [cells], of which
+  /// [front] and [back] are then the projection. Another card in the same
+  /// deck with an equal key blocks the save unless [allowDuplicate] is set.
+  /// Content that cannot be read back is not stored: the save fails as
+  /// [UnreadableCard].
   Future<SaveCardResult> editCard(
     Card card, {
     required List<Content> front,
     required List<Content> back,
+    List<Cell>? cells,
     bool allowDuplicate = false,
   }) {
     final key = CardKey.fromFront(plainText(front));
@@ -325,11 +334,21 @@ class DeckRepository {
           _db.cards,
         )..where((row) => row.id.equals(card.id.value))).write(
           CardsCompanion(
-            front: Value(encodeContent(_withIds(front, card.front))),
-            back: Value(encodeContent(_withIds(back, card.back))),
+            front: Value(
+              cells == null
+                  ? encodeContent(_withIds(front, card.front))
+                  : encodeCells(cells, newId: _newBlockId),
+            ),
+            back: Value(
+              cells == null
+                  ? encodeContent(_withIds(back, card.back))
+                  : encodeContent(const []),
+            ),
             cardKey: Value(key.value),
             template: const Value(freeTemplate),
-            templateVersion: const Value(cardTemplateVersion),
+            templateVersion: Value(
+              cells == null ? cardTemplateVersion : cardFrameVersion,
+            ),
             updatedAt: Value(now),
             dirty: const Value(true),
           ),
@@ -582,10 +601,12 @@ class DeckRepository {
     ];
   }
 
-  /// The template and version a merged back records on [card]: the one every
-  /// card is written in, or the card's own when this build cannot edit it,
-  /// so a later build's template is kept (ADR 0106, ADR 0114).
-  static (String?, int?) _mergedTemplate(Card card) => canEdit(card)
+  /// The template and version a merged back records on [card]: a card of two
+  /// side lists is written in the one this build gives them; a framed card
+  /// keeps the frame, and a later build's template is kept (ADR 0106,
+  /// ADR 0114, ADR 0137).
+  static (String?, int?) _mergedTemplate(Card card) =>
+      canEdit(card) && card.cells == null
       ? (freeTemplate, cardTemplateVersion)
       : (card.template, card.templateVersion);
 

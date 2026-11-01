@@ -5,6 +5,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/database/database.dart';
 import 'package:smartman/deck/deck.dart';
+import 'package:smartman/deck/src/card_template.dart';
 import 'package:smartman/media/media.dart';
 
 import '../media/fakes.dart';
@@ -357,6 +358,67 @@ void main() {
           ...cells,
           const TextCell(back: 'Also a colour.'),
         ]);
+      });
+
+      test('a merge onto a framed card the editor can edit keeps it in the '
+          'frame, which the editor then opens with the merged 글', () async {
+        final deck = await repository.createDeck('Colours');
+        await repository.addCards(AddToDeck(deck.id), [incoming]);
+        final before = (await cardsOf(deck.id)).single;
+        expect(canEdit(before), isTrue, reason: 'the setup: editable');
+
+        await repository.addCards(AddToDeck(deck.id), [
+          IncomingCard(
+            front: sides.front,
+            back: const [TextContent('Also a colour.')],
+            onDuplicate: DuplicateChoice.mergeBack,
+          ),
+        ]);
+
+        final stored = await row(deck.id);
+        expect((stored.template, stored.templateVersion), ('free', 2));
+        final card = (await cardsOf(deck.id)).single;
+        expect(card.cells, [...cells, const TextCell(back: 'Also a colour.')]);
+        expect(cellsOf(card), card.cells);
+      });
+
+      test('the editor\'s save writes its 칸 in free v2 with the back empty, '
+          'keyed by what shows before the reveal, and a card of two sides '
+          'is taken into the frame', () async {
+        final deck = await repository.createDeck('Colours');
+        const saved = [TextCell(front: 'Rose', back: 'A flower.')];
+        final projection = sidesOf(saved);
+        final added = await repository.addCard(
+          deck.id,
+          front: projection.front,
+          back: projection.back,
+          cells: saved,
+        );
+        expect(added, isA<CardSaved>());
+        final stored = await row(deck.id);
+        expect((stored.template, stored.templateVersion), ('free', 2));
+        expect(stored.back, '[]');
+        expect(stored.cardKey, frameKey(saved).value);
+        expect(decodeCells(stored.front), saved);
+
+        final other = await repository.createDeck('Other');
+        await repository.addCard(
+          other.id,
+          front: const [TextContent('Rose')],
+          back: const [TextContent('A flower.')],
+        );
+        final card = (await cardsOf(other.id)).single;
+        expect(card.templateVersion, 1, reason: 'the setup: two side lists');
+        await repository.editCard(
+          card,
+          front: projection.front,
+          back: projection.back,
+          cells: saved,
+        );
+        final edited = await row(other.id);
+        expect((edited.template, edited.templateVersion), ('free', 2));
+        expect(edited.back, '[]');
+        expect(decodeCells(edited.front), saved);
       });
 
       test('a back already on the card, or none, merges nothing into a stored '

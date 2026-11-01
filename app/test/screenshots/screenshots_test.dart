@@ -1046,12 +1046,12 @@ void main() {
 
       await tap(tester, find.text(ko.save));
       await shot(tester, '05b-card-editor-basic-errors');
-      // The back's Text block, made a Meanings block.
-      await reveal(find.byTooltip(ko.blockMenu(ko.cardBack, 1)));
-      await tap(tester, find.byTooltip(ko.blockMenu(ko.cardBack, 1)));
+      // The card's Text, made a Word.
+      await reveal(find.byTooltip(ko.blockMenu(1)));
+      await tap(tester, find.byTooltip(ko.blockMenu(1)));
       await tap(tester, find.text(ko.deleteBlock).last);
-      await reveal(find.bySemanticsLabel(ko.addToBack));
-      await tap(tester, find.bySemanticsLabel(ko.addToBack));
+      await reveal(find.bySemanticsLabel(ko.addBlock));
+      await tap(tester, find.bySemanticsLabel(ko.addBlock));
       await tap(tester, find.text(ko.blockSenses).last);
 
       await reveal(find.byType(TextField).first);
@@ -1256,14 +1256,121 @@ void main() {
       await tap(tester, find.byType(Scaffold).last);
       await shot(tester, '05w-card-preview-back');
       await tap(tester, find.byTooltip(ko.close));
-      await tester.ensureVisible(find.bySemanticsLabel(ko.addToBack));
+      await tester.ensureVisible(find.bySemanticsLabel(ko.addBlock));
       await tester.pumpAndSettle();
-      await tap(tester, find.bySemanticsLabel(ko.addToBack));
+      await tap(tester, find.bySemanticsLabel(ko.addBlock));
       await shot(tester, '05s-card-editor-add-sheet');
       await tap(tester, find.text(ko.blockSenses).last);
-      await tester.ensureVisible(find.bySemanticsLabel(ko.addToBack));
+      await tester.ensureVisible(find.bySemanticsLabel(ko.addBlock));
       await tester.pumpAndSettle();
       await shot(tester, '05t-card-editor-free-senses');
+      await unmount(tester);
+    });
+
+    testWidgets('each 칸 type in $mode', skip: !_capture, (tester) async {
+      phone(tester);
+      final db = AppDatabase(NativeDatabase.memory());
+      addTearDown(db.close);
+      var ids = 0;
+      final repository = DeckRepository(
+        db,
+        clock: () => homeNow,
+        newId: () => 'id${ids++}',
+      );
+      final deck = (await tester.runAsync(
+        () => repository.createDeck('영단어 기본'),
+      ))!;
+      const cells = <Cell>[
+        TextCell(front: 'ephemeral', back: '덧없는, 순간적인'),
+        WordCell(
+          term: 'present',
+          senses: [
+            CardSense(
+              labels: [PartOfSpeechLabel(PartOfSpeech.noun, '명')],
+              meaning: '선물',
+            ),
+            CardSense(
+              labels: [PartOfSpeechLabel(PartOfSpeech.verb, '동')],
+              meaning: '주다',
+            ),
+          ],
+          ask: WordAsk.term,
+        ),
+        BlankCell(ClozeContent('The capital of France is ___.', ['Paris'])),
+        BlankCell(
+          TableContent(
+            columns: ['나라', '수도'],
+            rows: [
+              ['프랑스', '파리'],
+              ['일본', '도쿄'],
+            ],
+            blanks: [(row: 0, column: 1)],
+          ),
+        ),
+        PlacedCell(
+          ImageContent(media: MediaId('photo'), width: 1600, height: 900),
+          CellSide.back,
+        ),
+        PlacedCell(
+          AudioContent(media: MediaId('sound'), duration: Duration(seconds: 7)),
+          CellSide.front,
+        ),
+      ];
+      final sides = sidesOf(cells);
+      final saved = await tester.runAsync(
+        () => repository.addCard(
+          deck.id,
+          front: sides.front,
+          back: sides.back,
+          cells: cells,
+        ),
+      );
+      final card = (saved! as CardSaved).card;
+      final storage = await openStudyStorage(tester);
+      Future<void> open(Card? card) async {
+        await tester.pumpWidget(
+          ProviderScope(
+            key: UniqueKey(),
+            overrides: [
+              deckRepositoryProvider.overrideWithValue(repository),
+              deckStorageProvider.overrideWithValue(storage),
+              mediaStoreProvider.overrideWithValue(
+                MediaStore(
+                  db,
+                  FakeMediaServer(),
+                  directory: unusedMediaDirectory,
+                  clock: () => homeNow,
+                  newId: () => 'media',
+                ),
+              ),
+            ],
+            child: MaterialApp(
+              theme: lightTheme,
+              darkTheme: darkTheme,
+              themeMode: ThemeMode.values.byName(mode),
+              locale: const Locale('ko'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: CardEditorScreen(deck: deck, card: card),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+      }
+
+      // Tall enough to show every group at once.
+      final size = tester.view.physicalSize;
+      tester.view.physicalSize = Size(size.width, size.height * 2.6);
+      await open(card);
+      await shot(tester, '05x-card-editor-each-kan');
+      tester.view.physicalSize = size;
+      await open(null);
+      await shot(tester, '05y-card-editor-new');
+      await tap(tester, find.text(ko.save));
+      await shot(tester, '05z-card-editor-nothing-before');
+      await tester.enterText(find.byType(TextField).first, 'ephemeral');
+      await tap(tester, find.text(ko.save));
+      await shot(tester, '05za-card-editor-nothing-added');
       await unmount(tester);
     });
 
@@ -1301,16 +1408,14 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      // A front of one Cloze sentence block, and a back of none.
-      for (final side in [ko.cardFront, ko.cardBack]) {
-        await tester.ensureVisible(find.byTooltip(ko.blockMenu(side, 1)));
-        await tester.pumpAndSettle();
-        await tap(tester, find.byTooltip(ko.blockMenu(side, 1)));
-        await tap(tester, find.text(ko.deleteBlock).last);
-      }
-      await tester.ensureVisible(find.bySemanticsLabel(ko.addToFront));
+      // One Cloze sentence.
+      await tester.ensureVisible(find.byTooltip(ko.blockMenu(1)));
       await tester.pumpAndSettle();
-      await tap(tester, find.bySemanticsLabel(ko.addToFront));
+      await tap(tester, find.byTooltip(ko.blockMenu(1)));
+      await tap(tester, find.text(ko.deleteBlock).last);
+      await tester.ensureVisible(find.bySemanticsLabel(ko.addBlock));
+      await tester.pumpAndSettle();
+      await tap(tester, find.bySemanticsLabel(ko.addBlock));
       await tap(tester, find.text(ko.blockCloze).last);
       final line = find.byType(TextField).first;
       await tester.enterText(line, 'She gave me a present for my birthday');
@@ -1332,10 +1437,6 @@ void main() {
       await tester.ensureVisible(find.text('영단어 기본'));
       await tester.pumpAndSettle();
       await shot(tester, '05g-card-editor-cloze');
-      // The back left empty, as a card with blanks allows.
-      await tester.ensureVisible(shownText(ko.clozeBackHint));
-      await tester.pumpAndSettle();
-      await shot(tester, '05u-card-editor-cloze-hint');
       // The caret in "present": the one action turns it back into text.
       controller.selection = const TextSelection.collapsed(offset: 17);
       await tester.pumpAndSettle();
@@ -1388,19 +1489,14 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      // A front of a Text block, the table's name, and a Table block, and a
-      // back of none.
-      await tester.ensureVisible(find.byTooltip(ko.blockMenu(ko.cardBack, 1)));
+      // A Text, the table's name, and a Table.
+      await tester.ensureVisible(find.bySemanticsLabel(ko.addBlock));
       await tester.pumpAndSettle();
-      await tap(tester, find.byTooltip(ko.blockMenu(ko.cardBack, 1)));
-      await tap(tester, find.text(ko.deleteBlock).last);
-      await tester.ensureVisible(find.bySemanticsLabel(ko.addToFront));
-      await tester.pumpAndSettle();
-      await tap(tester, find.bySemanticsLabel(ko.addToFront));
+      await tap(tester, find.bySemanticsLabel(ko.addBlock));
       await tap(tester, find.text(ko.blockTable).last);
       await tester.enterText(find.byType(TextField).first, '불규칙 동사');
-      // The table's fields follow the name's: its headers, then its cells.
-      Finder cell(int index) => find.byType(TextField).at(index + 1);
+      // The table's fields follow the Text's two: its headers, then its cells.
+      Finder cell(int index) => find.byType(TextField).at(index + 2);
       for (final (index, text) in [
         '원형',
         '과거형',
