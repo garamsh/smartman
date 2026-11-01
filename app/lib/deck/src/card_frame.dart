@@ -231,6 +231,68 @@ bool _isDerived(List<Content> front, List<Content> back) =>
     back.single is TextContent &&
     (back.single as TextContent).text == plainText(front);
 
+/// Encodes [cells] as [decodeCells] reads them, a 칸 of no id taking one from
+/// [newId] so every block has one once written (ADR 0106); a 칸 this build
+/// does not know is written as it was stored.
+String encodeCells(List<Cell> cells, {required String Function() newId}) =>
+    jsonEncode([
+      for (final cell in cells)
+        switch (cell) {
+          TextCell(:final front, :final back) => {
+            'type': 'text',
+            'v': _frameVersions['text'],
+            'id': cell.id ?? newId(),
+            'payload': {'front': front, 'back': back},
+          },
+          WordCell(:final term, :final senses, :final ask) => {
+            'type': 'senses',
+            'v': _frameVersions['senses'],
+            'id': cell.id ?? newId(),
+            'payload': {
+              'term': term,
+              'senses':
+                  (_encoded(SensesContent(senses))['payload']
+                      as Map<String, Object?>)['senses'],
+              'ask': ask.name,
+            },
+          },
+          BlankCell(:final block) => _withFrameVersion(
+            _encoded(block),
+            cell,
+            newId,
+          ),
+          PlacedCell(:final block, :final side) => _withFrameVersion(
+            _encoded(block),
+            cell,
+            newId,
+            side: side,
+          ),
+          UnknownCell(:final block) => _encoded(block),
+        },
+    ]);
+
+/// [block] as one stored `{type, v, id, payload}` object.
+Map<String, Object?> _encoded(Content block) =>
+    (jsonDecode(encodeContent([block])) as List<Object?>).single
+        as Map<String, Object?>;
+
+/// [stored] as [cell] keeps it in a 칸 list: at the frame's version of its
+/// type when it has one, with the 칸's id and its [side] when placed.
+Map<String, Object?> _withFrameVersion(
+  Map<String, Object?> stored,
+  Cell cell,
+  String Function() newId, {
+  CellSide? side,
+}) => {
+  ...stored,
+  'v': _frameVersions[stored['type']] ?? stored['v'],
+  'id': cell.id ?? newId(),
+  'payload': {
+    ...stored['payload'] as Map<String, Object?>,
+    'side': ?side?.name,
+  },
+};
+
 /// A card's two side lists as its 칸 list, by the rule of ADR 0137 as amended
 /// by ADR 0140; null when either holds a block this build does not know, which
 /// stays as it is.

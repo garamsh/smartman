@@ -400,6 +400,21 @@ class DeckRepository {
           },
       ],
     };
+    Future<List<Cell>> ownCells(List<Cell> cells) async => [
+      for (final cell in cells)
+        switch (cell) {
+          BlankCell(:final block, :final id) => BlankCell(
+            (await own([block])).single,
+            id: id,
+          ),
+          PlacedCell(:final block, :final side, :final id) => PlacedCell(
+            (await own([block])).single,
+            side,
+            id: id,
+          ),
+          _ => cell,
+        },
+    ];
     final CardsAdded result;
     try {
       result = await _db.transaction(() async {
@@ -419,17 +434,27 @@ class DeckRepository {
             case (null, _) || (_, DuplicateChoice.addNew):
               final now = _clock();
               final back = await own(card.back);
+              final cells = switch (card.cells) {
+                final cells? => await ownCells(cells),
+                null => null,
+              };
               await _db
                   .into(_db.cards)
                   .insert(
                     CardRow(
                       id: _newId(),
                       deckId: deck.id.value,
-                      front: encodeContent(_withIds(front, const [])),
-                      back: encodeContent(_withIds(back, const [])),
+                      front: cells == null
+                          ? encodeContent(_withIds(front, const []))
+                          : encodeCells(cells, newId: _newBlockId),
+                      back: cells == null
+                          ? encodeContent(_withIds(back, const []))
+                          : encodeContent(const []),
                       cardKey: key.value,
                       template: freeTemplate,
-                      templateVersion: cardTemplateVersion,
+                      templateVersion: cells == null
+                          ? cardTemplateVersion
+                          : cardFrameVersion,
                       source: switch (source) {
                         FromPhoto() => CardSource.import.name,
                         FromCopy() => CardSource.copy.name,
@@ -445,13 +470,25 @@ class DeckRepository {
                   );
               added++;
             case (final existing?, DuplicateChoice.mergeBack):
-              if (mergeBack(existing.back, plainText(card.back))
-                  case final back?) {
+              final incoming = plainText(card.back);
+              final cells = existing.cells;
+              if (mergeBack(existing.back, incoming) case final back?
+                  when cells == null || incoming.trim().isNotEmpty) {
                 await (_db.update(
                   _db.cards,
                 )..where((row) => row.id.equals(existing.id.value))).write(
                   CardsCompanion(
-                    back: Value(encodeContent(_withIds(back, existing.back))),
+                    front: cells == null
+                        ? const Value.absent()
+                        : Value(
+                            encodeCells([
+                              ...cells,
+                              TextCell(back: incoming),
+                            ], newId: _newBlockId),
+                          ),
+                    back: cells == null
+                        ? Value(encodeContent(_withIds(back, existing.back)))
+                        : const Value.absent(),
                     template: Value(_mergedTemplate(existing).$1),
                     templateVersion: Value(_mergedTemplate(existing).$2),
                     updatedAt: Value(_clock()),

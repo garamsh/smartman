@@ -66,6 +66,73 @@ void main() {
     });
   });
 
+  group('encodeCells', () {
+    for (final fixture in conversions.where((c) => c['cells'] != null)) {
+      test('round-trips: ${fixture['name']}', () {
+        final cells = decodeCells(jsonEncode(fixture['cells']));
+        expect(decodeCells(encodeCells(cells, newId: () => 'new')), cells);
+      });
+    }
+
+    test('a 칸 keeps its id, and one with none takes a new id', () {
+      const cells = [
+        TextCell(front: 'a', back: 'b', id: 'kept'),
+        BlankCell(ClozeContent('___', ['x'])),
+        PlacedCell(
+          AudioContent(media: MediaId('m'), duration: Duration(seconds: 1)),
+          CellSide.back,
+        ),
+      ];
+      var next = 0;
+      final stored = (jsonDecode(
+        encodeCells(cells, newId: () => 'n${next++}'),
+      ) as List<Object?>).cast<Map<String, Object?>>();
+      expect([for (final block in stored) block['id']], ['kept', 'n0', 'n1']);
+      expect([for (final block in stored) block['v']], [2, 1, 2]);
+      expect((stored.last['payload'] as Map)['side'], 'back');
+      expect(
+        (stored.last['payload'] as Map)['media'],
+        'm',
+        reason: 'the payload is the block\'s own',
+      );
+    });
+
+    test('a 사진 with a box stores no side, and one without stores its side', () {
+      const boxed = ImageContent(
+        media: MediaId('m'),
+        width: 1,
+        height: 1,
+        boxes: [ImageBox(id: 'x', x: 0, y: 0, w: 1, h: 1)],
+      );
+      const plain = ImageContent(media: MediaId('m'), width: 1, height: 1);
+      final stored = (jsonDecode(
+        encodeCells(const [
+          BlankCell(boxed, id: 'a'),
+          PlacedCell(plain, CellSide.front, id: 'b'),
+        ], newId: () => 'new'),
+      ) as List<Object?>).cast<Map<String, Object?>>();
+      expect((stored.first['payload'] as Map).containsKey('side'), isFalse);
+      expect((stored.last['payload'] as Map)['side'], 'front');
+    });
+
+    test('a 칸 this build does not know is written as it was stored', () {
+      final stored = [
+        {
+          'type': 'video',
+          'v': 9,
+          'id': 'v',
+          'payload': {'media': 'm'},
+        },
+      ];
+      expect(
+        jsonDecode(
+          encodeCells(decodeCells(jsonEncode(stored)), newId: () => 'new'),
+        ),
+        stored,
+      );
+    });
+  });
+
   group('the card key', () {
     for (final fixture in conversions) {
       final front = _blocks(fixture['front']);

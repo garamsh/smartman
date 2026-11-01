@@ -244,17 +244,13 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
 
   /// The pinned "카드" row with its "뒷면 보기" switch, then, as one group, a
   /// row for each card whose studied text holds the search, ignoring case,
-  /// its back shown as the switch is. A card is searched on the one face
-  /// [oneFaceOf] gives it, and on its front and back otherwise, so a back
-  /// study never shows is not searched.
+  /// its back shown as the switch is. Every 칸 is searched, revealed, since
+  /// none is hidden from study.
   List<Widget> _cardList(AppLocalizations l10n, List<Card> cards) {
     final query = (_query ?? '').trim().toLowerCase();
     final rows = [
       for (final card in cards)
-        if (switch (oneFaceOf(card.front, card.back)) {
-          final face? => [face],
-          null => [card.front, card.back],
-        }.any(
+        if ([card.front, card.back].any(
           (side) => describeContent(l10n, side).toLowerCase().contains(query),
         ))
           card,
@@ -290,6 +286,7 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
                       key: ValueKey(card.id),
                       front: card.front,
                       back: card.back,
+                      cells: card.cells,
                       shown: _showAll,
                       onOpen: () => _open(card),
                     ),

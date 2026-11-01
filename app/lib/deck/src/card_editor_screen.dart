@@ -166,7 +166,7 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
       CardSide.front when _saved(_front).isEmpty => l10n.sideBlockRequired,
       CardSide.back
           when _saved(_back).isEmpty &&
-              oneFaceOf(_frontBlocks, _backBlocks) == null =>
+              ![..._frontBlocks, ..._backBlocks].any(hasBlank) =>
         l10n.sideBlockRequired,
       _ => null,
     };
@@ -306,7 +306,8 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
   /// Whether the back holds nothing to save while the card holds a blank,
   /// so the card is answered on its front and the back may stay empty.
   bool get _backMayStayEmpty =>
-      _saved(_back).isEmpty && oneFaceOf(_frontPreview, _backPreview) != null;
+      _saved(_back).isEmpty &&
+      [..._frontPreview, ..._backPreview].any(hasBlank);
 
   /// Opens the card as study draws it.
   void _openPreview() {

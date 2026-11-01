@@ -101,4 +101,24 @@ void main() {
       }
     },
   );
+
+  testWidgets('a whole card shows its kept back revealed', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: lightTheme,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const Scaffold(
+          body: CardPreview(
+            front: [
+              ClozeContent('___ is red.', ['Rose']),
+            ],
+            back: [TextContent('A flower.')],
+          ),
+        ),
+      ),
+    );
+    expect(find.text('A flower.'), findsOneWidget);
+    expect(find.byType(VerticalDivider), findsNothing);
+  });
 }

@@ -386,19 +386,6 @@ bool hasBlank(Content block) => switch (block) {
   UnsupportedContent() => false,
 };
 
-/// The face a card with [front] and [back] is studied on, or null when it is
-/// studied front then back (ADR 0106). A card with a blank anywhere is
-/// studied on one face, its answers filled in place: its front when the
-/// front holds a blank, and otherwise its front's blocks followed by its
-/// back's, so the front stays the prompt (ADR 0108). No stored field says
-/// which, so the content and the mode cannot disagree.
-List<Content>? oneFaceOf(List<Content> front, List<Content> back) =>
-    front.any(hasBlank)
-    ? front
-    : back.any(hasBlank)
-    ? [...front, ...back]
-    : null;
-
 /// The media ids of the images and sounds in [blocks], in order, those of
 /// a later version's image or sound among them (ADR 0137), since a file is
 /// released once no block names it.
@@ -416,10 +403,6 @@ Set<MediaId> mediaOf(List<Content> blocks) => {
 /// The sounds in [blocks], in order (ADR 0112).
 List<AudioContent> audioOf(List<Content> blocks) =>
     blocks.whereType<AudioContent>().toList();
-
-/// Whether a card whose front is [front] is drawn whole, that front across
-/// the card with its blanks, rather than split: [oneFaceOf] for that front.
-bool isWholeCard(List<Content> front) => oneFaceOf(front, const []) != null;
 
 const _textType = 'text';
 const _clozeType = 'cloze';

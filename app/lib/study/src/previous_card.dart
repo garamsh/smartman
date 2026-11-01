@@ -151,6 +151,7 @@ class _PreviousCardViewState extends State<PreviousCardView>
             );
           },
           child: _GradedCard(
+            cells: drawnCellsOf(card.card),
             front: card.card.front,
             back: card.card.back,
             answer: card.answer,
@@ -161,20 +162,21 @@ class _PreviousCardViewState extends State<PreviousCardView>
   }
 }
 
-/// [card] as a screen reader reads it where it is drawn as studied: a card
-/// on one face reads that face with its blanks, then filled, since its
-/// stored back is never drawn; any other its front, then its back.
-({String front, String back}) _spokenSides(AppLocalizations l10n, Card card) =>
-    switch (oneFaceOf(card.front, card.back)) {
-      final face? => (
-        front: spokenContent(l10n, face, revealed: false),
-        back: spokenContent(l10n, face, revealed: true),
-      ),
-      null => (
-        front: spokenContent(l10n, card.front, revealed: false),
-        back: describeContent(l10n, card.back),
-      ),
-    };
+/// [card] as a screen reader reads it where it is drawn as studied: a whole
+/// card reads its 칸 with their blanks, then revealed; any other its front,
+/// then its back.
+({String front, String back}) _spokenSides(AppLocalizations l10n, Card card) {
+  final cells = drawnCellsOf(card);
+  return isDrawnWhole(cells)
+      ? (
+          front: spokenCells(l10n, cells, revealed: false),
+          back: spokenCells(l10n, cells, revealed: true),
+        )
+      : (
+          front: spokenContent(l10n, card.front, revealed: false),
+          back: describeContent(l10n, card.back),
+        );
+}
 
 /// The sound a screen reader plays from a card shown with its back: the
 /// back's first, which the answer just showed, or else the front's.
@@ -217,6 +219,7 @@ class EarlierCardView extends StatelessWidget {
           children: [
             Positioned.fill(
               child: _GradedCard(
+                cells: drawnCellsOf(card),
                 front: card.front,
                 back: card.back,
                 answer: earlier.answer,
@@ -270,6 +273,7 @@ class PreviousCardDemo extends StatelessWidget {
               child: Transform.rotate(
                 angle: offset * StudyStyle.tiltPerPixel,
                 child: _GradedCard(
+                  cells: cellsToDraw(front, back),
                   front: front,
                   back: back,
                   answer: Answer.know,
@@ -359,16 +363,18 @@ class _Reveal extends StatelessWidget {
 
 /// A previous card's face: its sides on the grade's fill inside the grade's
 /// line, at the current card's sizes and shrunk as far as their floors to fit
-/// their halves, then cut, or a whole card's front with its blanks filled,
-/// fitted to the card. The grade shows by the fill and the line alone; the
+/// their halves, then cut, or a whole card's 칸 in place, revealed, fitted to
+/// the card. The grade shows by the fill and the line alone; the
 /// card's semantics label names it.
 class _GradedCard extends StatelessWidget {
   const _GradedCard({
+    required this.cells,
     required this.front,
     required this.back,
     required this.answer,
   });
 
+  final List<Cell> cells;
   final List<Content> front;
   final List<Content> back;
   final Answer answer;
@@ -389,69 +395,67 @@ class _GradedCard extends StatelessWidget {
         ),
         // The card is given its height, so its halves are laid out at
         // it and each side reads the height its half leaves it.
-        // One face when the card holds a blank anywhere (ADR 0106).
-        child: switch (oneFaceOf(front, back)) {
-          final face? => Padding(
-            padding: const EdgeInsets.all(StudyStyle.cardPadding),
-            child: LayoutBuilder(
-              builder: (context, constraints) => Center(
-                child: WholeCardView(
-                  face,
-                  revealed: true,
-                  style: AppType.front.copyWith(color: colors.ink),
-                  minFontSize: AppType.frontFloor,
-                  width: constraints.maxWidth,
-                  height: constraints.maxHeight,
+        child: isDrawnWhole(cells)
+            ? Padding(
+                padding: const EdgeInsets.all(StudyStyle.cardPadding),
+                child: LayoutBuilder(
+                  builder: (context, constraints) => Center(
+                    child: WholeCardView.cells(
+                      cells,
+                      revealed: true,
+                      style: AppType.front.copyWith(color: colors.ink),
+                      minFontSize: AppType.frontFloor,
+                      width: constraints.maxWidth,
+                      height: constraints.maxHeight,
+                    ),
+                  ),
+                ),
+              )
+            : SplitCard(
+                padding: StudyStyle.cardPadding,
+                dividerInset: StudyStyle.dividerInset,
+                dividerColor: line,
+                stackBelow: StudyStyle.minHalfWidth,
+                front: (context, width) => LayoutBuilder(
+                  builder: (context, constraints) => ContentView(
+                    front,
+                    style: AppType.front.copyWith(color: colors.ink),
+                    fit: ShrinkFit(
+                      minFontSize: AppType.frontFloor,
+                      width: width,
+                      height: constraints.maxHeight,
+                    ),
+                  ),
+                ),
+                back: (context, width) => LayoutBuilder(
+                  builder: (context, constraints) => ContentView(
+                    back,
+                    style: AppType.back.copyWith(color: colors.ink2),
+                    fit: ShrinkFit(
+                      minFontSize: AppType.backFloor,
+                      width: width,
+                      height: constraints.maxHeight,
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
-          null => SplitCard(
-            padding: StudyStyle.cardPadding,
-            dividerInset: StudyStyle.dividerInset,
-            dividerColor: line,
-            stackBelow: StudyStyle.minHalfWidth,
-            front: (context, width) => LayoutBuilder(
-              builder: (context, constraints) => ContentView(
-                front,
-                style: AppType.front.copyWith(color: colors.ink),
-                fit: ShrinkFit(
-                  minFontSize: AppType.frontFloor,
-                  width: width,
-                  height: constraints.maxHeight,
-                ),
-              ),
-            ),
-            back: (context, width) => LayoutBuilder(
-              builder: (context, constraints) => ContentView(
-                back,
-                style: AppType.back.copyWith(color: colors.ink2),
-                fit: ShrinkFit(
-                  minFontSize: AppType.backFloor,
-                  width: width,
-                  height: constraints.maxHeight,
-                ),
-              ),
-            ),
-          ),
-        },
       ),
     );
   }
 }
 
 /// Opens [card] whole in a sheet titled as the card: its front and back,
-/// each under a label of the same rank, or a whole card's front with its
-/// blanks filled.
+/// each under a label of the same rank, or a whole card's 칸 in place,
+/// revealed, naming no side.
 void _showWholeCard(BuildContext context, Card card) {
   final l10n = AppLocalizations.of(context);
-  final face = oneFaceOf(card.front, card.back);
+  final cells = drawnCellsOf(card);
   showAppSheet<void>(
     context,
     builder: (context) => AppSheet(
       title: l10n.wholeCard,
-      content: face != null
-          ? WholeCardView(face, revealed: true, style: AppType.body)
+      content: isDrawnWhole(cells)
+          ? WholeCardView.cells(cells, revealed: true, style: AppType.body)
           : Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [

@@ -1,3 +1,4 @@
+import 'card_frame.dart';
 import 'card_key.dart';
 import 'content.dart';
 import 'model.dart';
@@ -63,11 +64,16 @@ final class IncomingCard {
   const IncomingCard({
     required this.front,
     required this.back,
+    this.cells,
     required this.onDuplicate,
   });
 
   final List<Content> front;
   final List<Content> back;
+
+  /// The 칸 of a framed card, written in the frame; [front] and [back] are
+  /// then their projection.
+  final List<Cell>? cells;
   final DuplicateChoice onDuplicate;
 }
 
