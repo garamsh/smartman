@@ -8,10 +8,11 @@ import { setRequestCookies } from "@/testing/next-headers";
 import { signedInCookies } from "@/testing/session";
 import { createDeck } from "../create-deck";
 import { saveCards, savePhotoCards } from "../save-cards";
-import { block, cardKey, textBlocks } from "../authoring";
+import { block, cardKey, encodeCells } from "../authoring";
 import { readAllowance } from "../read-allowance";
 import { parseCandidates } from "../photo-candidates";
-import { parseCardContent, parseContent } from "../card-content";
+import { parseCardContent, parseCells, parseContent } from "../card-content";
+import { cardsOf, defaultForm } from "../section-form";
 
 vi.mock("next/headers", () => import("@/testing/next-headers"));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -21,20 +22,16 @@ beforeEach(async () => {
   server.use(...db.handlers);
   setRequestCookies(await signedInCookies());
 });
+const appleSenses = [
+  {
+    labels: [{ kind: "part_of_speech" as const, category: "noun" as const, text: "명" }],
+    meaning: "사과",
+    examples: ["an apple"],
+  },
+];
 const draft = (name = " Apple ") => ({
   id: uuidOf("new-card"),
-  front: textBlocks(name),
-  back: [
-    block("senses", {
-      senses: [
-        {
-          labels: [{ kind: "part_of_speech", category: "noun", text: "명" }],
-          meaning: "사과",
-          examples: ["an apple"],
-        },
-      ],
-    }),
-  ],
+  blocks: encodeCells([{ kind: "word", term: name, senses: appleSenses, ask: "term" }]),
 });
 
 describe("web authoring writes", () => {
@@ -57,19 +54,11 @@ describe("web authoring writes", () => {
       card_key: "apple",
       source: "manual",
       template: "free",
-      template_version: 1,
+      template_version: 2,
+      back: [],
     });
-    expect(parseContent(db.rows.cards[0]?.back)).toEqual([
-      {
-        kind: "senses",
-        senses: [
-          {
-            labels: [{ kind: "part_of_speech", category: "noun", text: "명" }],
-            meaning: "사과",
-            examples: ["an apple"],
-          },
-        ],
-      },
+    expect(parseCells(db.rows.cards[0]?.front)).toEqual([
+      expect.objectContaining({ kind: "word", term: " Apple ", senses: appleSenses, ask: "term" }),
     ]);
   });
   it("warns on the phone's normalized duplicate without overwriting it, and permits an explicit extra card", async () => {
@@ -84,7 +73,7 @@ describe("web authoring writes", () => {
     expect(db.rows.cards).toHaveLength(1);
     expect(await saveCards(uuidOf("deck"), [second], "manual", true)).toEqual({ saved: true });
     expect(db.rows.cards).toHaveLength(2);
-    expect(db.rows.cards[0]?.front).toEqual(first.front);
+    expect(db.rows.cards[0]?.front).toEqual(first.blocks);
   });
   it("retains the request for retry after a write failure", async () => {
     db.rows.decks.push(deckRow("deck", "Deck"));
@@ -121,32 +110,41 @@ describe("web authoring writes", () => {
     expect(
       await saveCards(
         uuidOf("own"),
-        [{ ...card, front: [{ type: "table", v: 2, id: "block", payload: {} }] }],
+        [{ ...card, blocks: [{ type: "table", v: 2, id: "block", payload: {} }] }],
         "manual",
       ),
     ).toMatchObject({ saved: false });
-    expect(db.rows.cards[0]?.front).toEqual(card.front);
+    expect(db.rows.cards[0]?.front).toEqual(card.blocks);
   });
 });
 
 describe("a photo's cards saved over cards the deck holds", () => {
   const incoming = (id: string, front: string, back: string) => ({
     id: uuidOf(id),
-    front: textBlocks(front),
-    back: textBlocks(back),
+    blocks: encodeCells([{ kind: "text", front, back }]),
   });
   const twoMeanings = {
     id: uuidOf("incoming"),
-    front: textBlocks("수도"),
-    back: [
-      block("senses", {
+    blocks: encodeCells([
+      {
+        kind: "word",
+        term: "수도",
         senses: [
           { labels: [], meaning: "서울", examples: [] },
           { labels: [], meaning: "도시", examples: [] },
         ],
-      }),
-    ],
+        ask: "term",
+      },
+    ]),
   };
+  /** What [row]'s 칸 add by the reveal, read as any card is. */
+  const added = (row: Record<string, unknown> | undefined) =>
+    parseCardContent({
+      front: row?.front,
+      back: row?.back,
+      template: row?.template,
+      templateVersion: row?.template_version,
+    })?.back.map((part) => (part.kind === "text" ? part.text : part.kind));
   /** The stored row of [id], as `FakePostgrest` holds it. */
   const stored = (id: string) => db.rows.cards.find((row) => row.id === uuidOf(id));
   /** A deck holding the card "held", of front 수도, as [fields] say over a phone's row. */
@@ -181,7 +179,12 @@ describe("a photo's cards saved over cards the deck holds", () => {
     });
     expect(after?.updated_at).not.toBe(before.updated_at);
     expect(Number(after?.revision)).toBeGreaterThan(Number(before.revision));
-    expect(stored("other")).toMatchObject({ source: "import", template_version: 1 });
+    expect(stored("other")).toMatchObject({
+      source: "import",
+      template: "free",
+      template_version: 2,
+      back: [],
+    });
   });
   it("writes nothing when a line of the back holds it under the card key normalization, against one that does not", async () => {
     const before = hold({ back: [...side("Ｓeoul"), ...side("서울")] });
@@ -189,7 +192,7 @@ describe("a photo's cards saved over cards the deck holds", () => {
     expect(await savePhotoCards(uuidOf("deck"), [held])).toEqual({ saved: true });
     expect(stored("held")).toEqual(before);
     expect(db.requests).not.toContain("PATCH cards");
-    expect(await savePhotoCards(uuidOf("deck"), [{ ...held, back: textBlocks("부산") }])).toEqual({
+    expect(await savePhotoCards(uuidOf("deck"), [incoming("again", "수도", "부산")])).toEqual({
       saved: true,
     });
     expect(db.rows.cards).toHaveLength(1);
@@ -197,10 +200,14 @@ describe("a photo's cards saved over cards the deck holds", () => {
   });
   it("adds nothing for an empty back, against a back of text", async () => {
     const before = hold();
-    const card = incoming("incoming", "수도", "서울");
-    expect(await savePhotoCards(uuidOf("deck"), [{ ...card, back: [] }])).toEqual({ saved: true });
+    const cloze = {
+      id: uuidOf("cloze"),
+      blocks: [block("cloze", { text: "___", answers: ["수도"] })],
+    };
+    expect(await savePhotoCards(uuidOf("deck"), [cloze])).toEqual({ saved: true });
     expect(stored("held")).toEqual(before);
     expect(db.rows.cards).toHaveLength(1);
+    const card = incoming("incoming", "수도", "서울");
     expect(await savePhotoCards(uuidOf("deck"), [card])).toEqual({ saved: true });
     expect(parseContent(stored("held")?.back)).toHaveLength(2);
   });
@@ -233,18 +240,20 @@ describe("a photo's cards saved over cards the deck holds", () => {
     }
   });
   it("compares against a v1 card's stored back, not the back its 칸 show", async () => {
-    const filled = textBlocks("서울은 한국의 수도");
+    const filled = "서울은 한국의 수도";
     const before = hold({
       front: [block("cloze", { text: "서울은 ___의 수도", answers: ["한국"] })],
-      back: filled,
+      back: side(filled),
       template: "free",
       template_version: 1,
       card_key: "서울은 한국의 수도",
     });
     const repeat = {
       id: uuidOf("incoming"),
-      front: before.front,
-      back: filled,
+      blocks: [
+        block("cloze", { text: "서울은 ___의 수도", answers: ["한국"] }),
+        ...encodeCells([{ kind: "text", front: "", back: filled }]),
+      ],
     };
     expect(await savePhotoCards(uuidOf("deck"), [repeat])).toEqual({ saved: true });
     expect(stored("held")).toEqual(before);
@@ -262,7 +271,7 @@ describe("a photo's cards saved over cards the deck holds", () => {
     const held = incoming("incoming", "수도", "서울");
     expect(await savePhotoCards(uuidOf("deck"), [held])).toEqual({ saved: true });
     expect(stored("held")).toEqual(before);
-    expect(await savePhotoCards(uuidOf("deck"), [{ ...held, back: textBlocks("부산") }])).toEqual({
+    expect(await savePhotoCards(uuidOf("deck"), [incoming("again", "수도", "부산")])).toEqual({
       saved: true,
     });
     expect(db.rows.cards).toHaveLength(1);
@@ -272,14 +281,7 @@ describe("a photo's cards saved over cards the deck holds", () => {
       ...(before.front as unknown[]),
       expect.objectContaining({ type: "text", v: 2, payload: { front: "", back: "부산" } }),
     ]);
-    expect(
-      parseCardContent({
-        front: after?.front,
-        back: after?.back,
-        template: after?.template,
-        templateVersion: after?.template_version,
-      })?.back.map((part) => part.kind === "text" && part.text),
-    ).toEqual(["서울", "부산"]);
+    expect(added(after)).toEqual(["서울", "부산"]);
   });
   it("merges a card of an earlier one's key, in one request and across two, into one card", async () => {
     db.seed("decks", deckRow("deck", "Deck"));
@@ -294,10 +296,8 @@ describe("a photo's cards saved over cards the deck holds", () => {
       saved: true,
     });
     expect(db.rows.cards.map((row) => row.id)).toEqual([uuidOf("first")]);
-    expect(parseContent(stored("first")?.back)).toEqual(
-      ["서울", "부산", "대구"].map((text) => ({ kind: "text", text })),
-    );
-    expect(stored("first")).toMatchObject({ source: "import", template_version: 1 });
+    expect(added(stored("first"))).toEqual(["서울", "부산", "대구"]);
+    expect(stored("first")).toMatchObject({ source: "import", template_version: 2, back: [] });
   });
   it("merges two cards of one request into one stored card, each after the other", async () => {
     hold();
@@ -329,7 +329,7 @@ describe("a photo's cards saved over cards the deck holds", () => {
     await savePhotoCards(uuidOf("deck"), [first]);
     await savePhotoCards(uuidOf("deck"), [incoming("second", "수도", "부산")]);
     const merged = stored("first");
-    expect(parseContent(merged?.back)).toHaveLength(2);
+    expect(added(merged)).toHaveLength(2);
     expect(await savePhotoCards(uuidOf("deck"), [first, incoming("new", "인구", "많음")])).toEqual({
       saved: true,
     });
@@ -393,7 +393,7 @@ describe("a photo's cards saved over cards the deck holds", () => {
 });
 
 describe("photo candidates and allowance", () => {
-  it("merges a photo's later back unless a line of an earlier block holds it", () => {
+  it("merges a photo's later back on a line of its text unless a line holds it", () => {
     const note = { kind: "note", type: "concept", front: "수도", topic: "도시" };
     const cards = parseCandidates({
       cards: [
@@ -403,10 +403,7 @@ describe("photo candidates and allowance", () => {
       ],
     });
     expect(cards).toHaveLength(1);
-    expect(parseContent(cards?.[0]?.back)).toEqual([
-      { kind: "text", text: "서울" },
-      { kind: "text", text: "서울특별시" },
-    ]);
+    expect(parseContent(cards?.[0]?.back)).toEqual([{ kind: "text", text: "서울\n서울특별시" }]);
   });
   it("maps vocabulary senses and examples and whole cloze/table cards into existing content readers, saving only reviewed cards", async () => {
     const cards = parseCandidates({
@@ -446,7 +443,11 @@ describe("photo candidates and allowance", () => {
     expect(cards.map((card) => card.topic)).toEqual(["과일", "도시", "도시"]);
     expect(parseContent(cards[1]?.front)?.[0]).toMatchObject({ kind: "cloze", answers: ["수도"] });
     expect(parseContent(cards[2]?.front)?.[1]).toMatchObject({ kind: "table", spans: [] });
-    expect(await saveCards(uuidOf("own"), cards.slice(0, 2), "import")).toEqual({ saved: true });
+    expect(parseContent(cards[1]?.back)).toEqual([]);
+    const saving = cards
+      .slice(0, 2)
+      .flatMap((card) => cardsOf(card, defaultForm(card.kind, card.identify)));
+    expect(await saveCards(uuidOf("own"), saving, "import")).toEqual({ saved: true });
     expect(db.rows.cards).toHaveLength(2);
     expect(db.rows.cards.every((card) => card.source === "import")).toBe(true);
     expect(

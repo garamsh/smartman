@@ -9,7 +9,7 @@ import { setRequestCookies } from "@/testing/next-headers";
 import { signedInCookies } from "@/testing/session";
 import { xlsxOf } from "@/testing/xlsx";
 import { AuthoringButton } from "../components/authoring-button";
-import { parseContent } from "../card-content";
+import { parseCells, sidesOf } from "../card-content";
 import { parseDeckId } from "../library";
 
 vi.mock("next/headers", () => import("@/testing/next-headers"));
@@ -47,8 +47,8 @@ async function openFile(file: File) {
 }
 const fronts = () =>
   db.rows.cards.map((row) => {
-    const front = parseContent(row.front);
-    return front?.[0]?.kind === "text" ? front[0].text : null;
+    const [first] = sidesOf(parseCells(row.front) ?? []).front;
+    return first?.kind === "text" ? first.text : null;
   });
 
 describe("cards from a file", () => {
@@ -83,9 +83,11 @@ describe("cards from a file", () => {
       expect(db.rows.cards).toHaveLength(2);
     });
     expect(fronts()).toEqual(["apple", "pear"]);
-    expect(parseContent(db.rows.cards[1]?.back)).toEqual([
-      {
-        kind: "senses",
+    expect(parseCells(db.rows.cards[1]?.front)).toEqual([
+      expect.objectContaining({
+        kind: "word",
+        term: "pear",
+        ask: "term",
         senses: [
           {
             labels: [{ kind: "part_of_speech", category: "noun", text: "명" }],
@@ -93,9 +95,14 @@ describe("cards from a file", () => {
             examples: [],
           },
         ],
-      },
+      }),
     ]);
-    expect(db.rows.cards[1]).toMatchObject({ source: "import", template: "free" });
+    expect(db.rows.cards[1]).toMatchObject({
+      source: "import",
+      template: "free",
+      template_version: 2,
+      back: [],
+    });
   });
 
   it("names a row repeating a stored card and saves nothing until it is left out, never overwriting the stored card", async () => {

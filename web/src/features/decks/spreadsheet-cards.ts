@@ -1,4 +1,4 @@
-import { block, type CardDraft, labelsFromText, textBlocks } from "./authoring";
+import { type CellsDraft, encodeCells, labelsFromText, type WrittenCell } from "./authoring";
 import type { SheetRow } from "./spreadsheet";
 
 /** The most characters, in code points, a cell filling a card field may hold (ADR 0125). */
@@ -7,7 +7,7 @@ export const cellLimit = 500;
 /** Which column, from 0, fills each field; a label or example column is optional. */
 export type Columns = { front: number; back: number; label: number | null; example: number | null };
 /** A sheet row's card, named by the row it came from. */
-export type RowCard = CardDraft & { row: number };
+export type RowCard = CellsDraft & { row: number };
 /** The cards a sheet's rows make, and the rows that make none: skipped as empty, or refused as too long. */
 export type SheetCards = { cards: RowCard[]; skipped: number[]; tooLong: number[] };
 
@@ -51,11 +51,26 @@ export function headerByDefault(rows: SheetRow[]): boolean {
   });
 }
 
+/** A row's 단어 of one meaning, asking its word. */
+function word(term: string, meaning: string, label: string, example: string): WrittenCell {
+  const examples = example
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  return {
+    kind: "word",
+    term,
+    senses: [{ labels: labelsFromText(label), meaning, examples }],
+    ask: "term",
+  };
+}
+
 /**
- * The cards of [rows] under [columns]: a row with an empty front or back is skipped, and one
- * whose used cell is longer than [cellLimit] refused. Mapping a label or an example column
- * makes every back a meaning, with the label's words as its labels and the example's lines as
- * its examples, as direct entry writes them. [idOf] gives a row its card's id.
+ * The cards of [rows] under [columns], each its stored 칸: a row with an empty front or back is
+ * skipped, and one whose used cell is longer than [cellLimit] refused. A row is a 글; mapping a
+ * label or an example column makes every row a 단어 of one meaning, with the label's words as its
+ * labels and the example's lines as its examples, as direct entry writes them. [idOf] gives a row
+ * its card's id.
  */
 export function cardsOfRows(
   rows: SheetRow[],
@@ -78,24 +93,11 @@ export function cardsOfRows(
       result.cards.push({
         id: idOf(row.number),
         row: row.number,
-        front: textBlocks(front),
-        back:
+        blocks: encodeCells([
           columns.label === null && columns.example === null
-            ? textBlocks(back)
-            : [
-                block("senses", {
-                  senses: [
-                    {
-                      labels: labelsFromText(label),
-                      meaning: back,
-                      examples: example
-                        .split("\n")
-                        .map((line) => line.trim())
-                        .filter(Boolean),
-                    },
-                  ],
-                }),
-              ],
+            ? { kind: "text", front, back }
+            : word(front, back, label, example),
+        ]),
       });
   }
   return result;

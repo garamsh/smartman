@@ -114,23 +114,6 @@ export function labelsFromText(text: string): SenseLabel[] {
       return { kind: "other", category: null, text };
     });
 }
-/** A wire-format card with bounded, readable blocks; unsupported blocks are never rewritten. */
-export function parseDraft(value: unknown): CardDraft | null {
-  if (
-    !value ||
-    typeof value !== "object" ||
-    !("id" in value) ||
-    typeof value.id !== "string" ||
-    !("front" in value) ||
-    !("back" in value)
-  )
-    return null;
-  const front = parseBlocks(value.front);
-  const back = parseBlocks(value.back);
-  if (!front || !back || front.length === 0) return null;
-  const read = parseContent(front);
-  return read && cardKey(read) ? { id: value.id, front, back } : null;
-}
 /** A card of a list of 칸 on the wire: its id, and its 칸 as stored. */
 export type CellsDraft = { id: string; blocks: Block[] };
 /** A wire-format card of 칸 the frame's validity accepts, stored as `front` with an empty `back`. */
@@ -138,7 +121,7 @@ export function parseCellsDraft(value: unknown): CardDraft | null {
   if (!value || typeof value !== "object" || !("id" in value) || typeof value.id !== "string")
     return null;
   if (!("blocks" in value)) return null;
-  const blocks = parseBlocks(value.blocks, () => true);
+  const blocks = parseBlocks(value.blocks);
   const cells = blocks && parseCells(blocks);
   if (!blocks || !cells || cells.length === 0) return null;
   if (cells.some(({ kind }) => kind === "unknown") || frameProblem(cells) || !frameKey(cells))
@@ -166,10 +149,7 @@ export function mediaOf(cells: Cell[]): string[] {
       : [],
   );
 }
-function parseBlocks(
-  value: unknown,
-  readable: (item: unknown) => boolean = isSideBlock,
-): Block[] | null {
+function parseBlocks(value: unknown): Block[] | null {
   if (!Array.isArray(value) || value.length > 100) return null;
   const result: Block[] = [];
   for (const raw of value) {
@@ -189,25 +169,12 @@ function parseBlocks(
       Array.isArray(item.payload)
     )
       return null;
-    if (!readable(item)) return null;
     const payload: Record<string, unknown> = Object.fromEntries(Object.entries(item.payload));
     result.push({ type: item.type, v: item.v, id: item.id, payload });
   }
   return result;
 }
-/** A block a card of two sides may be written with: readable, and neither a photo nor a sound. */
-function isSideBlock(item: unknown): boolean {
-  const read = parseContent([item]);
-  return (
-    !!read &&
-    !read.some(
-      (content) =>
-        content.kind === "unsupported" || content.kind === "image" || content.kind === "audio",
-    )
-  );
-}
-
-/** A 칸 the editor writes: every kind but one this build does not know, which opens read-only. */
+/** A 칸 this build writes: every kind but one it does not know, which opens read-only. */
 export type WrittenCell = Exclude<Cell, { kind: "unknown" }>;
 
 /** [block] of a 칸 with blanks or a placed 칸 as its stored payload. */

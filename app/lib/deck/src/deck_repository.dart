@@ -504,8 +504,7 @@ class DeckRepository {
             case (final existing?, DuplicateChoice.mergeBack):
               final incoming = plainText(card.back);
               final cells = existing.cells;
-              if (mergeBack(existing.back, incoming) case final back?
-                  when cells == null || incoming.trim().isNotEmpty) {
+              if (mergeBack(existing.back, incoming) case final back?) {
                 await (_db.update(
                   _db.cards,
                 )..where((row) => row.id.equals(existing.id.value))).write(

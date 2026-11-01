@@ -6,11 +6,11 @@ import 'model.dart';
 const freeTemplate = 'free';
 
 /// The version of [freeTemplate] that stores a card as two side lists, which
-/// photo import and a spreadsheet still write.
+/// a copy of such a card still writes.
 const cardTemplateVersion = 1;
 
 /// The version of [freeTemplate] that stores a card as one list of 칸
-/// (ADR 0137), which the editor writes.
+/// (ADR 0137), which the editor, photo import and a spreadsheet write.
 const cardFrameVersion = 2;
 
 /// Whether a card of [template] at [version] stores a list of 칸.

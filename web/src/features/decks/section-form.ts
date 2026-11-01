@@ -1,5 +1,6 @@
 import { field } from "@/supabase/row";
-import { block, type Block, type CardDraft, textBlocks } from "./authoring";
+import { type Block, type CardDraft, type CellsDraft, encodeCells } from "./authoring";
+import { cellsFromSides, parseContent } from "./card-content";
 import type { Candidate } from "./photo-candidates";
 
 /** Which cards a vocabulary row makes, as the phone's `Direction`: word to meaning, meaning to word, or both. */
@@ -45,24 +46,12 @@ export function isWhole(card: CardDraft): boolean {
   return card.front.some((item) => item.type === "table" || item.type === "cloze");
 }
 
-/** The word side: the front, with the pronunciation on a line below it when the form shows it. */
-function word(card: Candidate, form: Extract<SectionForm, { kind: "vocabulary" }>): Block[] {
-  const { pronunciation } = card;
-  if (!form.showPronunciation || !pronunciation) return card.front;
-  const [only] = card.front;
-  const text = only?.type === "text" ? field(only.payload, "text") : null;
-  return card.front.length === 1 && typeof text === "string"
-    ? [block("text", { text: `${text}\n${pronunciation}` })]
-    : [...card.front, ...textBlocks(pronunciation)];
-}
-
 /**
  * The meaning side: each senses block with the first sense alone when the form asks, and without
- * its part-of-speech labels when the form hides them, its other labels kept; then the extras, one
- * per line, when shown (ADR 0075).
+ * its part-of-speech labels when the form hides them, its other labels kept.
  */
 function meaning(card: Candidate, form: Extract<SectionForm, { kind: "vocabulary" }>): Block[] {
-  const back = card.back.map((item) => {
+  return card.back.map((item) => {
     const senses = field(item.payload, "senses");
     if (item.type !== "senses" || !Array.isArray(senses)) return item;
     const shown: unknown[] = form.firstSenseOnly ? senses.slice(0, 1) : senses;
@@ -82,30 +71,55 @@ function meaning(card: Candidate, form: Extract<SectionForm, { kind: "vocabulary
       },
     };
   });
-  const extras = form.showExtras ? card.extras.map(({ label, text }) => `${label} ${text}`) : [];
-  return [...back, ...textBlocks(extras.join("\n"))];
+}
+
+/** The lines of what [form] shows of [card]'s pronunciation and extras (ADR 0075). */
+function addedLines(card: Candidate, form: Extract<SectionForm, { kind: "vocabulary" }>): string {
+  return [
+    ...(form.showPronunciation && card.pronunciation ? [card.pronunciation] : []),
+    ...(form.showExtras ? card.extras.map(({ label, text }) => `${label} ${text}`) : []),
+  ].join("\n");
 }
 
 /**
- * The cards [card] saves in [form], as the phone's `ImportRow.cards`: a table or cloze card as it
- * is in any form; a vocabulary entry's word to meaning, meaning to word, or both, the second under
- * its own id; a note as given or swapped.
+ * [front] and [back] as the stored 칸 of one card, as a card of two sides converts (ADR 0137), then
+ * a 글 of a back alone of [added] when it holds any. No 칸 for a side an edit left unreadable, which
+ * the save refuses.
  */
-export function cardsOf(card: Candidate, form: SectionForm): CardDraft[] {
-  if (isWhole(card)) return [{ id: card.id, front: card.front, back: card.back }];
+function blocksOf(front: Block[], back: Block[], added = ""): Block[] {
+  const [before, after] = [parseContent(front), parseContent(back)];
+  const cells = before && after ? cellsFromSides(before, after) : null;
+  if (!cells) return [];
+  return encodeCells([
+    ...cells.filter((cell) => cell.kind !== "unknown"),
+    ...(added ? [{ kind: "text" as const, front: "", back: added }] : []),
+  ]);
+}
+
+/**
+ * The cards [card] saves in [form], as the phone's `ImportRow.cards`, each its stored 칸: a table
+ * or cloze card alone in any form; a vocabulary entry's 단어, asking its word, its meaning, or both
+ * under the second's own id, with a 글 of a back alone of its pronunciation and extras when shown;
+ * a note's 글 as given or swapped.
+ */
+export function cardsOf(card: Candidate, form: SectionForm): CellsDraft[] {
+  const { id, reverseId, front, back } = card;
+  if (isWhole(card)) return [{ id, blocks: blocksOf(front, []) }];
   if (form.kind === "vocabulary" && card.kind === "vocabulary") {
-    const forward = { front: word(card, form), back: meaning(card, form) };
-    const backward = { front: forward.back, back: forward.front };
-    if (form.direction === "forward") return [{ id: card.id, ...forward }];
-    if (form.direction === "backward") return [{ id: card.id, ...backward }];
-    return [
-      { id: card.id, ...forward },
-      { id: card.reverseId, ...backward },
-    ];
+    const senses = meaning(card, form);
+    const added = addedLines(card, form);
+    const forward = { id, blocks: blocksOf(front, senses, added) };
+    const backward = (id: string) => ({ id, blocks: blocksOf(senses, front, added) });
+    if (form.direction === "forward") return [forward];
+    if (form.direction === "backward") return [backward(id)];
+    return [forward, backward(reverseId)];
   }
-  return form.kind === "note" && form.swapped
-    ? [{ id: card.id, front: card.back, back: card.front }]
-    : [{ id: card.id, front: card.front, back: card.back }];
+  return [
+    {
+      id,
+      blocks: form.kind === "note" && form.swapped ? blocksOf(back, front) : blocksOf(front, back),
+    },
+  ];
 }
 
 /** The candidates of one topic of one photo, of one kind, identify cards apart, as the phone's `ImportSection`. */
