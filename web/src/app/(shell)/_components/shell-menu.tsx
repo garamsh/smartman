@@ -42,7 +42,7 @@ export function SideMenuAt({ path, account }: { path: string | null; account: Re
       <nav aria-label="주 메뉴" className="sticky top-0 flex h-dvh flex-col gap-1.5 px-4 py-7">
         <Link
           href="/"
-          aria-label="smartman, 오늘"
+          aria-label="알아몰라, 오늘"
           className={`mx-2.5 mb-5 self-start rounded-field ${focus}`}
         >
           <BrandMark mark="lockup" alt="" className="h-7 w-auto" />

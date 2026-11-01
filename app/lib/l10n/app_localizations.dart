@@ -101,7 +101,7 @@ abstract class AppLocalizations {
   /// The app's name, shown by the operating system.
   ///
   /// In ko, this message translates to:
-  /// **'smartman'**
+  /// **'알아몰라'**
   String get appTitle;
 
   /// Title of the new-deck sheet and of the sheet that names a new deck, and the deck choosers' new deck.

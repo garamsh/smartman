@@ -92,10 +92,10 @@ describe("the account page", () => {
       /^https:\/\/api\.knowno\.app\/functions\/v1\/mcp$/,
     );
     expect(section.getByText("Claude").nextElementSibling).toHaveTextContent(
-      "커넥터 설정에서 커스텀 커넥터를 추가하고 서버 주소를 넣은 뒤 smartman으로 로그인해요",
+      "커넥터 설정에서 커스텀 커넥터를 추가하고 서버 주소를 넣은 뒤 알아몰라로 로그인해요",
     );
     expect(section.getByText("ChatGPT").nextElementSibling).toHaveTextContent(
-      "chatgpt.com/plugins에서 커스텀 MCP 서버를 추가하고 서버 주소를 넣은 뒤 smartman으로 로그인해요",
+      "chatgpt.com/plugins에서 커스텀 MCP 서버를 추가하고 서버 주소를 넣은 뒤 알아몰라로 로그인해요",
     );
     // What a connection may do, and that it deletes and edits nothing; substring, inside the note.
     expect(section.getByText(/지우거나 고치지는 않아요/)).toBeVisible();

@@ -25,7 +25,7 @@ test.describe("signed out", () => {
     await page.goto("/");
 
     await expect(page).toHaveURL(/\/login$/);
-    await expect(page.getByRole("heading", { name: "smartman", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "알아몰라", exact: true })).toBeVisible();
     await expect(
       page.getByText("계속하면 이용약관과 개인정보 처리방침에 동의하는 것으로 봐요.", {
         exact: true,
@@ -156,7 +156,11 @@ test.describe("signed out", () => {
     }
     const manifest = await request.get("/manifest.webmanifest", { maxRedirects: 0 });
     expect(manifest.status()).toBe(200);
-    expect(await manifest.json()).toMatchObject({ theme_color: "#1F2A44" });
+    expect(await manifest.json()).toMatchObject({
+      name: "알아몰라",
+      short_name: "알아몰라",
+      theme_color: "#1F2A44",
+    });
     for (const { src } of ((await manifest.json()) as { icons: { src: string }[] }).icons) {
       const icon = await request.get(src, { maxRedirects: 0 });
       expect({ src, status: icon.status() }).toEqual({ src, status: 200 });
