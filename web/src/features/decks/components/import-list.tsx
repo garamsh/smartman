@@ -8,8 +8,14 @@ import { SectionMenu } from "./section-menu";
 import { SideText } from "./side-text";
 import { WholeCard } from "./whole-card";
 
-/** One read photo's part of the list: its thumbnail, its number and its sections. */
-export type PhotoGroup = { id: string; url: string; sections: Section[] };
+/**
+ * One read photo's part of the list: its thumbnail, its number, its sections, and whether only part
+ * of the photo was read (ADR 0135).
+ */
+export type PhotoGroup = { id: string; url: string; sections: Section[]; partial: boolean };
+
+/** What a photo read only in part says above its cards. */
+const partialNote = "사진의 일부만 읽었어요";
 
 /**
  * The read cards as the phone's `ImportListView` lists them: the deck line, then, with one photo,
@@ -96,48 +102,59 @@ export function ImportList({
   return (
     <div className="flex min-w-0 flex-col">
       <DeckLine name={deckName} choose={chooseDeck} />
-      {groups.length === 1 && groups[0]
-        ? sections(groups[0])
-        : groups.map((group, at) => {
-            const expanded = !collapsed.has(group.id);
-            const rows = group.sections.reduce((count, section) => count + section.cards.length, 0);
-            const label = `사진 ${String(at + 1)}, 카드 ${String(rows)}장`;
-            return (
-              <div key={group.id} className="flex min-w-0 flex-col pt-7">
-                <div className="flex items-center gap-2">
-                  <span
-                    aria-hidden
-                    className="block h-14 w-12 shrink-0 rounded-button bg-hairline bg-cover bg-center"
-                    style={{ backgroundImage: `url(${group.url})` }}
-                  />
-                  <h3 aria-label={label} className="min-w-0 flex-1">
-                    <button
-                      type="button"
-                      aria-label={label}
-                      aria-expanded={expanded}
-                      onClick={() => {
-                        toggleGroup(group.id);
-                      }}
-                      className="pressable flex min-h-tap-target w-full items-center gap-3 rounded-group text-left"
-                    >
-                      <span className="flex min-w-0 flex-1 flex-col">
-                        <span className="text-body-strong text-ink">사진 {at + 1}</span>
-                        <span className="text-secondary text-ink-2">카드 {rows}장</span>
-                      </span>
-                      {expanded ? (
-                        <ChevronUp aria-hidden className="size-small-icon shrink-0 text-ink-2" />
-                      ) : (
-                        <ChevronDown aria-hidden className="size-small-icon shrink-0 text-ink-2" />
-                      )}
-                    </button>
-                  </h3>
-                </div>
-                {expanded && sections(group)}
+      {groups.length === 1 && groups[0] ? (
+        <>
+          {groups[0].partial && <PartialNote />}
+          {sections(groups[0])}
+        </>
+      ) : (
+        groups.map((group, at) => {
+          const expanded = !collapsed.has(group.id);
+          const rows = group.sections.reduce((count, section) => count + section.cards.length, 0);
+          const label = `사진 ${String(at + 1)}, 카드 ${String(rows)}장`;
+          return (
+            <div key={group.id} className="flex min-w-0 flex-col pt-7">
+              <div className="flex items-center gap-2">
+                <span
+                  aria-hidden
+                  className="block h-14 w-12 shrink-0 rounded-button bg-hairline bg-cover bg-center"
+                  style={{ backgroundImage: `url(${group.url})` }}
+                />
+                <h3 aria-label={label} className="min-w-0 flex-1">
+                  <button
+                    type="button"
+                    aria-label={label}
+                    aria-expanded={expanded}
+                    onClick={() => {
+                      toggleGroup(group.id);
+                    }}
+                    className="pressable flex min-h-tap-target w-full items-center gap-3 rounded-group text-left"
+                  >
+                    <span className="flex min-w-0 flex-1 flex-col">
+                      <span className="text-body-strong text-ink">사진 {at + 1}</span>
+                      <span className="text-secondary text-ink-2">카드 {rows}장</span>
+                    </span>
+                    {expanded ? (
+                      <ChevronUp aria-hidden className="size-small-icon shrink-0 text-ink-2" />
+                    ) : (
+                      <ChevronDown aria-hidden className="size-small-icon shrink-0 text-ink-2" />
+                    )}
+                  </button>
+                </h3>
               </div>
-            );
-          })}
+              {group.partial && <PartialNote />}
+              {expanded && sections(group)}
+            </div>
+          );
+        })
+      )}
     </div>
   );
+}
+
+/** The one sentence a photo read only in part shows above its cards. */
+function PartialNote() {
+  return <p className="pt-4 text-body break-keep text-ink-2">{partialNote}</p>;
 }
 
 /**

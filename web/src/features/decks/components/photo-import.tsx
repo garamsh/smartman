@@ -29,7 +29,7 @@ import { ImportList } from "./import-list";
 type PhotoState =
   | { kind: "waiting" }
   | { kind: "reading" }
-  | { kind: "read"; cards: Candidate[] }
+  | { kind: "read"; cards: Candidate[]; partial: boolean }
   | { kind: "failed"; failure: PhotoFailure };
 type Photo = { id: string; file: File; url: string; upload?: File; state: PhotoState };
 
@@ -120,7 +120,7 @@ export function PhotoImport({
     }
     const result = await sendPhoto(upload);
     return "cards" in result
-      ? { kind: "read", cards: result.cards }
+      ? { kind: "read", cards: result.cards, partial: result.partial }
       : { kind: "failed", failure: result.failure };
   }
   // Reads the waiting photos in order, one call at a time, as Server Actions run one at a time.
@@ -209,6 +209,7 @@ export function PhotoImport({
     id: photo.id,
     url: photo.url,
     sections: sectionsOf(photo.id, photo.state.kind === "read" ? photo.state.cards : []),
+    partial: photo.state.kind === "read" && photo.state.partial,
   }));
   const sections = groups.flatMap((group) => group.sections);
   // The decks to choose from: the page's deck, which a deck's page reads alone, and the list's.
@@ -278,7 +279,7 @@ export function PhotoImport({
           ? {
               ...photo,
               state: {
-                kind: "read",
+                ...photo.state,
                 cards: photo.state.cards.map((item) => (item.id === card.id ? card : item)),
               },
             }

@@ -107,6 +107,8 @@ type Result = {
   readonly limit?: { readonly photos: number; readonly period: Period };
   readonly attempts: readonly Attempt[];
   readonly cards?: readonly Card[];
+  /** Whether the answered reply was cut off at the output cap, so the photo was read in part. */
+  readonly partial?: boolean;
   /** How many of the reply's cards were dropped, when a reply was read as the schema's. */
   readonly dropped?: number;
   /** Whether the counted photo's outcome was recorded. */
@@ -127,7 +129,7 @@ export function createHandler(
     }
     log(deps, started, result);
     const body = result.outcome === "ok"
-      ? { cards: result.cards }
+      ? { cards: result.cards, partial: result.partial ?? false }
       : result.outcome === "rate_limited"
       ? {
         error: result.outcome,
@@ -207,10 +209,11 @@ async function handle(
     ? [...first.attempts, ...extraction.attempts]
     : first.attempts;
   const cards = extraction.kind === "cards" ? extraction.cards : [];
-  const dropped = extraction.kind === "cards" ||
+  const read = extraction.kind === "cards" ||
       extraction.kind === "invalid_output"
-    ? extraction.dropped.length
-    : 0;
+    ? extraction
+    : null;
+  const dropped = read?.dropped.length ?? 0;
   const recorded = await finishExtraction(start.usageId, {
     outcome: extraction.kind === "cards" ? "ok" : extraction.kind,
     attempts: retry ? 2 : 1,
@@ -221,11 +224,18 @@ async function handle(
       ...(retry && firstFailure !== null ? [firstFailure] : []),
       ...(lastFailure === null ? [] : [lastFailure]),
     ],
+    truncated: read?.cut ?? false,
   }, supabase);
   const served = { userId, plan, promptVersion, attempts, recorded };
   switch (extraction.kind) {
     case "cards":
-      return { outcome: "ok", ...served, cards, dropped };
+      return {
+        outcome: "ok",
+        ...served,
+        cards,
+        partial: extraction.cut,
+        dropped,
+      };
     case "no_cards":
       return { outcome: "no_cards", ...served, dropped: 0 };
     case "invalid_output":

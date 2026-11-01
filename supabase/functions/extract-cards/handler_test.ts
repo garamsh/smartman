@@ -24,7 +24,10 @@ const ENV: Record<string, string> = {
 };
 
 /** A model reply: the message text OpenRouter returns, an HTTP failure, or none ever. */
-type Reply = { content: string } | { status: number } | { hang: true };
+type Reply =
+  | { content: string; finish?: string }
+  | { status: number }
+  | { hang: true };
 
 /** The model timeout the handler is given in these tests. */
 const TIMEOUT_MS = 20;
@@ -107,7 +110,10 @@ function fakeFetch(fake: Fake): typeof fetch {
         );
       }
       return Promise.resolve(Response.json({
-        choices: [{ message: { role: "assistant", content: reply.content } }],
+        choices: [{
+          finish_reason: reply.finish ?? "stop",
+          message: { role: "assistant", content: reply.content },
+        }],
         usage: { prompt_tokens: 1200, completion_tokens: 80, cost: 0.002 },
       }));
     }
@@ -342,7 +348,7 @@ Deno.test("the suite runs without write or network permission", () => {
 Deno.test("a signed-in user's photo returns each card's kind, type, answer and topic, and a vocabulary card's fields", async () => {
   const r = await run({ replies: [cardsReply(twoCards)] });
   assert.equal(r.status, 200);
-  assert.deepEqual(r.body, { cards: twoAnswered });
+  assert.deepEqual(r.body, { cards: twoAnswered, partial: false });
   const [, river, note] = r.body.cards as Record<string, unknown>[];
   assert.ok(
     !Object.hasOwn(river, "examples"),
@@ -439,7 +445,7 @@ Deno.test("a reply whose cards break a rule keeps the valid cards, drops the bro
     replies: [cardsReply([broken[0], ...twoCards, broken[1]])],
   });
   assert.equal(mixed.status, 200);
-  assert.deepEqual(mixed.body, { cards: twoAnswered });
+  assert.deepEqual(mixed.body, { cards: twoAnswered, partial: false });
   assert.equal(mixed.logs[0].dropped_cards, 2);
   assert.equal(mixed.logs[0].outcome, "ok");
 
@@ -458,7 +464,7 @@ Deno.test("a reply whose cards break a rule keeps the valid cards, drops the bro
 
   // Control: the valid cards alone drop none.
   const valid = await run({ replies: [cardsReply(twoCards)] });
-  assert.deepEqual(valid.body, { cards: twoAnswered });
+  assert.deepEqual(valid.body, { cards: twoAnswered, partial: false });
   assert.equal(valid.logs[0].dropped_cards, 0);
 });
 
@@ -589,7 +595,7 @@ Deno.test("invalid output is retried once in the same request, and a valid retry
   ) {
     const r = await run({ replies: [reply, cardsReply(twoCards)] });
     assert.equal(r.status, 200);
-    assert.deepEqual(r.body, { cards: twoAnswered });
+    assert.deepEqual(r.body, { cards: twoAnswered, partial: false });
     assert.equal(r.modelCalls.length, 2, "the retry is asked for");
     assert.equal(usageCalls(r).length, 1, "the photo counts once");
     assert.deepEqual(r.fake.finishes, [{
@@ -600,6 +606,7 @@ Deno.test("invalid output is retried once in the same request, and a valid retry
       cards_returned: 3,
       cards_dropped: 0,
       failures: ["invalid_output"],
+      truncated: false,
     }]);
     assert.equal(r.logs[0].prompt_tokens, 2400, "both calls' tokens");
   }
@@ -627,6 +634,7 @@ Deno.test("a photo that fails twice is answered 502 after two calls, with one us
     cards_returned: 0,
     cards_dropped: 0,
     failures: ["model_error", "invalid_output"],
+    truncated: false,
   }]);
   assert.equal(r.logs[0].outcome, "model_error");
   // Control: an HTTP failure retried into a valid reply is served.
@@ -673,6 +681,7 @@ Deno.test("a call that fails past the retry limit is answered 502 without a retr
     cards_returned: 0,
     cards_dropped: 0,
     failures: ["timeout"],
+    truncated: false,
   }]);
   assert.equal(
     late.logs[0].prompt_tokens,
@@ -693,13 +702,44 @@ Deno.test("a photo whose outcome cannot be recorded is still answered with its c
     finishStatus: 500,
   });
   assert.equal(unrecorded.status, 200);
-  assert.deepEqual(unrecorded.body, { cards: twoAnswered });
+  assert.deepEqual(unrecorded.body, { cards: twoAnswered, partial: false });
   assert.equal(unrecorded.fake.finishes.length, 1, "the record was tried");
   assert.equal(unrecorded.logs[0].outcome, "ok");
   assert.equal(unrecorded.logs[0].outcome_recorded, false);
   // Control: a record that succeeds logs it.
   const recorded = await run({ replies: [cardsReply(twoCards)] });
   assert.equal(recorded.logs[0].outcome_recorded, true);
+});
+
+Deno.test("a reply cut at the output cap answers the cards it completed as read in part, records it truncated and is not retried", async () => {
+  const text = JSON.stringify({ cards: twoCards });
+  // Cut inside the last card, so the first two are whole.
+  const cut = { content: text.slice(0, -40), finish: "length" };
+  const r = await run({ replies: [cut, cardsReply(twoCards)] });
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.body, {
+    cards: twoAnswered.slice(0, 2),
+    partial: true,
+  });
+  assert.equal(
+    r.modelCalls.length,
+    1,
+    "a reply with kept cards is not retried",
+  );
+  assert.deepEqual(r.fake.finishes, [{
+    usage_id: USAGE_ID,
+    outcome: "ok",
+    attempts: 1,
+    latency_ms: 0,
+    cards_returned: 2,
+    cards_dropped: 0,
+    failures: [],
+    truncated: true,
+  }]);
+  // Control: the whole reply is read in full.
+  const whole = await run({ replies: [cardsReply(twoCards)] });
+  assert.deepEqual(whole.body, { cards: twoAnswered, partial: false });
+  assert.equal(whole.fake.finishes[0].truncated, false);
 });
 
 Deno.test("a photo refused before its count records no outcome", async () => {
@@ -717,6 +757,7 @@ Deno.test("a photo refused before its count records no outcome", async () => {
     cards_returned: 0,
     cards_dropped: 0,
     failures: [],
+    truncated: false,
   }]);
 });
 

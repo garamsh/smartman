@@ -252,7 +252,10 @@ describe("photo request", () => {
     expect(calls).toBe(0);
     const valid = new FormData();
     valid.set("photo", upload());
-    expect(await readPhoto(valid)).toMatchObject({ cards: [{ topic: "도시", selected: null }] });
+    expect(await readPhoto(valid)).toMatchObject({
+      cards: [{ topic: "도시", selected: null }],
+      partial: false,
+    });
     expect(calls).toBe(1);
     setRequestCookies([]);
     expect(await readPhoto(valid)).toEqual({ failure: { kind: "signIn" } });
@@ -286,6 +289,20 @@ describe("photo request", () => {
       expect(calls).toBe(1);
     },
   );
+  it("reads a photo answered in part as read in part, and one without the field as read whole", async () => {
+    for (const [body, partial] of [
+      [{ cards: [card], partial: true }, true],
+      [{ cards: [card], partial: "yes" }, false],
+      [{ cards: [card] }, false],
+    ] as const) {
+      server.use(
+        http.post(`${supabaseUrl}/functions/v1/extract-cards`, () => HttpResponse.json(body)),
+      );
+      const form = new FormData();
+      form.set("photo", upload());
+      expect(await readPhoto(form)).toMatchObject({ partial });
+    }
+  });
   it("sends a photo once more after no response, and logs one line with the status and latency, never the image or token", async () => {
     const log = vi.spyOn(console, "info").mockImplementation(() => undefined);
     let calls = 0;
@@ -747,6 +764,27 @@ describe("photo import", () => {
       await userEvent.click(screen.getByRole("button", { name: "새 덱" }));
       await userEvent.click(screen.getByRole("radio", { name: "단어장" }));
       expect(screen.getByRole("button", { name: "과일 카드 모양, 앞면에 뜻" })).toBeInTheDocument();
+    });
+    it("says a photo was read only in part above its cards, and nothing for a photo read whole", async () => {
+      answer({ status: 200, body: { cards: [card], partial: true } });
+      await choose(1);
+      expect(await screen.findByText("사진의 일부만 읽었어요")).toBeInTheDocument();
+      expect(screen.getByRole("checkbox", { name: "수도 선택" })).toBeInTheDocument();
+      cleanup();
+      // Several photos: only the partial one's group says it.
+      answer(
+        { status: 200, body: { cards: [card], partial: false } },
+        { status: 200, body: { cards: [{ ...card, front: "강", answer: "한강" }], partial: true } },
+      );
+      await choose(2);
+      await screen.findByRole("button", { name: "사진 2, 카드 1장" });
+      expect(screen.getAllByText("사진의 일부만 읽었어요")).toHaveLength(1);
+      cleanup();
+      // Control: a photo read whole says nothing of the kind.
+      answer({ status: 200, body: { cards: [card], partial: false } });
+      await choose(1);
+      await screen.findByRole("checkbox", { name: "수도 선택" });
+      expect(screen.queryByText("사진의 일부만 읽었어요")).not.toBeInTheDocument();
     });
     it("collapses and expands each photo's group from its header, leaving the other photos' rows", async () => {
       answer(read, { status: 200, body: { cards: [{ ...card, front: "강", answer: "한강" }] } });

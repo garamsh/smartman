@@ -7,8 +7,11 @@ import { field } from "@/supabase/row";
 import { parseCandidates, type Candidate } from "./photo-candidates";
 import type { PhotoFailure } from "./photo-failure";
 
-/** A per-photo result, without exposing service errors or credentials. */
-export type Extraction = { cards: Candidate[] } | { failure: PhotoFailure };
+/**
+ * A per-photo result, without exposing service errors or credentials; `partial` when the function
+ * read only part of the photo, its reply cut at the output cap (ADR 0135).
+ */
+export type Extraction = { cards: Candidate[]; partial: boolean } | { failure: PhotoFailure };
 
 /** The upload bound: the browser prepares every photo under it, inside the 4 MiB action limit. */
 const maxUploadBytes = 3 * 1024 * 1024;
@@ -90,7 +93,9 @@ export async function readPhoto(form: FormData): Promise<Extraction> {
 function parseExtraction(status: number, body: unknown): Extraction {
   if (status === 200) {
     const cards = parseCandidates(body);
-    return cards ? { cards } : { failure: { kind: "service" } };
+    return cards
+      ? { cards, partial: field(body, "partial") === true }
+      : { failure: { kind: "service" } };
   }
   if (status === 401) return { failure: { kind: "signIn" } };
   if (status === 403 && field(body, "error") === "suspended")
