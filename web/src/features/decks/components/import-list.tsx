@@ -8,8 +8,14 @@ import { SectionMenu } from "./section-menu";
 import { SideText } from "./side-text";
 import { WholeCard } from "./whole-card";
 
-/** One read photo's part of the list: its thumbnail, its number and its sections. */
-export type PhotoGroup = { id: string; url: string; sections: Section[] };
+/**
+ * One read photo's part of the list: its thumbnail, its number, its sections, and whether only part
+ * of the photo was read (ADR 0135).
+ */
+export type PhotoGroup = { id: string; url: string; sections: Section[]; partial: boolean };
+
+/** What a photo read only in part says above its cards. */
+const partialNote = "사진의 일부만 읽었어요";
 
 /**
  * The read cards as the phone's `ImportListView` lists them: the deck line, then, with one photo,
@@ -96,9 +102,13 @@ export function ImportList({
   return (
     <div className="flex min-w-0 flex-col">
       <DeckLine name={deckName} choose={chooseDeck} />
-      {groups.length === 1 && groups[0]
-        ? sections(groups[0])
-        : groups.map((group, at) => {
+      {groups.length === 1 && groups[0] ? (
+        <>
+          {groups[0].partial && <PartialNote />}
+          {sections(groups[0])}
+        </>
+      ) : (
+        groups.map((group, at) => {
             const expanded = !collapsed.has(group.id);
             const rows = group.sections.reduce((count, section) => count + section.cards.length, 0);
             const label = `사진 ${String(at + 1)}, 카드 ${String(rows)}장`;
@@ -132,12 +142,19 @@ export function ImportList({
                     </button>
                   </h3>
                 </div>
+                {group.partial && <PartialNote />}
                 {expanded && sections(group)}
               </div>
             );
-          })}
+          })
+      )}
     </div>
   );
+}
+
+/** The one sentence a photo read only in part shows above its cards. */
+function PartialNote() {
+  return <p className="pt-4 text-body break-keep text-ink-2">{partialNote}</p>;
 }
 
 /**
