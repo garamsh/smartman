@@ -6,13 +6,13 @@ import {
   audioOf,
   type Content,
   describeContent,
-  isWholeCard,
+  holdsBlank,
   type LibraryFailure,
   ReadFailure,
   readLibrary,
   SideText,
-  spokenContent,
-  WholeCard,
+  spokenCells,
+  WholeCells,
 } from "@/features/decks";
 import {
   type CardStates,
@@ -66,14 +66,17 @@ export async function Study({
 
   // Each side's text, and a whole card's faces, for the client, which cannot import decks' entry
   // point.
-  const cards = read.library.cards.map((card) => ({
+  const cards = read.library.cards.map(({ cells, ...card }) => ({
     ...card,
-    text: { front: describeContent(card.front), back: describeContent(card.back) },
-    ...(isWholeCard(card.front) && {
+    text: {
+      front: describeContent(card.front),
+      back: holdsBlank(cells) ? spokenCells(cells, true) : describeContent(card.back),
+    },
+    ...(holdsBlank(cells) && {
       whole: {
-        spokenFront: spokenContent(card.front, false),
-        empty: <WholeCard blocks={card.front} revealed={false} />,
-        filled: <WholeCard blocks={card.front} revealed />,
+        spokenFront: spokenCells(cells, false),
+        empty: <WholeCells cells={cells} revealed={false} />,
+        filled: <WholeCells cells={cells} revealed />,
       },
     }),
     ...([...card.front, ...card.back].some((block) => block.kind === "senses") && {
