@@ -163,7 +163,7 @@ class WholeCardView extends StatelessWidget {
   /// screen's sizes (#454).
   TextStyle get _titleStyle => _inRow
       ? style.copyWith(fontWeight: FontWeight.w700)
-      : AppType.headline.copyWith(color: style.color);
+      : AppType.wholeFront.copyWith(color: style.color);
 
   /// A part the reveal added: the back's size in `ink2` on a card, or, in a
   /// style such as a list row's, that style at regular weight in `ink2`.
@@ -171,7 +171,7 @@ class WholeCardView extends StatelessWidget {
     final ink2 = AppColors.of(context).ink2;
     return _inRow
         ? style.copyWith(color: ink2, fontWeight: FontWeight.w400)
-        : AppType.back.copyWith(color: ink2);
+        : AppType.wholeAdded.copyWith(color: ink2);
   }
 
   /// Whether [style] is smaller than a card's, as a list row's is.

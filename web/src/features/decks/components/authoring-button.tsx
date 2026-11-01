@@ -21,8 +21,19 @@ const choices = [
   { choice: "파일에서 고르기", line: "엑셀이나 CSV 파일의 행을 카드로 만들어요", open: "file" },
 ] as const;
 
-/** A creation entry opens the phone's three choices and a spreadsheet file without leaving the page. */
-export function AuthoringButton({ deck, decks = [] }: { deck?: Deck; decks?: Deck[] }) {
+/**
+ * A creation entry opens the phone's three choices and a spreadsheet file without leaving the page.
+ * It is outlined, or the coral fill with [primary], where it is the page's one way on.
+ */
+export function AuthoringButton({
+  deck,
+  decks = [],
+  primary = false,
+}: {
+  deck?: Deck;
+  decks?: Deck[];
+  primary?: boolean;
+}) {
   const [screen, setScreen] = useState<"options" | "name" | "manual" | "photo" | "file" | null>(
     null,
   );
@@ -36,7 +47,7 @@ export function AuthoringButton({ deck, decks = [] }: { deck?: Deck; decks?: Dec
         onClick={() => {
           setScreen("options");
         }}
-        className="pressable min-h-cta w-full rounded-button border border-outline bg-surface px-5 text-label focus-visible:outline-2 focus-visible:outline-ink"
+        className={`pressable min-h-cta w-full rounded-button px-5 text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${primary ? "bg-primary text-on-primary" : "border border-outline bg-surface"}`}
       >
         {label}
       </button>
@@ -195,7 +206,7 @@ const cellChoices = [
   { kind: "text", name: "글", line: "" },
   { kind: "word", name: "단어", line: "단어와 뜻을 함께 적어요" },
   { kind: "cloze", name: "빈칸 문장", line: "문장 속 단어를 가려요" },
-  { kind: "table", name: "표", line: "칸을 골라 가려요" },
+  { kind: "table", name: "표", line: "가릴 부분을 골라요" },
 ] as const;
 
 /** The editor's starting 칸: a stored card's, or one empty 글. */

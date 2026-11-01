@@ -1850,6 +1850,13 @@ void main() {
       expect(shownText('Done for today'), findsNothing);
       expect(shownText('Study'), findsNothing);
       expect(study.current, isNull);
+
+      // Its way back is a button as well as the ✕, the one primary.
+      final back = find.widgetWithText(AppButton, 'Close');
+      expect(tester.widget<AppButton>(back).variant, AppButtonVariant.primary);
+      await tester.tap(back);
+      await tester.pumpAndSettle();
+      expect(find.byType(StudyScreen), findsNothing);
     },
   );
 

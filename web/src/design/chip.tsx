@@ -24,7 +24,7 @@ export function Chip({
 }) {
   return (
     <span
-      className={`inline-flex shrink-0 items-center gap-1 rounded-chip border px-2 py-1 text-section ${tones[tone]}`}
+      className={`inline-flex shrink-0 items-center gap-1 rounded-chip border px-3 py-1 text-section ${tones[tone]}`}
     >
       {leading}
       {children}

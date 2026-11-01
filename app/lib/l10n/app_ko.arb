@@ -88,7 +88,7 @@
   "@blockSensesDescription": {"description": "The line under 단어 in the add sheet."},
   "blockTable": "표",
   "@blockTable": {"description": "A table block's type, in the add sheet and over the block in the card editor."},
-  "blockTableDescription": "칸을 골라 가려요",
+  "blockTableDescription": "가릴 부분을 골라요",
   "@blockTableDescription": {"description": "The line under 표 in the add sheet."},
   "blockCloze": "빈칸 문장",
   "@blockCloze": {"description": "A cloze block's type, in the add sheet and over the block in the card editor."},

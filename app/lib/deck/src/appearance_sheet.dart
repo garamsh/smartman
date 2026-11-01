@@ -17,10 +17,10 @@ import 'providers.dart';
 /// on its tile. On "저장" it stores the photo chosen, or its removal, and
 /// returns the icon and colour for the caller to store; null when the sheet
 /// is dismissed, which stores nothing.
-Future<(DeckIcon, DeckColor)?> showDeckAppearanceSheet(
+Future<(DeckIcon, DeckColor?)?> showDeckAppearanceSheet(
   BuildContext context, {
   required Deck deck,
-}) => showAppSheet<(DeckIcon, DeckColor)>(
+}) => showAppSheet<(DeckIcon, DeckColor?)>(
   context,
   builder: (_) => _AppearanceSheet(deck: deck),
 );
@@ -36,7 +36,9 @@ class _AppearanceSheet extends ConsumerStatefulWidget {
 
 class _AppearanceSheetState extends ConsumerState<_AppearanceSheet> {
   late DeckIcon _icon = widget.deck.icon ?? DeckIcon.fallback;
-  late DeckColor _color = widget.deck.color ?? defaultDeckColor(widget.deck.id);
+
+  /// The colour chosen, or none, which leaves the tile on the brand tint.
+  late DeckColor? _color = widget.deck.color;
   late TileImage _image = TileImage.of(widget.deck);
 
   /// While a photo is being picked or the choice stored.

@@ -175,7 +175,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get blockTable => '표';
 
   @override
-  String get blockTableDescription => '칸을 골라 가려요';
+  String get blockTableDescription => '가릴 부분을 골라요';
 
   @override
   String get blockCloze => '빈칸 문장';

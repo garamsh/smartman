@@ -1,6 +1,6 @@
 # ADR 0103: Give each deck an icon and a colour, stored as two unchecked keys and drawn on its tile in place of the initial
 
-> Status: accepted
+> Status: accepted; its colour selected by the id superseded by ADR-0145
 > Date: 2026-10-26
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.

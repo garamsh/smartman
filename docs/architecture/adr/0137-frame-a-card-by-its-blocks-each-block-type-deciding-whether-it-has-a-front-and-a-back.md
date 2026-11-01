@@ -1,6 +1,6 @@
 # ADR 0137: Frame a card by its blocks, each block type deciding whether it has a front and a back
 
-> Status: accepted
+> Status: accepted; a whole card's 글 at the headline and its added part at the back's size superseded by ADR-0145
 > Date: 2026-11-02
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.

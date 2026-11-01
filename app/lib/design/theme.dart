@@ -27,47 +27,48 @@ abstract final class AppSpace {
   static const sectionGap = s28;
 }
 
-/// The corner radii of the app's rounded surfaces, on one scale: group 14,
-/// button 18, chip and label 6, sheet 22 (#454, ADR 0139).
+/// The corner radii of the app's rounded surfaces, on one scale: group and
+/// card 24, button 20, sheet 28, and a chip and a label fully round
+/// (ADR 0145).
 abstract final class AppRadius {
   /// The bottom corners of the sign-in screen's brand panel.
   static const panel = 40.0;
 
   /// A sheet's top corners.
-  static const sheet = 22.0;
+  static const sheet = 28.0;
 
   /// A card: a study card, the today card, or a card preview.
   static const card = 24.0;
 
   /// A previous card in the study stack.
-  static const previous = 20.0;
+  static const previous = 24.0;
 
   /// A row in a list that stands alone on the ground.
-  static const row = 18.0;
+  static const row = 24.0;
 
   /// A group of rows split by hairlines: a settings section, a deck's cards.
-  static const group = 14.0;
+  static const group = 24.0;
 
   /// A button.
-  static const button = 18.0;
+  static const button = 20.0;
 
-  /// A chip, and a label before a meaning.
-  static const chip = 6.0;
+  /// A chip, and a label before a meaning: fully round at any height.
+  static const chip = 999.0;
 
   /// A field.
-  static const field = 14.0;
+  static const field = 16.0;
 
   /// A pull-down menu, such as a photo import section's form menu.
-  static const menu = 13.0;
+  static const menu = 16.0;
 }
 
 /// The heights and sizes of the app's controls and brand marks.
 abstract final class AppSize {
   /// The screen's or the sheet's primary action, at the bottom.
-  static const cta = 60.0;
+  static const cta = 56.0;
 
   /// Every other button.
-  static const button = 54.0;
+  static const button = 56.0;
 
   /// A one-line field.
   static const field = 52.0;
@@ -131,6 +132,9 @@ abstract final class AppSize {
 
   /// The study progress bar's thickness.
   static const progress = 8.0;
+
+  /// The coral-tinted pill behind the current tab's icon.
+  static const tabPill = Size(56, 32);
 }
 
 /// Digits of one width, so a figure keeps its place as it changes. Kept out
@@ -257,6 +261,22 @@ abstract final class AppType {
     fontFamily: appFontFamily,
     fontSize: 20,
     height: 28 / 20,
+    fontWeight: FontWeight.w600,
+  );
+
+  /// A 글's front on a whole card: 20/28, bold, above its added part.
+  static const wholeFront = TextStyle(
+    fontFamily: appFontFamily,
+    fontSize: 20,
+    height: 28 / 20,
+    fontWeight: FontWeight.w700,
+  );
+
+  /// The part the reveal adds to a whole card: 18/26, semibold (ADR 0145).
+  static const wholeAdded = TextStyle(
+    fontFamily: appFontFamily,
+    fontSize: 18,
+    height: 26 / 18,
     fontWeight: FontWeight.w600,
   );
 

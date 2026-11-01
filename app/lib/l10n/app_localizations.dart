@@ -347,7 +347,7 @@ abstract class AppLocalizations {
   /// The line under 표 in the add sheet.
   ///
   /// In ko, this message translates to:
-  /// **'칸을 골라 가려요'**
+  /// **'가릴 부분을 골라요'**
   String get blockTableDescription;
 
   /// A cloze block's type, in the add sheet and over the block in the card editor.

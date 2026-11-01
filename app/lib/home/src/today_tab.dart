@@ -128,8 +128,8 @@ class TodayTab extends StatelessWidget {
 }
 
 /// How to start while no deck holds a card, the mascot glad of the deck just
-/// made: add cards to the one deck, or open it; with more decks, go to the 덱
-/// tab to add cards in one of them.
+/// made: add cards to the one deck; with more decks, go to the 덱 tab to add
+/// cards in one of them.
 class _NoCards extends StatelessWidget {
   const _NoCards({required this.decks, required this.onShowDecks});
 
@@ -139,27 +139,21 @@ class _NoCards extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    void open(Deck deck, {required bool adding}) => Navigator.of(context).push(
+    void open(Deck deck) => Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => DeckScreen(deck: deck, addingCard: adding),
+        builder: (_) => DeckScreen(deck: deck, addingCard: true),
       ),
     );
     return FirstRun(
       mascot: MascotExpression.happy,
       title: l10n.noCardsTitle,
-      body: l10n.noCardsBody,
       actions: switch (decks) {
         [final deck] => [
           AppButton(
             label: l10n.newCard,
             icon: LucideIcons.plus,
             size: AppButtonSize.cta,
-            onPressed: () => open(deck, adding: true),
-          ),
-          AppButton(
-            label: l10n.openDeck,
-            variant: AppButtonVariant.text,
-            onPressed: () => open(deck, adding: false),
+            onPressed: () => open(deck),
           ),
         ],
         _ => [
@@ -416,9 +410,9 @@ class _ExtraPill extends StatelessWidget {
       AppChip(label: AppLocalizations.of(context).todayExtra(count));
 }
 
-/// Once today's cards are done: the mascot, that the day is done, the
-/// next review, the streak and the goal reached, and 학습하기, which goes on
-/// past today's cards.
+/// Once today's cards are done, on the white card, so the coral button stands
+/// alone: the mascot, that the day is done, the next review, the streak and
+/// the goal reached, and 학습하기, which goes on past today's cards.
 class _DoneCard extends StatelessWidget {
   const _DoneCard({required this.overview, required this.onStudy});
 
@@ -433,8 +427,9 @@ class _DoneCard extends StatelessWidget {
     final locale = Localizations.localeOf(context).toLanguageTag();
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: colors.brandTint,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(AppRadius.card),
+        boxShadow: AppShadow.card(colors),
       ),
       child: Padding(
         padding: const EdgeInsets.all(AppSpace.s24),
@@ -511,7 +506,7 @@ List<String> _dayLabels(BuildContext context, TodayOverview overview) {
 }
 
 /// The last seven study days on a card: the cards answered on each as a bar,
-/// today's in ink and last, under the heading; a tap opens 기록 through
+/// today's coral and last, under the heading; a tap opens 기록 through
 /// [onOpen].
 class _LastWeek extends StatelessWidget {
   const _LastWeek({required this.overview, required this.onOpen});
@@ -522,7 +517,6 @@ class _LastWeek extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final colors = AppColors.of(context);
     final locale = Localizations.localeOf(context).toLanguageTag();
     final week = overview.week;
     final cards = week.fold(0, (sum, day) => sum + day.cards);
@@ -557,7 +551,6 @@ class _LastWeek extends StatelessWidget {
               counts: [for (final day in week) day.cards],
               labels: labels,
               emphasised: week.length - 1,
-              ink: colors.ink,
               semantics: summary,
             ),
           ),
@@ -568,8 +561,8 @@ class _LastWeek extends StatelessWidget {
 }
 
 /// In a backlog: the overdue reviews left at the start of each of the next
-/// seven days at an average day's load, in the streak's amber, under how
-/// many days that takes at that pace, which the heading alone states.
+/// seven days at an average day's load, today's coral, under how many days
+/// that takes at that pace, which the heading alone states.
 class _CatchUp extends StatelessWidget {
   const _CatchUp({required this.overview});
 
@@ -578,7 +571,6 @@ class _CatchUp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final colors = AppColors.of(context);
     final counts = overview.backlogLeft;
     final labels = _dayLabels(context, overview);
     final days = (overview.count.total / overview.load).ceil();
@@ -587,8 +579,7 @@ class _CatchUp extends StatelessWidget {
       chart: _DayBars(
         counts: counts,
         labels: labels,
-        emphasised: null,
-        ink: colors.streak,
+        emphasised: 0,
         semantics: l10n.catchUpSemantics(
           [
             for (final (index, count) in counts.indexed)
@@ -631,21 +622,19 @@ class _ChartCard extends StatelessWidget {
 }
 
 /// A bar for each of [counts], its count above it and its label under it,
-/// the [emphasised] one in [ink] and the others a quieter shade of it, or all
-/// in [ink] when none is; read as [semantics].
+/// the [emphasised] one coral and the others the brand tint, which their
+/// counts carry; read as [semantics].
 class _DayBars extends StatelessWidget {
   const _DayBars({
     required this.counts,
     required this.labels,
     required this.emphasised,
-    required this.ink,
     required this.semantics,
   });
 
   final List<int> counts;
   final List<String> labels;
-  final int? emphasised;
-  final Color ink;
+  final int emphasised;
   final String semantics;
 
   @override
@@ -687,9 +676,9 @@ class _DayBars extends StatelessWidget {
                       maxWidth: AppSpace.s24 - 2,
                     ),
                     decoration: BoxDecoration(
-                      color: emphasised == null || index == emphasised
-                          ? ink
-                          : AppColors.quiet(ink),
+                      color: index == emphasised
+                          ? colors.primary
+                          : colors.brandTint,
                       borderRadius: BorderRadius.circular(AppSpace.s8 - 2),
                     ),
                   ),
@@ -749,9 +738,9 @@ class _TodayDecks extends StatelessWidget {
                   excludeSemantics: true,
                   child: Material(
                     color: colors.surface,
-                    borderRadius: BorderRadius.circular(AppRadius.button),
+                    borderRadius: BorderRadius.circular(AppRadius.row),
                     child: InkWell(
-                      borderRadius: BorderRadius.circular(AppRadius.button),
+                      borderRadius: BorderRadius.circular(AppRadius.row),
                       excludeFromSemantics: true,
                       onTap: () => _study(context, DeckSelection(deck.id)),
                       child: Padding(

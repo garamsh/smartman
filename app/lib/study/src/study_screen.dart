@@ -9,6 +9,7 @@ import '../../deck/deck.dart';
 import 'daily_minutes_sheet.dart';
 import 'study_coach.dart';
 import '../../design/app_chip.dart';
+import '../../design/app_button.dart';
 import '../../design/mascot.dart';
 import '../../design/theme.dart';
 import '../../design/word_break.dart';
@@ -279,11 +280,14 @@ class _StudyScreenState extends ConsumerState<StudyScreen>
             padding: const EdgeInsets.symmetric(horizontal: AppSpace.s20),
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               spacing: AppSpace.s16,
               children: [
-                const Mascot(
-                  expression: MascotExpression.sleepy,
-                  size: AppSize.mascotMedium,
+                const Center(
+                  child: Mascot(
+                    expression: MascotExpression.sleepy,
+                    size: AppSize.mascotMedium,
+                  ),
                 ),
                 Text(
                   l10n.nothingToStudyToday,
@@ -291,6 +295,12 @@ class _StudyScreenState extends ConsumerState<StudyScreen>
                   style: AppType.body.copyWith(
                     color: AppColors.of(context).muted,
                   ),
+                ),
+                const SizedBox(height: AppSpace.s4),
+                AppButton(
+                  label: l10n.close,
+                  size: AppButtonSize.cta,
+                  onPressed: () => Navigator.of(context).maybePop(),
                 ),
               ],
             ),

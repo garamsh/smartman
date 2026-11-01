@@ -227,7 +227,7 @@ describe("a whole card's 칸", () => {
     expect(group.querySelector("[data-audio=after]")).toBeNull();
   });
 
-  it("draws every 칸 revealed in place, an added part under its first part at the back's size and colour", () => {
+  it("draws every 칸 revealed in place, an added part under its larger first part, in ink-2", () => {
     const { group, parts } = draw(true);
 
     expect(parts.map((part) => part.textContent)).toEqual([
@@ -245,11 +245,11 @@ describe("a whole card's 칸", () => {
       "Colour. A flower.. Rose is red.. After.. apple. 사과. 소리. 소리",
     );
     for (const at of [1, 3, 5]) {
-      expect(parts[at]?.className).toContain("text-back");
+      expect(parts[at]?.className).toContain("text-whole-added");
       expect(parts[at]?.className).toContain("text-ink-2");
     }
     // Control: a first part keeps the title's style.
-    expect(parts[0]?.className).toContain("text-headline");
+    expect(parts[0]?.className).toContain("text-whole-front");
     expect(parts[0]?.className).not.toContain("text-ink-2");
   });
 
@@ -257,7 +257,7 @@ describe("a whole card's 칸", () => {
     const { parts } = draw(true, true);
     expect(parts[1]?.className).toContain("font-normal");
     expect(parts[1]?.className).toContain("text-ink-2");
-    expect(parts[1]?.className).not.toContain("text-back");
+    expect(parts[1]?.className).not.toContain("text-whole-added");
     // Control: a first part keeps the row's style.
     expect(parts[0]?.className).not.toContain("text-ink-2");
   });

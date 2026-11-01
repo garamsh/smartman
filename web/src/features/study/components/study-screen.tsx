@@ -493,9 +493,18 @@ function Session({ plan, back }: { plan: SessionPlan; back: string }) {
           className="flex min-w-0 flex-[999_1_520px] flex-col items-center gap-3 pt-6"
         >
           {view.kind === "empty" ? (
-            <div className="flex flex-col items-center gap-4 py-16">
-              <Mascot expression="sleepy" className="size-mascot-medium" />
+            <div className="flex w-full max-w-list flex-col items-stretch gap-4 py-16">
+              <Mascot expression="sleepy" className="size-mascot-medium self-center" />
               <p className="text-center text-body text-muted">오늘은 학습할 카드가 없어요</p>
+              <Link
+                href={back}
+                onClick={(event) => {
+                  exit(event, back);
+                }}
+                className={`${button} mt-1 min-h-cta bg-primary text-on-primary`}
+              >
+                닫기
+              </Link>
             </div>
           ) : (
             <>

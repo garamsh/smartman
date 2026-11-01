@@ -1,31 +1,31 @@
+import Link from "next/link";
+
 import { AuthoringButton } from "./authoring-button";
+import type { Deck } from "../library";
 
 import { Mascot, type MascotExpression } from "@/design/brand";
 
 /**
- * The first run's layout: the invitation [title] as a heading and one [body] line, under the
- * mascot in its [mascot] expression, as large as [size] says.
+ * The first run's layout: the one sentence [title] as a heading, under the mascot in its [mascot]
+ * expression, as large as [size] says.
  */
 function FirstRun({
   id,
   title,
-  body,
   mascot,
   size,
 }: {
   id: string;
   title: string;
-  body: string;
   mascot: MascotExpression;
   size: "size-mascot-large" | "size-mascot-medium";
 }) {
   return (
     <section aria-labelledby={id} className="flex flex-col items-center gap-2 pt-10 text-center">
       <Mascot expression={mascot} className={`mb-4 ${size}`} />
-      <h2 id={id} className="text-body-strong">
+      <h2 id={id} className="text-body-strong break-keep">
         {title}
       </h2>
-      <p className="text-secondary text-muted">{body}</p>
     </section>
   );
 }
@@ -40,11 +40,10 @@ export function EmptyHome() {
       <FirstRun
         id="empty-home-title"
         title="첫 덱을 만들어 볼까요?"
-        body="단어장 사진을 찍거나 직접 입력해 시작해 보세요."
         mascot="thinking"
         size="size-mascot-large"
       />
-      <AuthoringButton />
+      <AuthoringButton primary />
     </>
   );
 }
@@ -59,7 +58,6 @@ export function EmptyDeck() {
     <FirstRun
       id="empty-deck-title"
       title="아직 카드가 없어요"
-      body="카드를 추가해 시작해 보세요."
       mascot="sleepy"
       size="size-mascot-medium"
     />
@@ -68,16 +66,28 @@ export function EmptyDeck() {
 
 /**
  * The 오늘 page of a user whose decks hold no card, as the phone's 오늘 tab draws it, the mascot
- * glad of the deck just made: how to start rather than a finished day.
+ * glad of the deck just made: how to start rather than a finished day, and the one way there:
+ * adding a card to the one deck, or, with several, the deck list.
  */
-export function NoCardsHome() {
+export function NoCardsHome({ decks }: { decks: Deck[] }) {
   return (
-    <FirstRun
-      id="no-cards-title"
-      title="첫 카드를 만들어 볼까요?"
-      body="카드를 추가해 시작해 보세요."
-      mascot="happy"
-      size="size-mascot-large"
-    />
+    <>
+      <FirstRun
+        id="no-cards-title"
+        title="첫 카드를 만들어 볼까요?"
+        mascot="happy"
+        size="size-mascot-large"
+      />
+      {decks.length === 1 && decks[0] ? (
+        <AuthoringButton deck={decks[0]} primary />
+      ) : (
+        <Link
+          href="/decks"
+          className="pressable flex min-h-cta items-center justify-center rounded-button bg-primary px-5 text-label text-on-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+        >
+          덱에서 카드 추가
+        </Link>
+      )}
+    </>
   );
 }

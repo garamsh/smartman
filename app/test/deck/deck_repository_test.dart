@@ -260,6 +260,12 @@ void main() {
         (decks[french.id]!.icon, decks[french.id]!.color),
         (DeckIcon.book, DeckColor.violet),
       );
+
+      // Saving an icon alone stores no colour, so none reads as chosen.
+      await repository.setAppearance(spanish.id, DeckIcon.star, null);
+      final spanishNow = await repository.getDeck(spanish.id);
+      expect(spanishNow.icon, DeckIcon.star);
+      expect(spanishNow.color, isNull);
       expect((decks[spanish.id]!.icon, decks[spanish.id]!.color), (null, null));
       final row = await (db.select(
         db.decks,

@@ -23,9 +23,21 @@ const items: readonly Item[] = [
 
 const focus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
 
+/** The place of a menu item's icon, 56 by 32 as the phone's tab, the current one's a coral tint. */
+function Pill({ selected, children }: { selected: boolean; children: ReactNode }) {
+  return (
+    <span
+      className={`flex h-8 w-14 shrink-0 items-center justify-center rounded-chip ${selected ? "bg-brand-tint" : ""}`}
+    >
+      {children}
+    </span>
+  );
+}
+
 /**
- * The menu from 1024 px wide: the lockup, 오늘, 덱 and 기록, the current one on the brand tint,
- * and [account], the account's link, at its foot.
+ * The menu from 1024 px wide: the lockup, 오늘, 덱 and 기록, the current one a coral-tinted pill
+ * behind its icon beside a bold label and the others muted, as the tab bar draws them, and
+ * [account], the account's link, at its foot.
  */
 export function SideMenu({ account }: { account: ReactNode }) {
   return <SideMenuAt path={usePathname()} account={account} />;
@@ -54,9 +66,11 @@ export function SideMenuAt({ path, account }: { path: string | null; account: Re
               key={href}
               href={href}
               aria-current={selected ? "page" : undefined}
-              className={`pressable flex min-h-tap-target items-center gap-3 rounded-field px-3 text-label ${selected ? "bg-brand-tint text-ink" : "font-semibold text-ink-2"} ${focus}`}
+              className={`pressable flex min-h-tap-target items-center gap-3 rounded-field px-1 text-label ${selected ? "text-ink" : "font-medium text-muted"} ${focus}`}
             >
-              <Icon aria-hidden className="size-5" strokeWidth={selected ? 2.2 : 2} />
+              <Pill selected={selected}>
+                <Icon aria-hidden className="size-5" strokeWidth={selected ? 2.2 : 2} />
+              </Pill>
               {label}
             </Link>
           );
@@ -68,7 +82,7 @@ export function SideMenuAt({ path, account }: { path: string | null; account: Re
   );
 }
 
-/** The menu below 1024 px wide: 오늘, 덱 and 기록 in a bar at the foot, the current one in ink. */
+/** The menu below 1024 px wide: 오늘, 덱 and 기록 in a bar at the foot, the current one as beside. */
 export function TabBar() {
   return <TabBarAt path={usePathname()} />;
 }
@@ -87,9 +101,11 @@ export function TabBarAt({ path }: { path: string | null }) {
             key={href}
             href={href}
             aria-current={selected ? "page" : undefined}
-            className={`pressable flex flex-col items-center justify-center gap-0.5 text-micro ${selected ? "font-bold text-ink" : "font-semibold text-muted"} ${focus} focus-visible:-outline-offset-2`}
+            className={`pressable flex flex-col items-center justify-center gap-0.5 text-micro ${selected ? "font-bold text-ink" : "font-medium text-muted"} ${focus} focus-visible:-outline-offset-2`}
           >
-            <Icon aria-hidden className="size-6" strokeWidth={selected ? 2.2 : 2} />
+            <Pill selected={selected}>
+              <Icon aria-hidden className="size-6" strokeWidth={selected ? 2.2 : 2} />
+            </Pill>
             {label}
           </Link>
         );

@@ -314,13 +314,7 @@ void main() {
 
       expect(find.bySemanticsLabel('knowno'), findsOneWidget);
       expect(shownText('Shall we make your first deck?'), findsOneWidget);
-      expect(
-        shownText(
-          "Take a photo of a vocabulary page and we'll make the cards for you. You can also type them in.",
-        ),
-        findsOneWidget,
-      );
-      // One primary, which opens the new-deck sheet with every way to start.
+      // One sentence and one primary, which opens the new-deck sheet with every way to start.
       // The decks tab's way to a new deck, of the same name, waits for the
       // first deck.
       expect(find.text('Create a deck'), findsOneWidget);

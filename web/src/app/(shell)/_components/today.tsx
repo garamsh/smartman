@@ -101,7 +101,7 @@ export async function Today() {
     return (
       <>
         {heading}
-        <NoCardsHome />
+        <NoCardsHome decks={decks} />
       </>
     );
   }
@@ -159,7 +159,7 @@ export async function Today() {
         <div className="grid gap-4 lg:grid-cols-2">
           <section
             aria-labelledby="today-title"
-            className="flex flex-col items-center gap-2 rounded-card bg-brand-tint p-6 text-center text-ink lg:col-span-2"
+            className="flex flex-col items-center gap-2 rounded-card bg-surface p-6 text-center text-ink shadow-card lg:col-span-2"
           >
             <Mascot expression="happy" className="size-mascot-medium" />
             <h2 id="today-title" className="mt-1 text-body-strong">
@@ -175,7 +175,10 @@ export async function Today() {
               {goal.goal > 0 && <Chip>목표 {goal.goal}장 달성</Chip>}
               {extraChip}
             </p>
-            <EnterLink href={href} label="학습하기" />
+            {/* A row, so the link keeps its row sizes inside the card's column. */}
+            <div className="flex w-full flex-wrap justify-center">
+              <EnterLink href={href} label="학습하기" />
+            </div>
           </section>
           {week}
           <RetentionPreview days={retention.days} timeZone={retention.timeZone} />
@@ -275,7 +278,7 @@ export async function Today() {
 
 /**
  * In a backlog: the overdue reviews left at the start of each of the seven study days from today
- * when [perDay] are cleared a day, as amber bars under how many days that takes.
+ * when [perDay] are cleared a day, as bars, today's coral, under how many days that takes.
  */
 function CatchUp({
   backlog,
@@ -313,7 +316,7 @@ function CatchUp({
           <div key={labels[index]} className="flex flex-col items-center justify-end gap-1">
             <span className="text-micro font-bold">{value}</span>
             <span
-              className="w-full rounded-md bg-streak"
+              className={`w-full rounded-md ${index === 0 ? "bg-primary" : "bg-brand-tint"}`}
               style={{ height: `${String(Math.max(4, (value / highest) * 64))}px` }}
             />
             <span className="text-micro text-muted">{labels[index]}</span>
@@ -325,7 +328,7 @@ function CatchUp({
 }
 
 /**
- * The last seven study days as bars of the cards answered on each, today's in ink and last, under
+ * The last seven study days as bars of the cards answered on each, today's coral and last, under
  * the heading; the whole card links to 기록, which reads it as one sentence and each day's count.
  */
 function LastWeek({ week, timeZone }: { week: WeekDay[]; timeZone: string }) {
@@ -357,7 +360,7 @@ function LastWeek({ week, timeZone }: { week: WeekDay[]; timeZone: string }) {
           <span key={day.start} className="flex flex-col items-center justify-end gap-1">
             <span className="text-micro font-bold">{day.cards}</span>
             <span
-              className={`w-full rounded-md ${index === week.length - 1 ? "bg-ink" : "bg-outline"}`}
+              className={`w-full rounded-md ${index === week.length - 1 ? "bg-primary" : "bg-brand-tint"}`}
               style={{ height: `${String(Math.max(4, (day.cards / highest) * 64))}px` }}
             />
             <span className="text-micro text-muted">{labels[index]}</span>

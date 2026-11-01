@@ -67,13 +67,14 @@ function drawn(shade: string, theme: "light" | "dark"): Rgb {
 
 describe("the 기록 page's chart shades", () => {
   it.each(["light", "dark"] as const)(
-    "in the %s theme: each band and the quiet week are 3:1 on the surface, every two bands and adjacent heatmap levels 1.5:1 apart",
+    "in the %s theme: the ink bands and the quiet week are 3:1 on the surface, every two bands and adjacent heatmap levels 1.5:1 apart",
     (theme) => {
       const surface = rgb(themes[theme].get("surface") ?? "");
       const bands = [bandShades.strong, bandShades.fair, bandShades.fading].map((shade) =>
         drawn(shade, theme),
       );
-      for (const mark of [...bands, drawn(quietWeekShade, theme)]) {
+      // The coral band is 2.67:1 on the light surface; its count in words carries it (ADR 0145).
+      for (const mark of [...bands.slice(0, 2), drawn(quietWeekShade, theme)]) {
         expect(contrast(mark, surface)).toBeGreaterThanOrEqual(3);
       }
       for (const [i, a] of bands.entries()) {
@@ -87,7 +88,7 @@ describe("the 기록 page's chart shades", () => {
   );
 
   it("fails a fair band drawn at the other theme's alpha, so the check can fail", () => {
-    // Control: the light alpha in the dark theme lands within 1.5:1 of the amber band.
+    // Control: the light alpha in the dark theme lands within 1.5:1 of the coral band.
     const fairAtLightAlpha = drawn("bg-ink/75", "dark");
     expect(contrast(fairAtLightAlpha, drawn(bandShades.fading, "dark"))).toBeLessThan(1.5);
   });

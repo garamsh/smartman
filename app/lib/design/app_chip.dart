@@ -91,7 +91,7 @@ class AppChip extends StatelessWidget {
     );
     final face = Padding(
       padding: const EdgeInsets.symmetric(
-        horizontal: AppSpace.s8,
+        horizontal: AppSpace.s12,
         vertical: AppSpace.s4,
       ),
       child: leading == null

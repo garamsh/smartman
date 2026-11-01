@@ -45,14 +45,14 @@
   --color-google-stroke: #747775;
   --color-google-label: #1f1f1f;
 
-  --radius-sheet: 22px;
+  --radius-sheet: 28px;
   --radius-card: 24px;
-  --radius-previous: 20px;
-  --radius-row: 18px;
-  --radius-group: 14px;
-  --radius-button: 18px;
-  --radius-chip: 6px;
-  --radius-field: 14px;
+  --radius-previous: 24px;
+  --radius-row: 24px;
+  --radius-group: 24px;
+  --radius-button: 20px;
+  --radius-chip: 999px;
+  --radius-field: 16px;
   --radius-panel: 40px;
 
   /* The type scale of AppType in theme.dart: size, line height, weight and tracking. */
@@ -103,6 +103,12 @@
   --text-back: 20px;
   --text-back--line-height: 28px;
   --text-back--font-weight: 600;
+  --text-whole-front: 20px;
+  --text-whole-front--line-height: 28px;
+  --text-whole-front--font-weight: 700;
+  --text-whole-added: 18px;
+  --text-whole-added--line-height: 26px;
+  --text-whole-added--font-weight: 600;
   --text-card-body: 17px;
   --text-card-body--line-height: 27px;
   --text-card-body--font-weight: 500;
@@ -119,8 +125,8 @@
   --spacing-section-gap: 28px;
 
   /* The sizes of AppSize in theme.dart that the web draws, under the same names. */
-  --spacing-cta: 60px;
-  --spacing-button: 54px;
+  --spacing-cta: 56px;
+  --spacing-button: 56px;
   --spacing-search: 48px;
   --spacing-tap-target: 44px;
   --spacing-avatar: 56px;
