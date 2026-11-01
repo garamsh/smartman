@@ -1209,8 +1209,8 @@ test("creates a deck and a card on mobile, warns on a duplicate and keeps saved 
   await capture(page, "authoring-deck");
   await page.getByRole("button", { name: "카드 추가", exact: true }).click();
   await page.getByRole("button", { name: "직접 입력", exact: true }).click();
-  await page.getByRole("textbox", { name: "앞면 글 1", exact: true }).fill("apple");
-  await page.getByRole("textbox", { name: "뒷면 글 1", exact: true }).fill("사과");
+  await page.getByRole("textbox", { name: "앞면", exact: true }).fill("apple");
+  await page.getByRole("textbox", { name: "뒷면", exact: true }).fill("사과");
   await capture(page, "authoring-direct");
   await page.getByRole("button", { name: "저장", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
@@ -1225,14 +1225,14 @@ test("creates a deck and a card on mobile, warns on a duplicate and keeps saved 
   expect(read.data).toHaveLength(1);
   expect(read.data?.[0]).toMatchObject({
     template: "free",
-    template_version: 1,
+    template_version: 2,
     card_key: "apple",
   });
   expect(Number(read.data?.[0]?.revision)).toBeGreaterThan(0);
   await page.getByRole("button", { name: "카드 추가", exact: true }).click();
   await page.getByRole("button", { name: "직접 입력", exact: true }).click();
-  await page.getByRole("textbox", { name: "앞면 글 1", exact: true }).fill("ＡPPLE");
-  await page.getByRole("textbox", { name: "뒷면 글 1", exact: true }).fill("different");
+  await page.getByRole("textbox", { name: "앞면", exact: true }).fill("ＡPPLE");
+  await page.getByRole("textbox", { name: "뒷면", exact: true }).fill("different");
   await page.getByRole("button", { name: "저장", exact: true }).click();
   await expect(page.getByRole("dialog").getByRole("alert")).toHaveText(
     "이 덱에 이미 있는 카드예요",
