@@ -4,16 +4,26 @@ import { useEffect, useEffectEvent, useRef, useState, useTransition } from "reac
 import { useRouter } from "next/navigation";
 import { Check, CircleAlert, Clock, ImagePlus, LoaderCircle } from "lucide-react";
 import { v7 } from "uuid";
-import { createDeck, readAllowance, saveCards } from "../actions";
+import { createDeck, readAllowance, readCardKeys, saveCards } from "../actions";
+import { cardKey } from "../authoring";
+import { parseContent } from "../card-content";
 import { preparePhoto, sendPhoto } from "../extract-photo";
 import { describeFailure, isRetakeable, isRetryable, type PhotoFailure } from "../photo-failure";
 import { type Candidate } from "../photo-candidates";
-import { describeContent, parseContent } from "../card-content";
 import type { Deck } from "../library";
+import {
+  cardsOf,
+  defaultForm,
+  formFor,
+  readForms,
+  rememberForms,
+  type Section,
+  type SectionForm,
+  sectionsOf,
+} from "../section-form";
 import { AuthoringSheet } from "./authoring-sheet";
 import { CardFields } from "./card-fields";
-import { WholeCard } from "./whole-card";
-import { SideText } from "./side-text";
+import { ImportList } from "./import-list";
 
 /** A photo's place in the job, as the phone's `PhotoState`. */
 type PhotoState =
@@ -50,8 +60,29 @@ export function PhotoImport({
   const [note, setNote] = useState("");
   const [listOpen, setListOpen] = useState(false);
   const [message, setMessage] = useState("");
-  const [target, setTarget] = useState(deck?.id ?? "new");
+  const [target, setTarget] = useState<string>(deck?.id ?? "new");
   const [name, setName] = useState("");
+  const [naming, setNaming] = useState(false);
+  const [choosing, setChoosing] = useState(false);
+  // Each section's form once set, by section id; one not set takes the deck's remembered form.
+  const [forms, setForms] = useState<Record<string, SectionForm>>({});
+  const [remembered] = useState(readForms);
+  // The card keys the chosen deck holds, by deck id; a deck not read yet marks nothing.
+  const [held, setHeld] = useState<Record<string, ReadonlySet<string>>>({});
+  useEffect(() => {
+    if (target === "new") return;
+    let current = true;
+    // A deck whose keys cannot be read marks nothing, and a duplicate is still refused on saving.
+    void readCardKeys(target)
+      .catch(() => null)
+      .then((keys) => {
+        if (current && keys) setHeld((all) => ({ ...all, [target]: new Set(keys) }));
+      });
+    return () => {
+      current = false;
+    };
+  }, [target]);
+  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
   const [editing, setEditing] = useState<Candidate | null>(null);
   const [discarding, setDiscarding] = useState(false);
   const [pending, start] = useTransition();
@@ -174,7 +205,49 @@ export function PhotoImport({
   const candidates = read.flatMap((photo) =>
     photo.state.kind === "read" ? photo.state.cards : [],
   );
-  const selected = candidates.filter((card) => card.selected);
+  const groups = read.map((photo) => ({
+    id: photo.id,
+    url: photo.url,
+    sections: sectionsOf(photo.id, photo.state.kind === "read" ? photo.state.cards : []),
+  }));
+  const sections = groups.flatMap((group) => group.sections);
+  // The decks to choose from: the page's deck, which a deck's page reads alone, and the list's.
+  const choices = deck && !decks.some((item) => item.id === deck.id) ? [deck, ...decks] : decks;
+  function formOf(section: Section): SectionForm {
+    return (
+      forms[section.id] ??
+      formFor(section, remembered[target]?.[section.key]) ??
+      defaultForm(section.kind, section.identify)
+    );
+  }
+  /** Whether the chosen deck holds [card]'s first card in its form, as the phone's `isDuplicate`. */
+  function inDeck(card: Candidate, section: Section): boolean {
+    const [first] = cardsOf(card, formOf(section));
+    return !!first && !!held[target]?.has(cardKey(parseContent(first.front) ?? []));
+  }
+  /** Whether [card] is saved: as the user set it, else unless it is an identify card or in the deck. */
+  function included(card: Candidate, section: Section): boolean {
+    return card.selected ?? (!card.identify && !inDeck(card, section));
+  }
+  // The cards saving writes: each included candidate's, in its section's form.
+  const toSave = sections.flatMap((section) =>
+    section.cards
+      .filter((card) => included(card, section))
+      .flatMap((card) => cardsOf(card, formOf(section))),
+  );
+  /** Chooses the deck the cards go into, taking that deck's remembered forms where it has them. */
+  function chooseTarget(next: string) {
+    setForms(
+      Object.fromEntries(
+        sections.map((section) => [
+          section.id,
+          formFor(section, remembered[next]?.[section.key]) ?? formOf(section),
+        ]),
+      ),
+    );
+    setTarget(next);
+    setChoosing(false);
+  }
   function leave() {
     if (candidates.length) setDiscarding(true);
     else close();
@@ -213,6 +286,16 @@ export function PhotoImport({
       ),
     );
   }
+  /** Includes every card of [section], or leaves every one out when any is included. */
+  function toggleSection(section: Section) {
+    const include = !section.cards.some((card) => included(card, section));
+    for (const card of section.cards) changeCandidate({ ...card, selected: include });
+  }
+  /** Adds the cards; a new deck is named first, in its own sheet, as the phone's save asks. */
+  function add() {
+    if (target === "new" && !created) setNaming(true);
+    else save();
+  }
   function save() {
     if (busy.current) return;
     busy.current = true;
@@ -230,12 +313,9 @@ export function PhotoImport({
             setCreated(true);
           }
         }
-        for (let offset = 0; offset < selected.length; offset += 25) {
-          const result = await saveCards(
-            deckId,
-            selected.slice(offset, offset + 25).map(({ id, front, back }) => ({ id, front, back })),
-            "import",
-          );
+        setNaming(false);
+        for (let offset = 0; offset < toSave.length; offset += 25) {
+          const result = await saveCards(deckId, toSave.slice(offset, offset + 25), "import");
           if (!result.saved) {
             setMessage(
               result.message +
@@ -244,6 +324,10 @@ export function PhotoImport({
             return;
           }
         }
+        rememberForms(
+          deckId,
+          Object.fromEntries(sections.map((section) => [section.key, formOf(section)])),
+        );
         close();
         router.push(`/decks/${deckId}`);
         router.refresh();
@@ -385,111 +469,141 @@ export function PhotoImport({
           />
         </div>
       ) : (
-        <div className="flex min-w-0 flex-col gap-4">
-          {read.map((photo, photoIndex) => {
-            const cards = photo.state.kind === "read" ? photo.state.cards : [];
-            return (
-              <section key={photo.id} className="flex min-w-0 flex-col gap-3">
-                {read.length > 1 && (
-                  <div className="flex items-center gap-3 pt-2">
-                    <Thumbnail url={photo.url} className="h-16 w-12" />
-                    <div className="flex min-w-0 flex-col">
-                      <h3 className="text-body-strong">사진 {photoIndex + 1}</h3>
-                      <span className="text-caption text-muted">카드 {cards.length}장</span>
-                    </div>
-                  </div>
-                )}
-                {[...new Set(cards.map((card) => card.topic))].map((topic) => {
-                  const rows = cards.filter((card) => card.topic === topic);
-                  return (
-                    <div key={topic} className="flex min-w-0 flex-col gap-2">
-                      <h4 className="text-section text-muted">
-                        {topic || "카드"} {rows.length}
-                      </h4>
-                      <ul className="divide-y divide-hairline overflow-hidden rounded-group bg-surface">
-                        {rows.map((card) => (
-                          <CandidateRow
-                            key={card.id}
-                            card={card}
-                            toggle={() => {
-                              changeCandidate({ ...card, selected: !card.selected });
-                            }}
-                            edit={() => {
-                              setEditing(structuredClone(card));
-                            }}
-                          />
-                        ))}
-                      </ul>
-                    </div>
-                  );
-                })}
-              </section>
-            );
-          })}
+        <div className="flex min-w-0 flex-col">
+          <ImportList
+            groups={groups}
+            deckName={
+              target === "new" ? null : (choices.find((item) => item.id === target)?.name ?? null)
+            }
+            chooseDeck={() => {
+              setChoosing(true);
+            }}
+            formOf={formOf}
+            changeForm={(section, form) => {
+              setForms({ ...forms, [section.id]: form });
+            }}
+            collapsed={collapsed}
+            toggleGroup={(id) => {
+              const next = new Set(collapsed);
+              if (!next.delete(id)) next.add(id);
+              setCollapsed(next);
+            }}
+            included={included}
+            inDeck={inDeck}
+            toggleCard={(card, section) => {
+              changeCandidate({ ...card, selected: !included(card, section) });
+            }}
+            toggleSection={toggleSection}
+            edit={(card, section) => {
+              // An edit keeps the row as it was, so an edited duplicate is not left out.
+              setEditing({ ...structuredClone(card), selected: included(card, section) });
+            }}
+          />
           {photos.length < maxPhotos && (
-            <PhotoPicker
-              label="사진 더 추가"
-              icon
-              camera={false}
-              multiple
-              primary={false}
-              disabled={pending}
-              pick={(chosen) => {
-                void addBatch(chosen);
-              }}
-            />
-          )}
-          {!deck && (
-            <label className="text-section text-muted">
-              추가할 덱
-              <select
-                aria-label="추가할 덱"
-                value={target}
-                disabled={created}
-                onChange={(event) => {
-                  setTarget(event.target.value);
+            <div className="flex pt-6">
+              <PhotoPicker
+                label="사진 더 추가"
+                icon
+                camera={false}
+                multiple
+                primary={false}
+                disabled={pending}
+                pick={(chosen) => {
+                  void addBatch(chosen);
                 }}
-                className="mt-2 min-h-field w-full rounded-field bg-surface px-3 text-body text-ink"
-              >
-                <option value="new">새 덱 만들기</option>
-                {decks.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-          {target === "new" && (
-            <label className="text-section text-muted">
-              이름
-              <input
-                value={name}
-                disabled={created}
-                maxLength={500}
-                onChange={(event) => {
-                  setName(event.target.value);
-                }}
-                className="mt-2 min-h-field w-full rounded-field border border-outline bg-surface px-3 text-body text-ink"
               />
-            </label>
+            </div>
           )}
-          {message && (
-            <p role="alert" className="text-caption break-keep text-dont-know-text">
+          {message && !naming && (
+            <p role="alert" className="pt-4 text-caption break-keep text-dont-know-text">
               {message}
             </p>
           )}
-          <div className="sticky -bottom-4 bg-ground pt-3 pb-7">
+          <div className="sticky -bottom-4 mt-4 bg-ground pt-3 pb-7">
             <button
               type="button"
-              disabled={pending || selected.length === 0 || (target === "new" && !name.trim())}
-              onClick={save}
+              disabled={pending || toSave.length === 0}
+              onClick={add}
               className="pressable min-h-cta w-full rounded-button bg-ink px-4 text-label text-on-primary disabled:opacity-50"
             >
-              {pending ? "저장 중" : `카드 ${String(selected.length)}장 추가`}
+              {pending ? "저장 중" : `카드 ${String(toSave.length)}장 추가`}
             </button>
           </div>
         </div>
+      )}
+      {choosing && (
+        <AuthoringSheet
+          title="추가할 덱"
+          close={() => {
+            setChoosing(false);
+          }}
+        >
+          <div
+            role="radiogroup"
+            aria-label="추가할 덱"
+            className="divide-y divide-hairline overflow-hidden rounded-group bg-surface"
+          >
+            {[...choices, { id: "new", name: "새 덱" }].map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                role="radio"
+                aria-checked={item.id === target}
+                disabled={created}
+                onClick={() => {
+                  chooseTarget(item.id);
+                }}
+                className="pressable flex min-h-button w-full items-center gap-3 px-4 py-3 text-left text-body break-keep disabled:opacity-50"
+              >
+                <span className="min-w-0 flex-1">{item.name}</span>
+                {item.id === target && (
+                  <Check aria-hidden className="size-small-icon shrink-0 text-ink" />
+                )}
+              </button>
+            ))}
+          </div>
+        </AuthoringSheet>
+      )}
+      {naming && (
+        <AuthoringSheet
+          title="새 덱"
+          close={() => {
+            if (!busy.current) setNaming(false);
+          }}
+        >
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              save();
+            }}
+            className="flex flex-col gap-4"
+          >
+            <label className="text-section text-muted">
+              이름
+              <input
+                autoFocus
+                required
+                maxLength={500}
+                value={name}
+                onChange={(event) => {
+                  setName(event.target.value);
+                }}
+                className="mt-2 min-h-field w-full rounded-field border border-outline bg-surface px-4 text-body text-ink focus:outline-2 focus:outline-ink"
+              />
+            </label>
+            {message && (
+              <p role="alert" className="text-caption break-keep text-dont-know-text">
+                {message}
+              </p>
+            )}
+            <button
+              disabled={pending || !name.trim()}
+              className="pressable min-h-cta rounded-button bg-ink px-5 text-label text-on-primary disabled:opacity-50"
+            >
+              {pending ? "만드는 중" : "만들기"}
+            </button>
+          </form>
+        </AuthoringSheet>
       )}
       {editing && (
         <AuthoringSheet
@@ -666,59 +780,6 @@ function PhotoRow({
             빼기
           </button>
         </div>
-      )}
-    </li>
-  );
-}
-
-/** A candidate's row: its round check, and its sides, or a whole card's front, to edit. */
-function CandidateRow({
-  card,
-  toggle,
-  edit,
-}: {
-  card: Candidate;
-  toggle: () => void;
-  edit: () => void;
-}) {
-  const front = parseContent(card.front) ?? [];
-  const back = parseContent(card.back) ?? [];
-  const whole = front.some((item) => item.kind === "table" || item.kind === "cloze");
-  return (
-    <li className="flex min-w-0 items-start gap-2 p-3">
-      <button
-        type="button"
-        role="checkbox"
-        aria-checked={card.selected}
-        aria-label={`${describeContent(front)} 선택`}
-        onClick={toggle}
-        className="pressable flex size-tap-target shrink-0 items-center justify-center rounded-full text-body"
-      >
-        <span
-          aria-hidden
-          className={`flex size-6 items-center justify-center rounded-full border ${card.selected ? "border-ink bg-ink text-on-primary" : "border-outline"}`}
-        >
-          {card.selected && <Check className="size-4" />}
-        </span>
-      </button>
-      {whole ? (
-        <div className="min-w-0 flex-1 overflow-x-auto py-2">
-          <WholeCard blocks={front} revealed />
-        </div>
-      ) : (
-        <button
-          type="button"
-          aria-label={`${describeContent(front)} 편집`}
-          onClick={edit}
-          className="pressable min-h-tap-target min-w-0 flex-1 py-2 text-left text-body break-words"
-        >
-          <span className="block font-bold">
-            <SideText blocks={front} />
-          </span>
-          <span className="mt-1 block text-caption text-muted">
-            <SideText blocks={back} />
-          </span>
-        </button>
       )}
     </li>
   );

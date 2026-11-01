@@ -10,7 +10,6 @@ const sections = [
   { href: "/admin/users", label: "사용자" },
   { href: "/admin/plans", label: "요금제" },
   { href: "/admin/prompts", label: "프롬프트" },
-  { href: "/admin/extractions", label: "추출 결과" },
   { href: "/admin/admins", label: "관리자" },
   { href: "/admin/audit", label: "작업 기록" },
 ] as const;
