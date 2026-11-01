@@ -1,6 +1,6 @@
 # ADR 0108: Add a free template and an add control that puts any block on either side of every template
 
-> Status: accepted; its forms beside 자유, the kind switch and the split of a card's leading blocks into its form superseded by ADR-0114; its add control and block menu refined by ADR-0117, which ends each side's group with "+ 추가" and names the delete item "삭제"
+> Status: accepted; its forms beside 자유, the kind switch and the split of a card's leading blocks into its form superseded by ADR-0114; its add control and block menu refined by ADR-0117, which ends each side's group with "+ 추가" and names the delete item "삭제"; its add control on either side and its back-only one face superseded by [ADR 0137](0137-frame-a-card-by-its-blocks-each-block-type-deciding-whether-it-has-a-front-and-a-back.md)
 > Date: 2026-10-26
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.

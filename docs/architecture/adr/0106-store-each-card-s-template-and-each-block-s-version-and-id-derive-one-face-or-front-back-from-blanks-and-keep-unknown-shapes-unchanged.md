@@ -1,6 +1,6 @@
 # ADR 0106: Store each card's template and each block's version and id, derive one face or front then back from blanks, and keep unknown shapes unchanged
 
-> Status: accepted; its one face for a card whose back alone holds a blank refined by [ADR 0108](0108-add-a-free-template-and-an-add-control-that-puts-any-block-on-either-side-of-every-template.md)
+> Status: accepted; its one face for a card whose back alone holds a blank refined by [ADR 0108](0108-add-a-free-template-and-an-add-control-that-puts-any-block-on-either-side-of-every-template.md); its study mode from blanks (`oneFaceOf`) and its two side lists superseded by [ADR 0137](0137-frame-a-card-by-its-blocks-each-block-type-deciding-whether-it-has-a-front-and-a-back.md), keeping its versions, ids and unknown shapes
 > Date: 2026-10-26
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.
