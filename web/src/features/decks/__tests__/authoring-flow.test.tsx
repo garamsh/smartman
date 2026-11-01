@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { http, HttpResponse } from "msw";
 import { render } from "@/testing/render";
-import { cardRow, deckRow, uuidOf } from "@/testing/library";
+import { cardRow, deckRow, side, uuidOf } from "@/testing/library";
 import { FakePostgrest } from "@/testing/mocks/postgrest";
 import { server } from "@/testing/mocks/server";
 import { supabaseUrl, testAccessToken } from "@/testing/mocks/handlers";
@@ -757,6 +757,39 @@ describe("photo import", () => {
       );
       await userEvent.click(screen.getByRole("checkbox", { name: "수도 선택" }));
       expect(screen.getByRole("checkbox", { name: "수도 선택" })).toBeChecked();
+    });
+    it("merges a checked card the deck holds into it on saving, as the phone does, beside a new one inserted", async () => {
+      db.seed("cards", cardRow("held", "deck", "수도"));
+      answer({ status: 200, body: { cards: [card, { ...card, front: "인구", answer: "많음" }] } });
+      await choose(1);
+      await screen.findByRole("heading", { name: "카드 2장을 만들었어요" });
+      await waitFor(() => {
+        expect(screen.getByRole("checkbox", { name: "수도 선택" })).not.toBeChecked();
+      });
+      await userEvent.click(screen.getByRole("checkbox", { name: "수도 선택" }));
+      await userEvent.click(screen.getByRole("button", { name: "카드 2장 추가" }));
+      await waitFor(() => {
+        expect(db.rows.cards).toHaveLength(2);
+      });
+      await waitFor(() => {
+        expect(db.rows.cards[0]?.back).toEqual([
+          ...side("수도 back"),
+          expect.objectContaining({ type: "text", payload: { text: "서울" } }),
+        ]);
+      });
+      expect(db.rows.cards[0]?.id).toBe(uuidOf("held"));
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "카드 2장 추가" })).not.toBeInTheDocument();
+    });
+    it("counts two photos' cards of one key as one on the add button, and saves one card", async () => {
+      answer({ status: 200, body: { cards: [card] } });
+      await choose(2);
+      await screen.findByRole("heading", { name: "카드 2장을 만들었어요" });
+      await userEvent.click(screen.getByRole("button", { name: "카드 1장 추가" }));
+      await waitFor(() => {
+        expect(db.rows.cards).toHaveLength(1);
+      });
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     });
     it("merges a photo's cards of one front into one row, joining their backs and senses", async () => {
       const pear = { ...apple, senses: [{ labels: [], meaning: "배나무", examples: [] }] };

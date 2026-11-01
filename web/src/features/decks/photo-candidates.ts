@@ -1,6 +1,6 @@
 import { v7 } from "uuid";
 import { field } from "@/supabase/row";
-import { block, type Block, type CardDraft, cardKey, textBlocks } from "./authoring";
+import { block, type Block, type CardDraft, cardKey, holdsBack, textBlocks } from "./authoring";
 import { describeContent, parseContent } from "./card-content";
 
 /**
@@ -150,10 +150,7 @@ function mergeCandidates(cards: Candidate[]): Candidate[] {
       );
     } else if (!first.front.some((item) => item.type === "cloze" || item.type === "table")) {
       const back = describeContent(parseContent(card.back) ?? []);
-      const lines = describeContent(parseContent(first.back) ?? [])
-        .split("\n")
-        .map((line) => keyOf(textBlocks(line)));
-      if (back.trim() && !lines.includes(keyOf(textBlocks(back))))
+      if (back.trim() && !holdsBack(parseContent(first.back) ?? [], back))
         first.back = [...first.back, ...textBlocks(back)];
     }
   }
