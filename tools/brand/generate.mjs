@@ -42,7 +42,7 @@ const centred = (art, scale, ground = "") => {
 const onCircle = centred(mark, 0.88, `<circle cx="512" cy="512" r="512" fill="${cream}"/>`);
 
 /** The mark close up on a full cream square, its body running off the foot. */
-const onSquare = `<rect width="1024" height="1024" fill="${cream}"/><g transform="translate(-75 32) scale(1.15)">${mark}</g>`;
+const onSquare = `<rect width="1024" height="1024" fill="${cream}"/><g transform="translate(-120 -6) scale(1.25)">${mark}</g>`;
 
 /** The mark on the cream circle, in a box [size] across at ([x], [y]). */
 const circled = (x, y, size) =>
