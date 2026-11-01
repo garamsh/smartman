@@ -12,8 +12,8 @@ import 'whole_card_view.dart';
 
 /// A card as the study screen shows it with its back revealed: the front on
 /// the left half and the back on the right, each centred and fitted to its
-/// half, its lines broken only between words, or a whole card's front with
-/// its blanks filled, on a rounded surface.
+/// half, its lines broken only between words, or a whole card's 칸 in place,
+/// revealed, on a rounded surface.
 class CardPreview extends StatelessWidget {
   const CardPreview({super.key, required this.front, required this.back});
 
@@ -27,6 +27,7 @@ class CardPreview extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
+    final cells = cellsToDraw(front, back);
     return DecoratedBox(
       decoration: BoxDecoration(
         color: colors.surface,
@@ -35,13 +36,13 @@ class CardPreview extends StatelessWidget {
       ),
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: minHeight),
-        child: isWholeCard(front)
+        child: isDrawnWhole(cells)
             ? Center(
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpace.s16),
                   child: LayoutBuilder(
-                    builder: (context, constraints) => WholeCardView(
-                      front,
+                    builder: (context, constraints) => WholeCardView.cells(
+                      cells,
                       revealed: true,
                       style: AppType.front,
                       minFontSize: AppType.frontFloor,

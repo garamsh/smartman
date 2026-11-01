@@ -53,6 +53,48 @@ Future<SharingApp> _openSpanish(
 
 void main() {
   testWidgets(
+    'the preview draws a framed card as the deck screen does, split or whole',
+    (tester) async {
+      PublicCard framed(List<Cell> cells) {
+        final sides = sidesOf(cells);
+        return PublicCard(front: sides.front, back: sides.back, cells: cells);
+      }
+
+      final app = await _openSpanish(
+        tester,
+        server: FakeSharingServer(
+          decks: [_spanish],
+          cards: {
+            _spanish.id: [
+              framed(const [TextCell(front: 'perro', back: 'dog')]),
+              framed(const [
+                BlankCell(ClozeContent('___ barks.', ['Dog'])),
+                TextCell(front: 'one'),
+                TextCell(front: 'two', back: 'A pet.'),
+              ]),
+            ],
+          },
+        ),
+      );
+
+      final rows = find.byType(CardSplitRow);
+      expect(
+        find.descendant(of: rows.first, matching: find.byType(VerticalDivider)),
+        findsOneWidget,
+      );
+      expect(find.text('dog'), findsOneWidget);
+      expect(
+        find.descendant(of: rows.last, matching: find.byType(VerticalDivider)),
+        findsNothing,
+      );
+      double top(String text) => tester.getTopLeft(find.text(text)).dy;
+      expect(top('one'), lessThan(top('two')));
+      expect(top('two'), lessThan(top('A pet.')));
+      await app.close();
+    },
+  );
+
+  testWidgets(
     'the preview shows the name, owner, description, counts and cards as split rows',
     (tester) async {
       final app = await _openSpanish(tester);

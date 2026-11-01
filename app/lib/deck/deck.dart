@@ -30,12 +30,14 @@ export 'src/card_frame.dart'
         cellsFromSides,
         cellsOf,
         decodeCells,
+        encodeCells,
         frameKey,
         frameProblem,
         sidesOf;
 export 'src/card_key.dart' show CardKey;
 export 'src/card_list.dart'
-    show CardBackRow, CardSplitRow, describeContent, spokenContent;
+    show CardBackRow, CardSplitRow, describeContent, spokenCells, spokenContent;
+export 'src/card_template.dart' show isFramed;
 export 'src/content.dart'
     show
         AudioContent,
@@ -58,8 +60,6 @@ export 'src/content.dart'
         decodeContent,
         encodeContent,
         decodeSense,
-        isWholeCard,
-        oneFaceOf,
         plainText;
 export 'src/card_text.dart' show CardScroll;
 export 'src/content_view.dart'
@@ -95,4 +95,10 @@ export 'src/providers.dart'
         deckRepositoryProvider,
         decksProvider;
 export 'src/split_card.dart' show SideBuilder, SplitCard;
-export 'src/whole_card_view.dart' show SteppedWholeCardView, WholeCardView;
+export 'src/whole_card_view.dart'
+    show
+        SteppedWholeCardView,
+        WholeCardView,
+        cellsToDraw,
+        drawnCellsOf,
+        isDrawnWhole;

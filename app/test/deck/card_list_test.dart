@@ -80,7 +80,7 @@ void main() {
                       ['당신', '자기'],
                     ),
                   ],
-                  back: const [TextContent('3인칭 재귀칭')],
+                  back: const [],
                   shown: shown,
                   onOpen: () {},
                 ),
@@ -129,4 +129,69 @@ void main() {
       }
     });
   }
+
+  group('a whole card with a kept back', () {
+    const cloze = ClozeContent('The capital is $clozeBlank', ['Paris']);
+    const front = [cloze];
+    const back = [TextContent('on the Seine')];
+
+    Future<void> pump(WidgetTester tester, Widget row) => tester.pumpWidget(
+      MaterialApp(
+        theme: lightTheme,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+        home: Scaffold(body: row),
+      ),
+    );
+
+    testWidgets('its split row draws it revealed, as the previous card does', (
+      tester,
+    ) async {
+      await pump(tester, const CardSplitRow(front: front, back: back));
+      expect(find.text('on the Seine'), findsOneWidget);
+      expect(blanksUnder(find.byType(CardSplitRow)), {'Paris': true});
+      expect(find.byType(VerticalDivider), findsNothing);
+    });
+
+    testWidgets('its deck row hides the back until shown, and reads it after '
+        'the answer', (tester) async {
+      Widget row(bool shown) =>
+          CardBackRow(front: front, back: back, shown: shown, onOpen: () {});
+      await pump(tester, row(false));
+      expect(find.text('on the Seine'), findsNothing);
+      expect(blanksUnder(find.byType(CardBackRow)), {'Paris': false});
+      expect(
+        find.bySemanticsLabel('The capital is blank, back hidden'),
+        findsOneWidget,
+      );
+
+      await pump(tester, row(true));
+      expect(find.text('on the Seine'), findsOneWidget);
+      expect(blanksUnder(find.byType(CardBackRow)), {'Paris': true});
+      expect(
+        find.bySemanticsLabel(
+          'The capital is blank, back The capital is Paris. on the Seine',
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('a row draws the 칸 a framed card stores, a back in the 칸 it '
+        'was written on', (tester) async {
+      const cells = [
+        BlankCell(cloze),
+        TextCell(front: 'one'),
+        TextCell(front: 'two', back: 'of two'),
+      ];
+      final sides = sidesOf(cells);
+      await pump(
+        tester,
+        CardSplitRow(front: sides.front, back: sides.back, cells: cells),
+      );
+      double top(String text) => tester.getTopLeft(find.text(text)).dy;
+      expect(top('one'), lessThan(top('two')));
+      expect(top('two'), lessThan(top('of two')));
+    });
+  });
 }

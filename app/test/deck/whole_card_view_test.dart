@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:smartman/deck/src/card_frame.dart';
 import 'package:smartman/deck/src/content.dart';
 import 'package:smartman/deck/src/whole_card_view.dart';
 import 'package:smartman/design/theme.dart';
+import 'package:smartman/media/media.dart';
 
 import '../design/harness.dart';
 import 'whole_cards.dart';
@@ -110,5 +112,156 @@ void main() {
     }
     // The joiners are not read: the card reads as its words.
     expect(find.bySemanticsLabel(RegExp('^낮에는 친구들과 함께 춤을')), findsOneWidget);
+  });
+
+  group('a whole card of 칸', () {
+    const blank = BlankCell(cloze);
+    const glue = TextCell(front: 'Title', back: 'Added');
+    const word = WordCell(
+      term: 'apple',
+      senses: [CardSense(meaning: '사과')],
+      ask: WordAsk.term,
+    );
+    const meaningFirst = WordCell(
+      term: 'apple',
+      senses: [CardSense(meaning: '사과')],
+      ask: WordAsk.meaning,
+    );
+    final photo = PlacedCell(
+      const ImageContent(media: MediaId('m'), width: 4, height: 3),
+      CellSide.back,
+    );
+
+    List<String> order(WidgetTester tester) => [
+      for (final text in tester.widgetList<RichText>(
+        find.descendant(
+          of: find.byType(WholeCardView),
+          matching: find.byType(RichText),
+        ),
+      ))
+        text.text
+            .toPlainText()
+            .replaceAll('⁠', '')
+            .trim()
+            .replaceAll(RegExp(r'\s+'), ' '),
+    ];
+
+    TextStyle styleOf(WidgetTester tester, String text) =>
+        tester.widget<Text>(find.text(text)).style!;
+
+    testWidgets('before the reveal it draws a 글\'s front as a title, a 단어\'s '
+        'asked side and the blank empty, in order', (tester) async {
+      await pumpComponent(
+        tester,
+        const WholeCardView.cells(
+          [glue, word, blank],
+          revealed: false,
+          style: AppType.front,
+        ),
+      );
+      expect(order(tester), ['Title', 'apple', 'The capital is Paris today']);
+      expect(styleOf(tester, 'Title').fontSize, AppType.headline.fontSize);
+      expect(blanksUnder(find.byType(WholeCardView)), {'Paris': false});
+      expect(find.text('Added'), findsNothing);
+      expect(find.textContaining('사과'), findsNothing);
+    });
+
+    for (final MapEntry(key: themeMode, value: colors) in themeModes.entries) {
+      testWidgets('after it each added part is under its first part at the '
+          "back's size in ink2, the blank filled, in ${themeMode.name}", (
+        tester,
+      ) async {
+        await pumpComponent(
+          tester,
+          const WholeCardView.cells(
+            [glue, word, blank],
+            revealed: true,
+            style: AppType.front,
+          ),
+          themeMode: themeMode,
+        );
+        expect(order(tester), [
+          'Title',
+          'Added',
+          'apple',
+          '사과',
+          'The capital is Paris today',
+        ]);
+        final added = styleOf(tester, 'Added');
+        expect(added.fontSize, AppType.back.fontSize);
+        expect(added.fontWeight, AppType.back.fontWeight);
+        expect(added.color, colors.ink2);
+        expect(blanksUnder(find.byType(WholeCardView)), {'Paris': true});
+      });
+    }
+
+    testWidgets("a 단어 asking its meaning shows the meaning first, the word "
+        'added', (tester) async {
+      await pumpComponent(
+        tester,
+        const WholeCardView.cells(
+          [meaningFirst, blank],
+          revealed: false,
+          style: AppType.front,
+        ),
+      );
+      expect(find.textContaining('사과'), findsOneWidget);
+      expect(find.text('apple'), findsNothing);
+    });
+
+    testWidgets('a 글 with a back alone draws nothing before the reveal', (
+      tester,
+    ) async {
+      await pumpComponent(
+        tester,
+        const WholeCardView.cells(
+          [blank, TextCell(back: 'Only after')],
+          revealed: false,
+          style: AppType.front,
+        ),
+      );
+      expect(order(tester), hasLength(1));
+      expect(find.text('Only after'), findsNothing);
+    });
+
+    testWidgets('in a list row\'s style an added part keeps the row\'s size', (
+      tester,
+    ) async {
+      await pumpComponent(
+        tester,
+        const WholeCardView.cells(
+          [glue, blank],
+          revealed: true,
+          style: AppType.label,
+        ),
+      );
+      expect(styleOf(tester, 'Added').fontSize, AppType.label.fontSize);
+      expect(styleOf(tester, 'Added').color, AppColors.light.ink2);
+      expect(styleOf(tester, 'Added').fontWeight, FontWeight.w400);
+    });
+
+    test('a photo on the back is a part after the reveal alone', () {
+      final cells = [blank, photo];
+      expect(partsOf(cells, revealed: false), hasLength(1));
+      expect(partsOf(cells, revealed: true), [
+        (block: cloze, added: false),
+        (block: photo.block, added: true),
+      ]);
+    });
+  });
+
+  group('the 칸 a card of two sides is drawn from', () {
+    test('a block this build cannot show is kept, after the 칸 it knows', () {
+      const later = UnsupportedContent('video', {'media': 'm1'});
+      final cells = cellsToDraw([cloze, later], [const TextContent('kept')]);
+      expect(cells, [
+        const BlankCell(cloze),
+        const TextCell(back: 'kept'),
+        const UnknownCell(later),
+      ]);
+      expect(isDrawnWhole(cells), isTrue);
+      // Control: the same block with no blank beside it stays split.
+      expect(isDrawnWhole(cellsToDraw([later], const [])), isFalse);
+    });
   });
 }

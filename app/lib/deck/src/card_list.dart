@@ -3,13 +3,14 @@ import 'package:flutter/material.dart';
 import '../../design/app_list_row.dart';
 import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
+import 'card_frame.dart';
 import 'content.dart';
 import 'content_view.dart';
 import 'split_card.dart';
 import 'whole_card_view.dart';
 
 /// A card as two columns, front and back, split by a thin divider, or a
-/// whole card's front with its blanks filled; read-only without [onTap]. On
+/// whole card's 칸 in place, revealed; read-only without [onTap]. On
 /// its own it is a row on its rounded surface; [grouped] it is one row of a
 /// group that draws the surface.
 class CardSplitRow extends StatelessWidget {
@@ -17,12 +18,16 @@ class CardSplitRow extends StatelessWidget {
     super.key,
     required this.front,
     required this.back,
+    this.cells,
     this.onTap,
     this.grouped = false,
   });
 
   final List<Content> front;
   final List<Content> back;
+
+  /// The 칸 a framed card stores; null on a card converted from its sides.
+  final List<Cell>? cells;
   final VoidCallback? onTap;
   final bool grouped;
 
@@ -30,10 +35,15 @@ class CardSplitRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
-    final content = isWholeCard(front)
+    final cells = this.cells ?? cellsToDraw(front, back);
+    final content = isDrawnWhole(cells)
         ? Padding(
             padding: const EdgeInsets.all(AppSpace.s16),
-            child: WholeCardView(front, revealed: true, style: AppType.label),
+            child: WholeCardView.cells(
+              cells,
+              revealed: true,
+              style: AppType.label,
+            ),
           )
         : SplitCard(
             centred: false,
@@ -51,7 +61,7 @@ class CardSplitRow extends StatelessWidget {
 }
 
 /// A card's row: its front, and its back muted after it when [shown], or a
-/// whole card's front with its blanks empty unless [shown]. A tap opens the
+/// whole card's 칸 in place, unrevealed unless [shown]. A tap opens the
 /// card with [onOpen], and a screen reader hears the row as one button.
 /// Inside an [AppGroup] it is one of the group's rows.
 class CardBackRow extends StatelessWidget {
@@ -59,12 +69,16 @@ class CardBackRow extends StatelessWidget {
     super.key,
     required this.front,
     required this.back,
+    this.cells,
     required this.shown,
     required this.onOpen,
   });
 
   final List<Content> front;
   final List<Content> back;
+
+  /// The 칸 a framed card stores; null on a card converted from its sides.
+  final List<Cell>? cells;
   final bool shown;
   final VoidCallback onOpen;
 
@@ -72,11 +86,13 @@ class CardBackRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
-    final whole = isWholeCard(front);
-    final spokenFront = spokenContent(l10n, front, revealed: false);
-    // A whole card's back is never drawn: its front, filled, is read instead.
+    final cells = this.cells ?? cellsToDraw(front, back);
+    final whole = isDrawnWhole(cells);
+    final spokenFront = whole
+        ? spokenCells(l10n, cells, revealed: false)
+        : spokenContent(l10n, front, revealed: false);
     final spokenBack = whole
-        ? spokenContent(l10n, front, revealed: true)
+        ? spokenCells(l10n, cells, revealed: true)
         : describeContent(l10n, back);
     return Semantics(
       container: true,
@@ -99,8 +115,8 @@ class CardBackRow extends StatelessWidget {
             child: Align(
               alignment: AlignmentDirectional.centerStart,
               child: whole
-                  ? WholeCardView(
-                      front,
+                  ? WholeCardView.cells(
+                      cells,
                       revealed: shown,
                       style: AppType.bodyStrong,
                     )
@@ -132,6 +148,17 @@ class CardBackRow extends StatelessWidget {
     );
   }
 }
+
+/// A whole card as a screen reader reads it: its 칸 in order, as
+/// [spokenContent] reads their parts, each added part after its first when
+/// [revealed] (ADR 0137).
+String spokenCells(
+  AppLocalizations l10n,
+  List<Cell> cells, {
+  required bool revealed,
+}) => spokenContent(l10n, [
+  for (final part in partsOf(cells, revealed: revealed)) part.block,
+], revealed: revealed);
 
 /// One line of text for a card side: a cloze or a table with its blanks
 /// filled, a photo as "사진", a sound as "소리", and a block this version

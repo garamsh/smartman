@@ -480,15 +480,20 @@ void main() {
     await screens.close();
   });
 
-  for (final (name, back) in [
-    ('a new cloze card, with no back,', const <Content>[]),
+  for (final (name, back, read) in [
+    (
+      'a new cloze card, with no back,',
+      const <Content>[],
+      'The capital of France is Paris',
+    ),
     (
       'a former cloze card whose stored back no longer matches its front',
       const [TextContent('The capital of France is Lyon')],
+      'The capital of France is Paris. The capital of France is Lyon',
     ),
   ]) {
     testWidgets(
-      '$name is read on its row as its front filled once shown, never its stored back',
+      '$name is read on its row as its 칸 revealed once shown, its kept back after them',
       (tester) async {
         const cloze = ClozeContent('The capital of France is ___', ['Paris']);
         final screens = await DeckScreens.open(tester);
@@ -512,9 +517,7 @@ void main() {
 
         await screens.tap(find.byType(Switch));
         expect(
-          find.bySemanticsLabel(
-            'The capital of France is blank, back The capital of France is Paris',
-          ),
+          find.bySemanticsLabel('The capital of France is blank, back $read'),
           findsOneWidget,
         );
         expect(row, findsOneWidget);
@@ -524,11 +527,11 @@ void main() {
   }
 
   testWidgets(
-    'search reads only the face a card with a blank in its front is studied on, so a former cloze card\'s stale back is not found',
+    'search reads every 칸 revealed, so a cloze card\'s kept back is found',
     (tester) async {
       const cloze = ClozeContent('The capital of France is ___', ['Paris']);
       final screens = await DeckScreens.open(tester, cards: {'Chat': 'cat'});
-      // A 빈칸 card whose derived back was written before its front changed.
+      // A 빈칸 card whose back differs from its filled text, which study shows.
       await tester.runAsync(
         () => screens.repository.addCard(
           screens.deck.id,
@@ -541,10 +544,12 @@ void main() {
 
       await screens.tap(find.byTooltip('Search cards'));
       await screens.enter('Search', 'rome');
-      expect(find.byType(CardBackRow), findsNothing);
+      expect(find.byType(CardBackRow), findsOneWidget);
 
-      // Controls: the cloze card's face is searched, its answer included,
-      // and a split card's back still is.
+      // Controls: a match narrows the list, the cloze card's answer is
+      // searched, and a split card's back still is.
+      await screens.enter('Search', 'nowhere');
+      expect(find.byType(CardBackRow), findsNothing);
       await screens.enter('Search', 'paris');
       expect(find.byType(CardBackRow), findsOneWidget);
       expect(
