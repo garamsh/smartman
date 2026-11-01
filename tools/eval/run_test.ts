@@ -1461,6 +1461,29 @@ Deno.test("--prompts v9,v10 runs each prompt file on every configuration, each a
   assert.ok(Math.abs(two - one * 2) <= 0.0001, `${two} against ${one}`);
 });
 
+Deno.test("the committed dense word list holds its hundred French words, each with every meaning it prints as a sense", async () => {
+  const dense = (await committedSamples()).find((sample) =>
+    sample.name === "90-dense-list-fr-ko-print"
+  );
+  assert.ok(dense !== undefined && dense.kind === "vocabulary");
+  const words: { front: string; senses: string[] }[] = JSON.parse(
+    await Deno.readTextFile(new URL("./vocabulary.json", import.meta.url)),
+  )["dense-list-fr"];
+  assert.equal(dense.cards.length, 100);
+  assert.deepEqual(
+    dense.cards.map((card) => [
+      card.front,
+      card.senses.map((sense) => sense.meaning),
+    ]),
+    words.map((word) => [word.front, word.senses]),
+  );
+  assert.equal(
+    dense.cards.filter((card) => card.senses.length === 2).length,
+    15,
+  );
+  assert.deepEqual(dense.languages, { front: "fr", back: "ko" });
+});
+
 Deno.test("--alternatives runs each named way as rows of its own, and --samples runs only the samples named", async () => {
   const w = world({ budgetUsd: 10, runs: [] });
   w.systems = [];

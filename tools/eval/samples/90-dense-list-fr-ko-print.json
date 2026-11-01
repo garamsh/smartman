@@ -1,0 +1,1090 @@
+{
+  "image": "90-dense-list-fr-ko-print.jpg",
+  "layout": "dense-list",
+  "languages": {
+    "front": "fr",
+    "back": "ko"
+  },
+  "hand": "print",
+  "distortion": "mild",
+  "fonts": [
+    "NanumGothic-Regular.ttf"
+  ],
+  "cards": [
+    {
+      "front": "maison",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "집",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "chat",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "고양이",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "chien",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "개",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "livre",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "책",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "table",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "탁자",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "porte",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "문",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "jardin",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "정원",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "voiture",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "자동차",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "train",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "기차",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "avion",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "비행기",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "bateau",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "배",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "route",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "길",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "ville",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "도시",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "pays",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "나라",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "mer",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "바다",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "montagne",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "산",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "fleuve",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "강",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "soleil",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "해",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "lune",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "달",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "ciel",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "하늘",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "nuage",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "구름",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "pluie",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "비",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "neige",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "눈",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "vent",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "바람",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "feu",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "불",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "terre",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "땅",
+          "examples": []
+        },
+        {
+          "labels": [],
+          "meaning": "지구",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "eau",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "물",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "pain",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "빵",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "lait",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "우유",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "fromage",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "치즈",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "viande",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "고기",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "poisson",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "물고기",
+          "examples": []
+        },
+        {
+          "labels": [],
+          "meaning": "생선",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "fruit",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "과일",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "pomme",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "사과",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "sucre",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "설탕",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "sel",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "소금",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "vin",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "포도주",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "tasse",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "찻잔",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "assiette",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "접시",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "couteau",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "칼",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "fourchette",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "포크",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "lit",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "침대",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "chaise",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "의자",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "mur",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "벽",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "toit",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "지붕",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "cuisine",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "부엌",
+          "examples": []
+        },
+        {
+          "labels": [],
+          "meaning": "요리",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "chambre",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "방",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "bureau",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "책상",
+          "examples": []
+        },
+        {
+          "labels": [],
+          "meaning": "사무실",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "travail",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "일",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "argent",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "돈",
+          "examples": []
+        },
+        {
+          "labels": [],
+          "meaning": "은",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "temps",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "시간",
+          "examples": []
+        },
+        {
+          "labels": [],
+          "meaning": "날씨",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "jour",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "날",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "nuit",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "밤",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "matin",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "아침",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "soir",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "저녁",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "semaine",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "주",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "ami",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "친구",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "enfant",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "아이",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "homme",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "남자",
+          "examples": []
+        },
+        {
+          "labels": [],
+          "meaning": "사람",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "femme",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "여자",
+          "examples": []
+        },
+        {
+          "labels": [],
+          "meaning": "아내",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "fils",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "아들",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "fille",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "딸",
+          "examples": []
+        },
+        {
+          "labels": [],
+          "meaning": "소녀",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "famille",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "가족",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "voisin",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "이웃",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "docteur",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "의사",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "client",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "손님",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "main",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "손",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "pied",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "발",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "bras",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "팔",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "jambe",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "다리",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "bouche",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "입",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "nez",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "코",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "dent",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "이",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "voix",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "목소리",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "corps",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "몸",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "sang",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "피",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "manger",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "먹다",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "boire",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "마시다",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "dormir",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "자다",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "parler",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "말하다",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "marcher",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "걷다",
+          "examples": []
+        },
+        {
+          "labels": [],
+          "meaning": "작동하다",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "courir",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "달리다",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "lire",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "읽다",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "chanter",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "노래하다",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "voir",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "보다",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "entendre",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "듣다",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "sentir",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "느끼다",
+          "examples": []
+        },
+        {
+          "labels": [],
+          "meaning": "냄새 맡다",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "prendre",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "잡다",
+          "examples": []
+        },
+        {
+          "labels": [],
+          "meaning": "타다",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "donner",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "주다",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "porter",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "들다",
+          "examples": []
+        },
+        {
+          "labels": [],
+          "meaning": "입다",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "tomber",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "떨어지다",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "ouvrir",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "열다",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "fermer",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "닫다",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "chercher",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "찾다",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "perdre",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "잃다",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "gagner",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "이기다",
+          "examples": []
+        },
+        {
+          "labels": [],
+          "meaning": "벌다",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "vendre",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "팔다",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "acheter",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "사다",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "attendre",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "기다리다",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "jouer",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "놀다",
+          "examples": []
+        },
+        {
+          "labels": [],
+          "meaning": "연주하다",
+          "examples": []
+        }
+      ]
+    }
+  ]
+}

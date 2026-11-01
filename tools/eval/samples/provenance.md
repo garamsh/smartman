@@ -20,7 +20,7 @@ what licence.
   `NN-structure-<document>-<hand>-<distortion>.jpg` with its `.json` for the
   two-stage eval, 20 pairs numbered 68 to 87, and
   `NN-numbered-list-en-ko-<style>.jpg` with its `.json`, 2 pairs numbered 88 and
-  89, are written by `tools/eval/generate.py` with seed `20261015`:
+  89, and `90-dense-list-fr-ko-print.jpg` with its `.json`, are written by `tools/eval/generate.py` with seed `20261015`:
   `uv run --locked --script tools/eval/generate.py` from the repository root.
 - Each `.json` is the ground truth of its image: the cards the page shows, its
   layout, languages, hand, distortion and fonts. A card holds its `front` and
@@ -137,6 +137,14 @@ what licence.
   `.json` holds each word as its `front` and its meaning as one sense with no
   label, and no number: a front holding the list's number is the error it is
   scored on.
+- The dense word list, sample 90, is `dense-list-fr` in
+  `tools/eval/vocabulary.json`: a hundred French words numbered 101 to 200 in
+  two ruled tables of three columns, 번호, 앞면 (프랑스어) and 뒷면 (한국어 뜻),
+  15 of them with two senses printed "1. 땅  2. 지구", in Nanum Gothic under
+  the mild distortion (#519, ADR 0135). It follows the structure of the owner's
+  word list, not its content, and its words have no accent, which Nanum Gothic
+  lacks. Its `.json` holds each word as its `front` and each printed meaning as
+  a sense with no label, and no number.
 - No real photo is among them: the owner's photo of their own logic notes, which
   issue #148 describes, was not used, and the Korean document was written for
   this project on the topics it names.
@@ -151,7 +159,8 @@ what licence.
   01 to 55 and the notes truths byte-identical, while it rewrote the 27
   vocabulary truths in the shape of senses, adding the pages for the two-stage
   eval left samples 01 to 67 byte-identical, and adding the numbered word list
-  left samples 01 to 87 byte-identical.
+  left samples 01 to 87 byte-identical, and adding the dense word list left
+  samples 01 to 89 byte-identical.
 - The generator's dependencies are pinned in its header and locked in
   `tools/eval/generate.py.lock`. No bot proposes their bump; whoever regenerates
   the samples moves them, with
@@ -163,7 +172,7 @@ what licence.
 - `tools/eval/vocabulary.json` was written for this project: 90 English and 90
   Japanese entries with their Korean meanings, parts of speech, and English
   example sentences, and the entries of the word-book, examples, Korean
-  dictionary, German and numbered word list pages. It is licensed with the
+  dictionary, German, numbered and dense word list pages. It is licensed with the
   repository.
 - `tools/eval/notes.json` was written for this project: the lines of every notes
   page, their facts with steps and terms, their examples, and the table and
@@ -194,5 +203,5 @@ under the SIL Open Font License 1.1, whose text sits beside it in
   this file naming who took it and under what licence.
 - A real photo of notes takes a `.json` of the notes shape: `image`, `kind`
   "notes", `facts` and `lines`.
-- `generate.py` overwrites only the 89 names it writes, so a real photo keeps
-  any other name; numbering it from 90 keeps the folder in order.
+- `generate.py` overwrites only the 90 names it writes, so a real photo keeps
+  any other name; numbering it from 91 keeps the folder in order.

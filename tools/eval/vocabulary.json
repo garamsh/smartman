@@ -1532,5 +1532,622 @@
       "front": "avoid",
       "back": "피하다"
     }
+  ],
+  "dense-list-fr": [
+    {
+      "front": "maison",
+      "senses": [
+        "집"
+      ]
+    },
+    {
+      "front": "chat",
+      "senses": [
+        "고양이"
+      ]
+    },
+    {
+      "front": "chien",
+      "senses": [
+        "개"
+      ]
+    },
+    {
+      "front": "livre",
+      "senses": [
+        "책"
+      ]
+    },
+    {
+      "front": "table",
+      "senses": [
+        "탁자"
+      ]
+    },
+    {
+      "front": "porte",
+      "senses": [
+        "문"
+      ]
+    },
+    {
+      "front": "jardin",
+      "senses": [
+        "정원"
+      ]
+    },
+    {
+      "front": "voiture",
+      "senses": [
+        "자동차"
+      ]
+    },
+    {
+      "front": "train",
+      "senses": [
+        "기차"
+      ]
+    },
+    {
+      "front": "avion",
+      "senses": [
+        "비행기"
+      ]
+    },
+    {
+      "front": "bateau",
+      "senses": [
+        "배"
+      ]
+    },
+    {
+      "front": "route",
+      "senses": [
+        "길"
+      ]
+    },
+    {
+      "front": "ville",
+      "senses": [
+        "도시"
+      ]
+    },
+    {
+      "front": "pays",
+      "senses": [
+        "나라"
+      ]
+    },
+    {
+      "front": "mer",
+      "senses": [
+        "바다"
+      ]
+    },
+    {
+      "front": "montagne",
+      "senses": [
+        "산"
+      ]
+    },
+    {
+      "front": "fleuve",
+      "senses": [
+        "강"
+      ]
+    },
+    {
+      "front": "soleil",
+      "senses": [
+        "해"
+      ]
+    },
+    {
+      "front": "lune",
+      "senses": [
+        "달"
+      ]
+    },
+    {
+      "front": "ciel",
+      "senses": [
+        "하늘"
+      ]
+    },
+    {
+      "front": "nuage",
+      "senses": [
+        "구름"
+      ]
+    },
+    {
+      "front": "pluie",
+      "senses": [
+        "비"
+      ]
+    },
+    {
+      "front": "neige",
+      "senses": [
+        "눈"
+      ]
+    },
+    {
+      "front": "vent",
+      "senses": [
+        "바람"
+      ]
+    },
+    {
+      "front": "feu",
+      "senses": [
+        "불"
+      ]
+    },
+    {
+      "front": "terre",
+      "senses": [
+        "땅",
+        "지구"
+      ]
+    },
+    {
+      "front": "eau",
+      "senses": [
+        "물"
+      ]
+    },
+    {
+      "front": "pain",
+      "senses": [
+        "빵"
+      ]
+    },
+    {
+      "front": "lait",
+      "senses": [
+        "우유"
+      ]
+    },
+    {
+      "front": "fromage",
+      "senses": [
+        "치즈"
+      ]
+    },
+    {
+      "front": "viande",
+      "senses": [
+        "고기"
+      ]
+    },
+    {
+      "front": "poisson",
+      "senses": [
+        "물고기",
+        "생선"
+      ]
+    },
+    {
+      "front": "fruit",
+      "senses": [
+        "과일"
+      ]
+    },
+    {
+      "front": "pomme",
+      "senses": [
+        "사과"
+      ]
+    },
+    {
+      "front": "sucre",
+      "senses": [
+        "설탕"
+      ]
+    },
+    {
+      "front": "sel",
+      "senses": [
+        "소금"
+      ]
+    },
+    {
+      "front": "vin",
+      "senses": [
+        "포도주"
+      ]
+    },
+    {
+      "front": "tasse",
+      "senses": [
+        "찻잔"
+      ]
+    },
+    {
+      "front": "assiette",
+      "senses": [
+        "접시"
+      ]
+    },
+    {
+      "front": "couteau",
+      "senses": [
+        "칼"
+      ]
+    },
+    {
+      "front": "fourchette",
+      "senses": [
+        "포크"
+      ]
+    },
+    {
+      "front": "lit",
+      "senses": [
+        "침대"
+      ]
+    },
+    {
+      "front": "chaise",
+      "senses": [
+        "의자"
+      ]
+    },
+    {
+      "front": "mur",
+      "senses": [
+        "벽"
+      ]
+    },
+    {
+      "front": "toit",
+      "senses": [
+        "지붕"
+      ]
+    },
+    {
+      "front": "cuisine",
+      "senses": [
+        "부엌",
+        "요리"
+      ]
+    },
+    {
+      "front": "chambre",
+      "senses": [
+        "방"
+      ]
+    },
+    {
+      "front": "bureau",
+      "senses": [
+        "책상",
+        "사무실"
+      ]
+    },
+    {
+      "front": "travail",
+      "senses": [
+        "일"
+      ]
+    },
+    {
+      "front": "argent",
+      "senses": [
+        "돈",
+        "은"
+      ]
+    },
+    {
+      "front": "temps",
+      "senses": [
+        "시간",
+        "날씨"
+      ]
+    },
+    {
+      "front": "jour",
+      "senses": [
+        "날"
+      ]
+    },
+    {
+      "front": "nuit",
+      "senses": [
+        "밤"
+      ]
+    },
+    {
+      "front": "matin",
+      "senses": [
+        "아침"
+      ]
+    },
+    {
+      "front": "soir",
+      "senses": [
+        "저녁"
+      ]
+    },
+    {
+      "front": "semaine",
+      "senses": [
+        "주"
+      ]
+    },
+    {
+      "front": "ami",
+      "senses": [
+        "친구"
+      ]
+    },
+    {
+      "front": "enfant",
+      "senses": [
+        "아이"
+      ]
+    },
+    {
+      "front": "homme",
+      "senses": [
+        "남자",
+        "사람"
+      ]
+    },
+    {
+      "front": "femme",
+      "senses": [
+        "여자",
+        "아내"
+      ]
+    },
+    {
+      "front": "fils",
+      "senses": [
+        "아들"
+      ]
+    },
+    {
+      "front": "fille",
+      "senses": [
+        "딸",
+        "소녀"
+      ]
+    },
+    {
+      "front": "famille",
+      "senses": [
+        "가족"
+      ]
+    },
+    {
+      "front": "voisin",
+      "senses": [
+        "이웃"
+      ]
+    },
+    {
+      "front": "docteur",
+      "senses": [
+        "의사"
+      ]
+    },
+    {
+      "front": "client",
+      "senses": [
+        "손님"
+      ]
+    },
+    {
+      "front": "main",
+      "senses": [
+        "손"
+      ]
+    },
+    {
+      "front": "pied",
+      "senses": [
+        "발"
+      ]
+    },
+    {
+      "front": "bras",
+      "senses": [
+        "팔"
+      ]
+    },
+    {
+      "front": "jambe",
+      "senses": [
+        "다리"
+      ]
+    },
+    {
+      "front": "bouche",
+      "senses": [
+        "입"
+      ]
+    },
+    {
+      "front": "nez",
+      "senses": [
+        "코"
+      ]
+    },
+    {
+      "front": "dent",
+      "senses": [
+        "이"
+      ]
+    },
+    {
+      "front": "voix",
+      "senses": [
+        "목소리"
+      ]
+    },
+    {
+      "front": "corps",
+      "senses": [
+        "몸"
+      ]
+    },
+    {
+      "front": "sang",
+      "senses": [
+        "피"
+      ]
+    },
+    {
+      "front": "manger",
+      "senses": [
+        "먹다"
+      ]
+    },
+    {
+      "front": "boire",
+      "senses": [
+        "마시다"
+      ]
+    },
+    {
+      "front": "dormir",
+      "senses": [
+        "자다"
+      ]
+    },
+    {
+      "front": "parler",
+      "senses": [
+        "말하다"
+      ]
+    },
+    {
+      "front": "marcher",
+      "senses": [
+        "걷다",
+        "작동하다"
+      ]
+    },
+    {
+      "front": "courir",
+      "senses": [
+        "달리다"
+      ]
+    },
+    {
+      "front": "lire",
+      "senses": [
+        "읽다"
+      ]
+    },
+    {
+      "front": "chanter",
+      "senses": [
+        "노래하다"
+      ]
+    },
+    {
+      "front": "voir",
+      "senses": [
+        "보다"
+      ]
+    },
+    {
+      "front": "entendre",
+      "senses": [
+        "듣다"
+      ]
+    },
+    {
+      "front": "sentir",
+      "senses": [
+        "느끼다",
+        "냄새 맡다"
+      ]
+    },
+    {
+      "front": "prendre",
+      "senses": [
+        "잡다",
+        "타다"
+      ]
+    },
+    {
+      "front": "donner",
+      "senses": [
+        "주다"
+      ]
+    },
+    {
+      "front": "porter",
+      "senses": [
+        "들다",
+        "입다"
+      ]
+    },
+    {
+      "front": "tomber",
+      "senses": [
+        "떨어지다"
+      ]
+    },
+    {
+      "front": "ouvrir",
+      "senses": [
+        "열다"
+      ]
+    },
+    {
+      "front": "fermer",
+      "senses": [
+        "닫다"
+      ]
+    },
+    {
+      "front": "chercher",
+      "senses": [
+        "찾다"
+      ]
+    },
+    {
+      "front": "perdre",
+      "senses": [
+        "잃다"
+      ]
+    },
+    {
+      "front": "gagner",
+      "senses": [
+        "이기다",
+        "벌다"
+      ]
+    },
+    {
+      "front": "vendre",
+      "senses": [
+        "팔다"
+      ]
+    },
+    {
+      "front": "acheter",
+      "senses": [
+        "사다"
+      ]
+    },
+    {
+      "front": "attendre",
+      "senses": [
+        "기다리다"
+      ]
+    },
+    {
+      "front": "jouer",
+      "senses": [
+        "놀다",
+        "연주하다"
+      ]
+    }
   ]
 }
