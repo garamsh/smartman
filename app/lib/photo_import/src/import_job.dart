@@ -68,6 +68,13 @@ final class JobPhoto {
 
   PhotoState state = const PhotoWaiting();
 
+  /// The cards read off the page so far, before it is read to its end; kept
+  /// through a failure, so reading it again adds to them.
+  List<CandidateCard> _readSoFar = const [];
+
+  /// The cursor to read the page on from; null to read it from the start.
+  String? _cursor;
+
   Completer<void>? _cancel;
 }
 
@@ -308,13 +315,25 @@ final class ImportJob extends ChangeNotifier {
     PhotoState next;
     try {
       final bytes = await _store.photo(kept.key);
-      final cards = await _client.extract(
-        JpegPhoto.stored(bytes, kept.width, kept.height),
-        cancel: cancel.future,
-      );
-      if (cards == null) return;
-      next = PhotoRead(cards);
+      // A page the function leaves unread past a request's cards is read on
+      // with its cursor, kept on the device after each answer (ADR 0138).
+      do {
+        final read = await _client.extract(
+          JpegPhoto.stored(bytes, kept.width, kept.height),
+          cursor: photo._cursor,
+          cancel: cancel.future,
+        );
+        if (read == null) return;
+        photo
+          .._readSoFar = _appended(photo._readSoFar, read.cards)
+          .._cursor = read.cursor;
+        _keep();
+      } while (photo._cursor != null && !_ended && photos.contains(photo));
+      next = PhotoRead(photo._readSoFar);
     } on PhotoImportFailure catch (failure) {
+      // The function took the cursor, or no longer takes it: the photo is
+      // read again from the start, keeping the cards read so far.
+      photo._cursor = null;
       next = PhotoFailed(failure);
     } finally {
       photo._cancel = null;
@@ -322,6 +341,19 @@ final class ImportJob extends ChangeNotifier {
     if (_ended || !photos.contains(photo)) return;
     photo.state = next;
     _changed();
+  }
+
+  /// [read] followed by those of [more] whose front none of [read] has, as
+  /// the function compares the fronts a request reads on past.
+  static List<CandidateCard> _appended(
+    List<CandidateCard> read,
+    List<CandidateCard> more,
+  ) {
+    final fronts = {for (final card in read) CardKey.fromFront(card.front)};
+    return [
+      ...read,
+      ...more.where((card) => !fronts.contains(CardKey.fromFront(card.front))),
+    ];
   }
 
   /// Once every photo of the batch is read, adds their cards to the list,
@@ -407,7 +439,8 @@ final class ImportJob extends ChangeNotifier {
   }
 
   /// Writes the job's target and origin, and each kept photo with its cards
-  /// once read. A photo not yet prepared is not kept.
+  /// once read, or, before then, those read so far and its cursor. A photo
+  /// not yet prepared is not kept.
   Future<void> _writeState() async {
     final state = jsonEncode({
       'version': 1,
@@ -421,7 +454,13 @@ final class ImportJob extends ChangeNotifier {
               'width': width,
               'height': height,
               if (photo.state case PhotoRead(:final cards))
-                'cards': [for (final card in cards) encodeCandidate(card)],
+                'cards': [for (final card in cards) encodeCandidate(card)]
+              else if (photo._readSoFar.isNotEmpty) ...{
+                'readSoFar': [
+                  for (final card in photo._readSoFar) encodeCandidate(card),
+                ],
+                'cursor': ?photo._cursor,
+              },
             },
       ],
     });
@@ -489,9 +528,26 @@ final class ImportJob extends ChangeNotifier {
             },
             _ => const PhotoWaiting(),
           };
-          job.photos.add(
-            JobPhoto._stored((key: key, width: width, height: height), state),
-          );
+          final restored = JobPhoto._stored((
+            key: key,
+            width: width,
+            height: height,
+          ), state);
+          // A page left unread past its cards goes on from its cursor; one
+          // whose cards cannot be read back is read again from the start.
+          if (photo['readSoFar'] case final List<Object?> cards
+              when state is PhotoWaiting) {
+            final decoded = [for (final card in cards) decodeCandidate(card)];
+            if (decoded.every((card) => card != null)) {
+              restored
+                .._readSoFar = decoded.whereType<CandidateCard>().toList()
+                .._cursor = switch (photo['cursor']) {
+                  final String cursor => cursor,
+                  _ => null,
+                };
+            }
+          }
+          job.photos.add(restored);
         }
       }
       if (job.photos.isEmpty) return null;

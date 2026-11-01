@@ -95,11 +95,18 @@ final class FakePhotoSource implements PhotoSource {
 
 /// One extraction the test answers.
 final class PendingExtraction {
-  PendingExtraction(this.photo, this.cancel);
+  PendingExtraction(this.photo, this.cancel, this.cursor);
 
   final JpegPhoto photo;
   final Future<void> cancel;
+
+  /// The cursor the call read on from; null for a first read.
+  final String? cursor;
+
   final answer = Completer<List<CandidateCard>?>();
+
+  /// The cursor the answer carries, to read the page on from.
+  String? nextCursor;
 
   bool cancelled = false;
 }
@@ -118,15 +125,22 @@ final class FakeExtractionClient implements ExtractionClient {
   Iterable<PendingExtraction> get open =>
       calls.where((call) => !call.answer.isCompleted && !call.cancelled);
 
+  /// The calls the function counts against the user's limit: those without
+  /// a cursor (ADR 0138).
+  int get usages => calls.where((call) => call.cursor == null).length;
+
   @override
-  Future<List<CandidateCard>?> extract(
+  Future<Extracted?> extract(
     JpegPhoto photo, {
+    String? cursor,
     required Future<void> cancel,
   }) {
-    final call = PendingExtraction(photo, cancel);
+    final call = PendingExtraction(photo, cancel, cursor);
     calls.add(call);
     unawaited(cancel.then((_) => call.cancelled = true));
-    return call.answer.future;
+    return call.answer.future.then(
+      (cards) => cards == null ? null : (cards: cards, cursor: call.nextCursor),
+    );
   }
 
   /// Answers the last call with vocabulary cards of one sense, front →
@@ -136,9 +150,12 @@ final class FakeExtractionClient implements ExtractionClient {
       word(front: front, meaning: meaning),
   ]);
 
-  /// Answers the last call with [cards].
-  void answerCards(List<CandidateCard> cards) =>
-      calls.last.answer.complete(cards);
+  /// Answers the last call with [cards], and a [cursor] to read on from when
+  /// the page was left unread past them.
+  void answerCards(List<CandidateCard> cards, {String? cursor}) {
+    calls.last.nextCursor = cursor;
+    calls.last.answer.complete(cards);
+  }
 
   /// Answers the last call with [failure].
   void fail(PhotoImportFailure failure) =>

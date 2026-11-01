@@ -8,6 +8,7 @@ export 'src/extraction_client.dart'
         CardKind,
         CardType,
         Extra,
+        Extracted,
         ExtractionAllowance,
         ExtractionClient,
         extractCardsUrl,

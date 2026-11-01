@@ -7,6 +7,7 @@ import 'package:http/testing.dart';
 import 'package:image/image.dart' as img;
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/photo_import/photo_import.dart';
+import 'package:smartman/photo_import/src/failure_message.dart';
 import 'package:smartman/photo_import/src/photo.dart';
 
 final _url = Uri.parse(
@@ -33,8 +34,8 @@ http.Response _json(int status, Object body) => http.Response.bytes(
   headers: {'content-type': 'application/json'},
 );
 
-Future<List<CandidateCard>?> _extract(HttpExtractionClient client) =>
-    client.extract(_photo, cancel: Completer<void>().future);
+Future<List<CandidateCard>?> _extract(HttpExtractionClient client) async =>
+    (await client.extract(_photo, cancel: Completer<void>().future))?.cards;
 
 /// A vocabulary card of one sense as the function sends it today.
 Map<String, Object?> _vocabulary(
@@ -94,6 +95,89 @@ void main() {
       ]);
     },
   );
+
+  test('a page left unread goes on through two cursors, each sent back with '
+      'the same photo, until an answer of no card ends it', () async {
+    final sent = <Map<String, Object?>>[];
+    final answers = [
+      {
+        'cards': [_vocabulary('chat', 'cat')],
+        'partial': true,
+        'cursor': 'first',
+      },
+      {
+        'cards': [_vocabulary('chien', 'dog')],
+        'partial': true,
+        'cursor': 'second',
+      },
+      {'cards': <Object>[], 'partial': false},
+    ];
+    final client = _client((request) async {
+      sent.add(jsonDecode(request.body) as Map<String, Object?>);
+      return _json(200, answers[sent.length - 1]);
+    });
+    final cancel = Completer<void>().future;
+
+    final first = await client.extract(_photo, cancel: cancel);
+    final second = await client.extract(
+      _photo,
+      cursor: first!.cursor,
+      cancel: cancel,
+    );
+    final last = await client.extract(
+      _photo,
+      cursor: second!.cursor,
+      cancel: cancel,
+    );
+
+    expect(
+      [first.cursor, second.cursor, last!.cursor],
+      ['first', 'second', null],
+    );
+    expect([first, second, last].map((read) => read.cards.length), [1, 1, 0]);
+    expect(sent.map((body) => body['cursor']), [null, 'first', 'second']);
+    for (final body in sent) {
+      expect(base64Decode(body['image']! as String), _photo.bytes);
+    }
+  });
+
+  test('a cursor is read only beside partial, and a first request answering '
+      'no card is a service failure', () async {
+    final whole = _client(
+      (_) async => _json(200, {
+        'cards': [_vocabulary('chat', 'cat')],
+        'partial': false,
+        'cursor': 'stray',
+      }),
+    );
+    final empty = _client(
+      (_) async => _json(200, {'cards': <Object>[], 'partial': false}),
+    );
+    final cancel = Completer<void>().future;
+
+    expect((await whole.extract(_photo, cancel: cancel))!.cursor, isNull);
+    await expectLater(
+      empty.extract(_photo, cancel: cancel),
+      throwsA(isA<ServiceFailed>()),
+    );
+    // Control: the same empty answer to a request that sent a cursor.
+    expect(
+      (await empty.extract(_photo, cursor: 'c', cancel: cancel))!.cards,
+      isEmpty,
+    );
+  });
+
+  test('a cursor the function no longer takes, 410 cursor_expired, is the '
+      'retryable service failure', () async {
+    final client = _client(
+      (_) async => _json(410, {'error': 'cursor_expired'}),
+    );
+
+    await expectLater(
+      client.extract(_photo, cursor: 'old', cancel: Completer<void>().future),
+      throwsA(isA<ServiceFailed>().having(isRetryable, 'retryable', isTrue)),
+    );
+  });
 
   test('a card of an older function, without an answer, a topic, a kind or a '
       "vocabulary card's senses, is a service failure: its back, meaning and "

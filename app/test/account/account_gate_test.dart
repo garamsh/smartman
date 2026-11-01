@@ -67,8 +67,9 @@ String _expiredSession() {
 /// An extraction client the test never calls.
 final class _NoExtraction implements ExtractionClient {
   @override
-  Future<List<CandidateCard>?> extract(
+  Future<Extracted?> extract(
     JpegPhoto photo, {
+    String? cursor,
     required Future<void> cancel,
   }) => throw UnimplementedError('not called');
 
