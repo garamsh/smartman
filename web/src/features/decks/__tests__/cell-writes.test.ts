@@ -49,6 +49,10 @@ beforeEach(async () => {
   db.rows.decks.push(deckRow("deck", "Deck"));
 });
 
+/** [value] with every id left out: a 칸 of no stored id takes a new one when it is written. */
+const withoutIds = (value: unknown): unknown =>
+  JSON.parse(JSON.stringify(value, (key, field: unknown) => (key === "id" ? undefined : field)));
+
 const written = (cells: unknown): WrittenCell[] => {
   const read = parseCells(cells);
   if (!read) throw new Error("a fixture's 칸 did not parse");
@@ -175,75 +179,57 @@ describe("encodeCells", () => {
 
   it.each(conversions)("round-trips through parseCells: $name", ({ cells }) => {
     const read = written(cells);
-    expect(parseCells(encodeCells(read, () => "id"))).toEqual(
-      read.map((cell) => ({ ...cell, id: "id", ...cell })).map(withBlockId),
-    );
+    expect(withoutIds(parseCells(encodeCells(read)))).toEqual(withoutIds(read));
+    expect(withoutIds(parseCells(encodeCells(read)))).not.toEqual([]);
   });
 });
 
-/** [cell] as read back when its block had no id and took "id". */
-function withBlockId(cell: WrittenCell): WrittenCell {
-  if (cell.kind === "text" || cell.kind === "word") {
-    return cell;
-  }
-  const { id: _, ...plain } = cell as WrittenCell & { id?: string };
-  const placed = plain as typeof cell;
-  return { ...placed, block: { ...placed.block, id: placed.block.id ?? "id" } };
-}
-
 describe("a v1 card of each fixture placement", () => {
-  it.each(conversions)("opens, saves and reads back whole: $name", async ({ front, back, cells }) => {
-    const row = stored("card", { front, back, source: "import" });
-    db.rows.cards.push(row);
-    const read = parseCardContent({ front, back, template: "free", templateVersion: 1 });
-    if (!read || read.readOnly) throw new Error("a fixture did not open");
-    const built = builtCells(read.cells.map((cell) => cellDraft(cell as WrittenCell)));
-    // What the frame refuses the phone refuses too: nothing is written over it.
-    if (!built.cells) {
-      expect(built.message).not.toBeNull();
-      return;
-    }
-    const blocks = encodeCells(built.cells);
-    expect(await editCard(uuidOf("deck"), uuidOf("card"), { id: uuidOf("card"), blocks })).toEqual({
-      saved: true,
-    });
-    const saved = db.rows.cards[0];
-    expect(saved).toMatchObject({
-      id: uuidOf("card"),
-      template: "free",
-      template_version: 2,
-      back: [],
-      source: "import",
-      created_at: row.created_at,
-    });
-    const back2 = parseCardContent({
-      front: saved?.front,
-      back: saved?.back,
-      template: saved?.template,
-      templateVersion: saved?.template_version,
-    });
-    const ids = (value: object) => JSON.parse(JSON.stringify(value)) as unknown;
-    const plain = (list: WrittenCell[]) =>
-      list.map((cell) => {
-        const { id: _cell, ...rest } = cell as WrittenCell & { id?: string };
-        if (!("block" in rest)) return ids(rest);
-        const { id: _block, ...block } = rest.block;
-        return ids({ ...rest, block });
+  it.each(conversions)(
+    "opens, saves and reads back whole: $name",
+    async ({ front, back, cells }) => {
+      const row = stored("card", { front, back, source: "import" });
+      db.rows.cards.push(row);
+      const read = parseCardContent({ front, back, template: "free", templateVersion: 1 });
+      if (!read || read.readOnly) throw new Error("a fixture did not open");
+      const built = builtCells(read.cells.map((cell) => cellDraft(cell as WrittenCell)));
+      // What the frame refuses the phone refuses too: nothing is written over it.
+      if (!built.cells) {
+        expect(built.message).not.toBeNull();
+        return;
+      }
+      const blocks = encodeCells(built.cells);
+      expect(
+        await editCard(uuidOf("deck"), uuidOf("card"), { id: uuidOf("card"), blocks }),
+      ).toEqual({
+        saved: true,
       });
-    expect(plain((back2?.cells ?? []) as WrittenCell[])).toEqual(
-      plain(written(cells)),
-    );
-    // The same parts show before and after the reveal.
-    expect(back2?.front.map(({ kind }) => kind)).toEqual(read.front.map(({ kind }) => kind));
-    expect(back2?.back.map(({ kind }) => kind)).toEqual(read.back.map(({ kind }) => kind));
-  });
+      const saved = db.rows.cards[0];
+      expect(saved).toMatchObject({
+        id: uuidOf("card"),
+        template: "free",
+        template_version: 2,
+        back: [],
+        source: "import",
+        created_at: row.created_at,
+      });
+      const back2 = parseCardContent({
+        front: saved?.front,
+        back: saved?.back,
+        template: saved?.template,
+        templateVersion: saved?.template_version,
+      });
+      expect(withoutIds(back2?.cells)).toEqual(withoutIds(written(cells)));
+      // The same parts show before and after the reveal.
+      expect(back2?.front.map(({ kind }) => kind)).toEqual(read.front.map(({ kind }) => kind));
+      expect(back2?.back.map(({ kind }) => kind)).toEqual(read.back.map(({ kind }) => kind));
+    },
+  );
 
   it("covers the fixtures that can be saved", () => {
     const saved = conversions.filter(({ front, back }) => {
       const read = parseCardContent({ front, back, template: "free", templateVersion: 1 });
-      return builtCells(
-        (read?.cells ?? []).map((cell) => cellDraft(cell as WrittenCell)),
-      ).cells;
+      return builtCells((read?.cells ?? []).map((cell) => cellDraft(cell as WrittenCell))).cells;
     });
     for (const placement of [1, 2, 3, 4, 5, 6, 7])
       expect(saved.some(({ name }) => name.includes(`placement ${String(placement)}`))).toBe(true);
@@ -297,7 +283,9 @@ describe("addCard", () => {
     const cards = draftOf("photo", glue("a", "b"), photoBlock("m"));
     expect(await addCard(uuidOf("deck"), cards)).toMatchObject({ saved: false });
     expect(db.rows.cards).toHaveLength(0);
-    expect(await addCard(uuidOf("deck"), draftOf("plain", glue("a", "b")))).toEqual({ saved: true });
+    expect(await addCard(uuidOf("deck"), draftOf("plain", glue("a", "b")))).toEqual({
+      saved: true,
+    });
   });
 });
 
@@ -308,7 +296,8 @@ describe("editCard", () => {
   it("keeps the card's id, source and creation, leaves its reviews, and takes the new key", async () => {
     db.rows.cards.push(stored("card", { source: "copy", front: [], back: [] }));
     const review = { id: uuidOf("review"), card_id: uuidOf("card"), user_id: "u", rating: "good" };
-    db.rows.reviews.push(review as never);
+    db.seed("reviews", review);
+    const reviews = JSON.stringify(db.rows.reviews);
     expect(await edit("card", draftOf("card", glue("New", "뒤")))).toEqual({ saved: true });
     expect(db.rows.cards).toHaveLength(1);
     expect(db.rows.cards[0]).toMatchObject({
@@ -318,7 +307,7 @@ describe("editCard", () => {
       template_version: 2,
     });
     expect(db.rows.cards[0]?.updated_at).not.toBe(stored("card").updated_at);
-    expect(db.rows.reviews).toEqual([review]);
+    expect(JSON.stringify(db.rows.reviews)).toBe(reviews);
   });
 
   it("leaves a later edit made elsewhere, as the later updated_at wins, against an earlier one", async () => {
@@ -355,11 +344,19 @@ describe("editCard", () => {
     const chart = { type: "chart", payload: {} };
     const later = stored("later", { template: "free", template_version: 3 });
     const holding = stored("holding", { back: [chart] });
-    const framed = stored("framed", { template_version: 2, front: [glue("a", "b"), chart], back: [] });
+    const framed = stored("framed", {
+      template_version: 2,
+      front: [glue("a", "b"), chart],
+      back: [],
+    });
     db.rows.cards.push(later, holding, framed, stored("known"));
-    const words = "새 버전의 앱에서 만든 카드라 이 버전에서는 편집할 수 없어요. 앱을 업데이트해 주세요.";
+    const words =
+      "새 버전의 앱에서 만든 카드라 이 버전에서는 편집할 수 없어요. 앱을 업데이트해 주세요.";
     for (const id of ["later", "holding", "framed"]) {
-      expect(await edit(id, draftOf(id, glue("New", "뒤")))).toEqual({ saved: false, message: words });
+      expect(await edit(id, draftOf(id, glue("New", "뒤")))).toEqual({
+        saved: false,
+        message: words,
+      });
     }
     expect(db.rows.cards[0]).toEqual(later);
     expect(await edit("known", draftOf("known", glue("New", "뒤")))).toEqual({ saved: true });
@@ -390,7 +387,22 @@ describe("editCard", () => {
     expect(await edit("card", draftOf("card", glue("a", "b"), photoBlock("held")))).toEqual({
       saved: true,
     });
-    expect(parseCells(db.rows.cards[0]?.front)?.[1]).toMatchObject({ kind: "placed", side: "back" });
+    expect(parseCells(db.rows.cards[0]?.front)?.[1]).toMatchObject({
+      kind: "placed",
+      side: "back",
+    });
+  });
+
+  it("refuses a card of a deleted deck, beside one of a live deck", async () => {
+    db.rows.decks.push(deckRow("gone", "Gone", true));
+    db.rows.cards.push({ ...stored("card"), deck_id: uuidOf("gone") }, stored("live"));
+    expect(await editCard(uuidOf("gone"), uuidOf("card"), draftOf("card", glue("a", "b")))).toEqual(
+      {
+        saved: false,
+        message: "덱을 찾을 수 없어요. 추가할 덱을 다시 골라 주세요.",
+      },
+    );
+    expect(await edit("live", draftOf("live", glue("a", "b")))).toEqual({ saved: true });
   });
 
   it("refuses a draft naming another card, beside its own", async () => {
@@ -435,7 +447,7 @@ describe("the editor's drafts", () => {
   });
 
   it("opens a stored cloze with its blanks in place and saves it unchanged", () => {
-    const block = { kind: "cloze", text: "___ is ___.", answers: ["Rose", "red"] } as const;
+    const block = { kind: "cloze" as const, text: "___ is ___.", answers: ["Rose", "red"] };
     const draft = cellDraft({ kind: "blank", block: { ...block, id: "c" } });
     expect(draft).toMatchObject({
       line: "Rose is red.",
@@ -523,7 +535,15 @@ describe("spans through an edit", () => {
   });
 
   it("replaces the spans a new one overlaps", () => {
-    expect(withSpan([{ start: 0, end: 2 }, { start: 5, end: 7 }], { start: 1, end: 3 })).toEqual([
+    expect(
+      withSpan(
+        [
+          { start: 0, end: 2 },
+          { start: 5, end: 7 },
+        ],
+        { start: 1, end: 3 },
+      ),
+    ).toEqual([
       { start: 1, end: 3 },
       { start: 5, end: 7 },
     ]);

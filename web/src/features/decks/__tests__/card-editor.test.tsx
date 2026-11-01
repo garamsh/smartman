@@ -62,7 +62,9 @@ async function editing(front: unknown, back: unknown, template = "free", version
   });
   const close = vi.fn();
   await render(
-    () => <CardEditor deck={deck} card={storedCard(front, back, template, version)} close={close} />,
+    () => (
+      <CardEditor deck={deck} card={storedCard(front, back, template, version)} close={close} />
+    ),
     {},
   );
   return close;
@@ -99,7 +101,11 @@ describe("a new card", () => {
     await newCard();
     await userEvent.click(screen.getByRole("button", { name: "+ 칸 추가" }));
     const sheet = screen.getByRole("dialog", { name: "칸 추가" });
-    expect(within(sheet).getAllByRole("button").map((item) => item.textContent)).toEqual([
+    expect(
+      within(sheet)
+        .getAllByRole("button")
+        .map((item) => item.textContent),
+    ).toEqual([
       "",
       "글",
       "단어단어와 뜻을 함께 적어요",
@@ -138,9 +144,7 @@ describe("a new card", () => {
   it("reads ADR 0137's two sentences under the column, and saves nothing", async () => {
     await newCard();
     await userEvent.click(screen.getByRole("button", { name: "저장" }));
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      "앞면에 보일 내용을 하나 이상 넣어 주세요",
-    );
+    expect(screen.getByRole("alert")).toHaveTextContent("앞면에 보일 내용을 하나 이상 넣어 주세요");
     await userEvent.type(screen.getByRole("textbox", { name: "앞면" }), "front");
     expect(screen.getByRole("alert")).toHaveTextContent("뒷면이나 빈칸을 하나 이상 넣어 주세요");
     // Control: with a back it saves and the sentence goes.
@@ -328,10 +332,7 @@ describe("a stored card", () => {
   });
 
   it("keeps a photo and a sound, moving a side and leaving a boxed photo sideless", async () => {
-    await editing(
-      [{ type: "text", id: "f", payload: { text: "dog" } }, photo, boxed],
-      [sound],
-    );
+    await editing([{ type: "text", id: "f", payload: { text: "dog" } }, photo, boxed], [sound]);
     expect(screen.getAllByRole("heading", { name: "사진" })).toHaveLength(2);
     expect(screen.getByRole("heading", { name: "소리" })).toBeInTheDocument();
     // Two chip rows: the unboxed photo's and the sound's; a boxed photo has no side.
@@ -391,23 +392,44 @@ describe("a stored card", () => {
 
   it.each([
     ["a later template", [{ type: "text", payload: { text: "dog" } }], [], "free", 3],
-    ["an unknown block", [{ type: "text", payload: { text: "dog" } }], [{ type: "chart", payload: {} }], "free", 1],
-    ["a framed card's unknown 칸", [{ type: "text", v: 2, payload: { front: "dog", back: "b" } }, { type: "chart", payload: {} }], [], "free", 2],
-  ])("opens %s read-only, saying why in the phone's words", async (_, front, back, template, version) => {
-    await editing(front, back, template, version);
-    expect(screen.getByRole("heading", { name: "카드 편집" })).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        "새 버전의 앱에서 만든 카드라 이 버전에서는 편집할 수 없어요. 앱을 업데이트해 주세요.",
-      ),
-    ).toBeInTheDocument();
-    expect(screen.getByText("dog")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "저장" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
-  });
+    [
+      "an unknown block",
+      [{ type: "text", payload: { text: "dog" } }],
+      [{ type: "chart", payload: {} }],
+      "free",
+      1,
+    ],
+    [
+      "a framed card's unknown 칸",
+      [
+        { type: "text", v: 2, payload: { front: "dog", back: "b" } },
+        { type: "chart", payload: {} },
+      ],
+      [],
+      "free",
+      2,
+    ],
+  ])(
+    "opens %s read-only, saying why in the phone's words",
+    async (_, front, back, template, version) => {
+      await editing(front, back, template, version);
+      expect(screen.getByRole("heading", { name: "카드 편집" })).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          "새 버전의 앱에서 만든 카드라 이 버전에서는 편집할 수 없어요. 앱을 업데이트해 주세요.",
+        ),
+      ).toBeInTheDocument();
+      expect(screen.getByText("dog")).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "저장" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+    },
+  );
 
   it("opens a known card with fields, the control for the read-only line", async () => {
-    await editing([{ type: "text", payload: { text: "dog" } }], [{ type: "text", payload: { text: "b" } }]);
+    await editing(
+      [{ type: "text", payload: { text: "dog" } }],
+      [{ type: "text", payload: { text: "b" } }],
+    );
     expect(screen.getByRole("button", { name: "저장" })).toBeInTheDocument();
     expect(screen.queryByText(/새 버전의 앱에서/)).not.toBeInTheDocument();
   });

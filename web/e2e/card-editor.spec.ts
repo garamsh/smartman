@@ -91,6 +91,7 @@ test("writes every 칸 type as free v2, and opens and saves a stored card over i
   });
   const v1Id = randomUUID();
   const mediaId = randomUUID();
+  const boxedId = randomUUID();
   const soundId = randomUUID();
   const laterId = randomUUID();
   const seeded = await db.from("cards").insert([
@@ -98,20 +99,28 @@ test("writes every 칸 type as free v2, and opens and saves a stored card over i
       v1Id,
       [
         text("f1", "A photo card"),
-        { type: "image", v: 1, id: "i1", payload: { media: mediaId, width: 800, height: 600, boxes: [] } },
+        {
+          type: "image",
+          v: 1,
+          id: "i1",
+          payload: { media: mediaId, width: 800, height: 600, boxes: [] },
+        },
         {
           type: "image",
           v: 1,
           id: "i2",
           payload: {
-            media: randomUUID(),
+            media: boxedId,
             width: 800,
             height: 600,
             boxes: [{ id: "1", x: 0.1, y: 0.2, w: 0.4, h: 0.3, answer: "Paris" }],
           },
         },
       ],
-      [{ type: "audio", v: 1, id: "a1", payload: { media: soundId, duration_ms: 7000 } }, text("b1", "뒤")],
+      [
+        { type: "audio", v: 1, id: "a1", payload: { media: soundId, duration_ms: 7000 } },
+        text("b1", "뒤"),
+      ],
       "a photo card",
     ),
     row(laterId, [text("f2", "From a later build")], [text("b2", "뒤")], "from a later build", 3),
@@ -133,8 +142,12 @@ test("writes every 칸 type as free v2, and opens and saves a stored card over i
   await page.goto(`/decks/${deckId}`);
 
   // A new card holding one 칸 of each type the web can start.
-  await untilReacted(page.getByRole("button", { name: "카드 추가" }), page.getByText("직접 입력"));
-  await page.getByRole("button", { name: "직접 입력" }).click();
+  const manual = page.getByRole("button", { name: "직접 입력" });
+  await untilReacted(
+    () => page.getByRole("button", { name: "카드 추가" }).click(),
+    () => manual.isVisible(),
+  );
+  await manual.click();
   await expect(page.getByRole("textbox", { name: "앞면", exact: true })).toBeFocused();
   await capture(page, "new");
   await page.getByRole("button", { name: "저장", exact: true }).click();
@@ -201,14 +214,18 @@ test("writes every 칸 type as free v2, and opens and saves a stored card over i
   const before = await db.from("cards").select("revision").eq("id", v1Id).single();
   await editor.getByRole("button", { name: "저장", exact: true }).click();
   await expect(editor).toBeHidden();
-  const after = await db.from("cards").select("*").eq("id", v1Id).single();
+  const after = await db
+    .from("cards")
+    .select("id,source,template,template_version,back,card_key,revision,updated_at,front")
+    .eq("id", v1Id)
+    .single();
   expect(after.data).toMatchObject({
     id: v1Id,
     source: "manual",
     template: "free",
     template_version: 2,
     back: [],
-    card_key: `a photo card, edited\n${mediaId}`.replace("\n", " "),
+    card_key: `a photo card, edited ${mediaId} ${boxedId} paris`,
   });
   expect(Number(after.data?.revision)).toBeGreaterThan(Number(before.data?.revision));
   expect(Date.parse(String(after.data?.updated_at))).toBeGreaterThan(Date.parse(time));
@@ -223,7 +240,9 @@ test("writes every 칸 type as free v2, and opens and saves a stored card over i
   // A card of a later template opens read-only.
   await page.getByRole("button", { name: /^From a later build/ }).click();
   const readOnly = page.getByRole("dialog", { name: "카드 편집" });
-  await expect(readOnly.getByText("이 버전에서는 편집할 수 없어요", { exact: false })).toBeVisible();
+  await expect(
+    readOnly.getByText("이 버전에서는 편집할 수 없어요", { exact: false }),
+  ).toBeVisible();
   await expect(readOnly.getByRole("button", { name: "저장", exact: true })).toHaveCount(0);
   await capture(page, "read-only");
 });

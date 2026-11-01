@@ -153,8 +153,9 @@ const frameMessages: Record<FrameProblem, string> = {
 /** The sentence refusing a wire-format card that breaks the frame's rule; null otherwise. */
 export function frameRefusal(value: unknown): string | null {
   const blocks = value && typeof value === "object" && "blocks" in value ? value.blocks : null;
-  const problem = frameProblem(parseCells(blocks) ?? []);
-  return Array.isArray(blocks) && parseCells(blocks) && problem ? frameMessages[problem] : null;
+  const cells = parseCells(blocks);
+  const problem = cells && frameProblem(cells);
+  return problem ? frameMessages[problem] : null;
 }
 /** The media ids [cells] hold. */
 export function mediaOf(cells: Cell[]): string[] {

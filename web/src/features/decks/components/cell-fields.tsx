@@ -1,7 +1,15 @@
 "use client";
 
 import { Ellipsis } from "lucide-react";
-import { type KeyboardEvent, type ReactNode, useEffect, useId, useRef, useState } from "react";
+import {
+  type KeyboardEvent,
+  type ReactNode,
+  type SyntheticEvent,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react";
 
 import {
   blankPressed,
@@ -27,9 +35,11 @@ import { WholeCard } from "./whole-card";
 type Draft<K extends CellDraft["kind"]> = Extract<CellDraft, { kind: K }>;
 
 const fieldBox = "whitespace-pre-wrap break-words p-2 text-body";
-const chip =
-  "pressable min-h-tap-target rounded-chip border border-outline bg-surface px-3 text-secondary disabled:opacity-40";
-const choiceOn = "border-transparent bg-brand-tint";
+/** A small outlined control, its target the tap target's height past what it draws. */
+const chipShape =
+  "pressable relative h-8 rounded-chip border px-3 text-secondary before:absolute before:inset-x-0 before:-inset-y-1.5 before:content-[''] disabled:opacity-40";
+const chip = `${chipShape} border-outline bg-surface`;
+const chipOn = `${chipShape} border-ink bg-brand-tint`;
 
 /**
  * A field that grows with its text and tints each of [marks] in it as a blank, as the phone's line
@@ -55,6 +65,10 @@ function Field({
   input?: React.Ref<HTMLTextAreaElement>;
   keyDown?: (event: KeyboardEvent<HTMLTextAreaElement>) => void;
 }) {
+  const read = (event: SyntheticEvent<HTMLTextAreaElement>) => {
+    const { selectionStart: start, selectionEnd: end } = event.currentTarget;
+    select?.({ start, end });
+  };
   const parts: ReactNode[] = [];
   let at = 0;
   for (const { start, end } of [...marks].sort((a, b) => a.start - b.start)) {
@@ -89,10 +103,8 @@ function Field({
           const { selectionStart: start, selectionEnd: end } = event.target;
           change(event.target.value, { start, end });
         }}
-        onSelect={(event) => {
-          const { selectionStart: start, selectionEnd: end } = event.currentTarget;
-          select?.({ start, end });
-        }}
+        onFocus={read}
+        onSelect={read}
         onKeyDown={keyDown}
         className={`absolute inset-0 size-full resize-none overflow-hidden rounded-chip bg-transparent ${fieldBox} placeholder:text-muted focus:outline-2 focus:-outline-offset-2 focus:outline-ink`}
       />
@@ -216,7 +228,7 @@ function Choices<V extends string>({
           onClick={() => {
             change(choice);
           }}
-          className={`${chip} ${value === choice ? choiceOn : ""}`}
+          className={value === choice ? chipOn : chip}
         >
           {text}
         </button>
@@ -528,7 +540,7 @@ function TableGroup({
   const columnName = (target: { column: number }) => `${String(target.column + 1)}열`;
   return (
     <div>
-      <div role="toolbar" aria-label="표 도구" className="flex flex-wrap gap-2 px-3 py-2">
+      <div role="toolbar" aria-label="표 도구" className="flex flex-wrap gap-x-2 gap-y-3 px-3 py-2">
         <button
           type="button"
           onClick={() => {
@@ -559,7 +571,7 @@ function TableGroup({
             onClick={() => {
               change(withBlankToggled(draft, body.row, body.column, selection));
             }}
-            className={`${chip} ${blankPressed(draft, body.row, body.column, selection) ? choiceOn : ""}`}
+            className={blankPressed(draft, body.row, body.column, selection) ? chipOn : chip}
           >
             빈칸
           </button>
@@ -690,9 +702,18 @@ function KeptGroup({ draft, change }: { draft: Draft<"kept">; change: (next: Cel
   const { cell } = draft;
   return (
     <div className="divide-y divide-hairline">
-      <div className="p-3 text-left">
-        <WholeCard blocks={[cell.block]} revealed />
-      </div>
+      {cell.block.kind === "image" ? (
+        <div className="p-3">
+          <div className="mx-auto max-w-56">
+            <WholeCard blocks={[cell.block]} revealed />
+          </div>
+          <p className="mt-2 text-center text-caption text-muted">사진은 앱에서 볼 수 있어요</p>
+        </div>
+      ) : (
+        <div className="px-4 py-3">
+          <WholeCard blocks={[cell.block]} revealed inRow />
+        </div>
+      )}
       {cell.kind === "placed" && (
         <Choices<CellSide>
           name="보일 면"

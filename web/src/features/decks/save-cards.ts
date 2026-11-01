@@ -30,6 +30,10 @@ const malformed = { saved: false as const, message: "카드 내용을 확인해 
 const failed = { saved: false as const, message: "카드를 저장하지 못했어요. 다시 시도해 주세요." };
 const signedOut = { saved: false as const, message: "다시 로그인해 주세요" };
 const repeated = "이 덱에 이미 있는 카드예요";
+const noDeck = {
+  saved: false as const,
+  message: "덱을 찾을 수 없어요. 추가할 덱을 다시 골라 주세요.",
+};
 const gone = { saved: false as const, message: "카드를 찾을 수 없어요. 덱을 다시 열어 주세요." };
 const later = {
   saved: false as const,
@@ -126,6 +130,7 @@ export async function editCard(
   const session = await readUserId(client);
   if ("failure" in session) return signedOut;
   const { userId } = session;
+  if (!(await holdsDeck(client, userId, deckId))) return noDeck;
   const owned = () =>
     client
       .from("cards")
@@ -187,7 +192,8 @@ export async function editCard(
   if (persisted.error || !Array.isArray(persisted.data)) return failed;
   const [saved] = persisted.data as unknown[];
   if (!saved) return gone;
-  if (parseTime(field(saved, "updated_at")) !== Date.parse(now)) return later;
+  const time = parseTime(field(saved, "updated_at"));
+  if (time !== Date.parse(now)) return time !== null && time > Date.parse(now) ? later : failed;
   if (JSON.stringify(parseCells(field(saved, "front"))) !== JSON.stringify(cells)) return failed;
   revalidatePath("/", "layout");
   return { saved: true };
@@ -215,15 +221,7 @@ async function writeCards(
   const session = await readUserId(client);
   if ("failure" in session) return signedOut;
   const { userId } = session;
-  const deck = await client
-    .from("decks")
-    .select("id")
-    .eq("id", deckId)
-    .eq("user_id", userId)
-    .is("deleted_at", null)
-    .abortSignal(AbortSignal.timeout(requestTimeoutMs));
-  if (deck.error || !Array.isArray(deck.data) || deck.data.length !== 1)
-    return { saved: false, message: "덱을 찾을 수 없어요. 추가할 덱을 다시 골라 주세요." };
+  if (!(await holdsDeck(client, userId, deckId))) return noDeck;
   const existing = await selectAll((from, to, counted) =>
     client
       .from("cards")
@@ -343,6 +341,18 @@ async function writeCards(
     return failed;
   revalidatePath("/", "layout");
   return { saved: true };
+}
+
+/** Whether the user owns the live deck [deckId]. */
+async function holdsDeck(client: Client, userId: string, deckId: string): Promise<boolean> {
+  const deck = await client
+    .from("decks")
+    .select("id")
+    .eq("id", deckId)
+    .eq("user_id", userId)
+    .is("deleted_at", null)
+    .abortSignal(AbortSignal.timeout(requestTimeoutMs));
+  return !deck.error && Array.isArray(deck.data) && deck.data.length === 1;
 }
 
 /** The live cards [ids] of the deck, as stored, by id; null when the read fails. */
