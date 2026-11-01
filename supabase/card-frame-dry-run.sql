@@ -19,7 +19,8 @@
 --   derived_filled_text  a back of one text block equal to a blanked front's filled text, which
 --                        the migration drops.
 --   derived_source       a back of one text block on a blanked front that differs from its filled
---                        text, on an import or a copy, which the migration drops too.
+--                        text, on an import or a copy, which the migration keeps as a 글's back
+--                        (ADR 0140).
 --   o2                   a blanked front with any other back, which O2 shows after the answer.
 --   o2_back_blank        the O2 cards whose back holds a blank, which the migration moves as a
 --                        question.
