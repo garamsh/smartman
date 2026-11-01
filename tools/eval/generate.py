@@ -575,11 +575,10 @@ def write_numbered_list_samples(index: int, entries: list[dict]) -> int:
     return index
 
 
-# The dense page (#519), after the numbered word list: a hundred French words numbered from 101, in
-# two ruled tables of three columns, 번호, 앞면 (프랑스어) and 뒷면 (한국어 뜻), as the owner's word
-# list prints them, a word of two senses numbering each. Its words have no accent, which the Nanum
-# faces lack.
-DENSE_FIRST_NUMBER = 101
+# The dense pages, after the numbered word list: French words in two ruled tables of three columns,
+# 번호, 앞면 (프랑스어) and 뒷면 (한국어 뜻), as the owner's word list prints them, a word of two
+# senses numbering each; a hundred numbered from 101 (#519), and two hundred numbered from 1 in a
+# smaller size (#535). Their words have no accent, which the Nanum faces lack.
 DENSE_COLUMNS = ("번호", "앞면 (프랑스어)", "뒷면 (한국어 뜻)")
 DENSE_WIDTHS = (70, 170, 260)
 
@@ -589,15 +588,16 @@ def dense_back(senses: list[str]) -> str:
     return senses[0] if len(senses) == 1 else "  ".join(f"{n}. {s}" for n, s in enumerate(senses, 1))
 
 
-def dense_list(page: Page, entries: list[dict]) -> None:
-    """A title, then the entries in two tables side by side, each a header row and half the entries."""
-    page.text((100, 70), f"프랑스어 단어 {DENSE_FIRST_NUMBER}-{DENSE_FIRST_NUMBER + len(entries) - 1}",
+def dense_list(page: Page, entries: list[dict], first: int, size: int) -> None:
+    """A title, then the entries numbered from `first` in two tables side by side, each a header row
+    and half the entries, in text of `size`."""
+    page.text((100, 70), f"프랑스어 단어 {first}-{first + len(entries) - 1}",
               LABEL_FACE, 40, (30, 60, 120))
     half = (len(entries) + 1) // 2
-    top, size = 160, 19
+    top = 160
     row = (PAGE[1] - top - 70) / (half + 1)
     for t, left in enumerate((100, 100 + sum(DENSE_WIDTHS) + 40)):
-        rows = [DENSE_COLUMNS] + [(str(DENSE_FIRST_NUMBER + t * half + i), e["front"], dense_back(e["senses"]))
+        rows = [DENSE_COLUMNS] + [(str(first + t * half + i), e["front"], dense_back(e["senses"]))
                                   for i, e in enumerate(entries[t * half:(t + 1) * half])]
         for r, cells in enumerate(rows):
             y = top + r * row
@@ -613,16 +613,17 @@ def dense_list(page: Page, entries: list[dict]) -> None:
                 x += width
 
 
-def write_dense_list_sample(index: int, entries: list[dict]) -> int:
-    """Writes the dense French word list in print under the mild distortion, numbered after
-    `index`, with its truth; returns its index."""
+def write_dense_list_sample(index: int, entries: list[dict], first: int, size: int,
+                            name: str) -> int:
+    """Writes a dense French word list numbered from `first`, in text of `size`, in print under the
+    mild distortion, as sample `name` numbered after `index`, with its truth; returns its index."""
     index += 1
     rng = np.random.default_rng([SEED, index])
     page = Page(rng, "en-ko", "print")
-    dense_list(page, entries)
+    dense_list(page, entries, first, size)
     check_coverage(page.covered)
     photo = photograph(page.image, rng, MILD)
-    sample = f"{index:02d}-dense-list-fr-ko-print"
+    sample = f"{index:02d}-{name}-fr-ko-print"
     photo.save(SAMPLES / f"{sample}.jpg", quality=MILD.quality, optimize=False)
     truth = {
         "image": f"{sample}.jpg",
@@ -891,7 +892,9 @@ def main() -> None:
     for name in STRUCTURE_DOCUMENTS:
         index = write_structure_samples(index, name, structures[name])
     index = write_numbered_list_samples(index, vocabulary["numbered-list"])
-    index = write_dense_list_sample(index, vocabulary["dense-list-fr"])
+    index = write_dense_list_sample(index, vocabulary["dense-list-fr"], 101, 19, "dense-list")
+    index = write_dense_list_sample(index, vocabulary["dense-list-fr-first"] + vocabulary["dense-list-fr"],
+                                    1, 12, "dense-list-200")
     print(f"wrote {index} samples to {SAMPLES.relative_to(HERE.parent.parent)}/ from seed {SEED}")
 
 

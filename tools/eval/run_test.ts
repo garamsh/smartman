@@ -710,8 +710,8 @@ Deno.test("a run stops before a call whose worst case could exceed the remaining
   const models = parseModels(MODEL_LIST);
   const cheap = newest("^vendor/cheap$", models);
   assert.ok(cheap !== null);
-  // One call per image, so its worst case is one call's.
-  const worst = worstCallUsd(cheap.pricing);
+  // The function's way may read a photo on, so its worst case is that many calls'.
+  const worst = worstCallUsd(cheap.pricing) * ALTERNATIVES[0].calls;
   // Room for the worst case of the first image, and not for it again once that image spent its reply cost.
   const ledger = { budgetUsd: worst + w.replyCost / 2, runs: [] };
   const run = await runEval(
@@ -1482,6 +1482,36 @@ Deno.test("the committed dense word list holds its hundred French words, each wi
     15,
   );
   assert.deepEqual(dense.languages, { front: "fr", back: "ko" });
+});
+
+Deno.test("the committed two-hundred-word list holds a hundred new French words before the dense list's hundred, numbered from 1", async () => {
+  const samples = await committedSamples();
+  const long = samples.find((sample) =>
+    sample.name === "91-dense-list-200-fr-ko-print"
+  );
+  assert.ok(long !== undefined && long.kind === "vocabulary");
+  const vocabulary: Record<string, { front: string; senses: string[] }[]> = JSON
+    .parse(
+      await Deno.readTextFile(new URL("./vocabulary.json", import.meta.url)),
+    );
+  const words = [
+    ...vocabulary["dense-list-fr-first"],
+    ...vocabulary["dense-list-fr"],
+  ];
+  assert.equal(long.cards.length, 200);
+  assert.deepEqual(
+    long.cards.map((card) => [
+      card.front,
+      card.senses.map((sense) => sense.meaning),
+    ]),
+    words.map((word) => [word.front, word.senses]),
+  );
+  assert.equal(new Set(words.map((word) => word.front)).size, 200);
+  assert.equal(
+    long.cards.filter((card) => card.senses.length === 2).length,
+    30,
+  );
+  assert.deepEqual(long.languages, { front: "fr", back: "ko" });
 });
 
 Deno.test("--alternatives runs each named way as rows of its own, and --samples runs only the samples named", async () => {
