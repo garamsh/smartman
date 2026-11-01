@@ -72,3 +72,10 @@ Each line names a file and what it covers; the file holds the cases. The consent
 
 - Whether a Custom Access Token Hook should set `aud` to the function's URL for tokens carrying `client_id`, in place of the claim check; it needs a migration.
 - Whether to serve protocol revision 2026-07-28 once Claude or ChatGPT speaks it.
+
+### Proposed: the 칸 frame
+
+Proposed in [ADR 0137](adr/0137-frame-a-card-by-its-blocks-each-block-type-deciding-whether-it-has-a-front-and-a-back.md), awaiting the owner's approval of the design and of its migration (#488). Nothing below holds today; once approved and implemented, it replaces the current decisions it names.
+
+- **Tools.** `add_cards` takes each card as `{"blocks": [칸, …]}`, a union on `type` of `text` (`front`, `back`), `senses` (`term`, `senses`, `ask`), `cloze` (`text`, `answers`), `table` (`columns`, `rows`, `blanks`, `spans`) and `image` (an https `url`, `boxes`, `side`), validated by `deck.md`'s rules; the plain `front` and `back`, with labels and examples, stays accepted as one 글, or a 단어 when it has labels or examples (#531). `list_cards` and `search_cards` return each card's `blocks` in the same union.
+- **Rows written.** Each card records `free` v2, its 칸 list in `front` and `[]` in `back`.
