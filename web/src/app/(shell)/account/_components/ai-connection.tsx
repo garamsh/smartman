@@ -1,9 +1,8 @@
-import { env } from "@/env";
-
-/** The address of the project's `mcp` Edge Function, which Claude and ChatGPT connect to. */
-export function mcpServerUrl(): string {
-  return `${env.supabaseUrl.replace(/\/$/, "")}/functions/v1/mcp`;
-}
+/**
+ * The `mcp` Edge Function on the project's custom domain, which Claude and ChatGPT connect to
+ * (ADR 0133); the function's `PUBLIC_HOSTS` lists the domain first.
+ */
+const MCP_SERVER_URL = "https://api.knowno.app/functions/v1/mcp";
 
 /**
  * "AI 연결": the MCP server's address and how to add it in Claude and in ChatGPT (ADR 0126). It
@@ -18,7 +17,7 @@ export function AiConnection() {
       <div className="flex flex-col divide-y divide-hairline rounded-group bg-surface">
         <div className="flex flex-col gap-1 px-4 py-3">
           <p className="text-caption text-muted">서버 주소</p>
-          <p className="text-body break-all select-all">{mcpServerUrl()}</p>
+          <p className="text-body break-all select-all">{MCP_SERVER_URL}</p>
         </div>
         <div className="flex flex-col gap-1 px-4 py-3">
           <p className="text-body-strong">Claude</p>

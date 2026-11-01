@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { EmptyHome } from "@/features/decks";
 import { FakePostgrest } from "@/testing/mocks/postgrest";
-import { supabaseUnreachable, supabaseUrl, testUser } from "@/testing/mocks/handlers";
+import { supabaseUnreachable, testUser } from "@/testing/mocks/handlers";
 import { server } from "@/testing/mocks/server";
 import { setRequestCookies } from "@/testing/next-headers";
 import { redirectTarget } from "@/testing/redirect";
@@ -80,7 +80,7 @@ describe("the account page", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("radiogroup", { name: "화면" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "AI 연결" })).toHaveTextContent(
-      `${supabaseUrl}/functions/v1/mcp`,
+      "https://api.knowno.app/functions/v1/mcp",
     );
   });
 
@@ -89,7 +89,7 @@ describe("the account page", () => {
 
     const section = within(screen.getByRole("region", { name: "AI 연결" }));
     expect(section.getByText("서버 주소").nextElementSibling).toHaveTextContent(
-      `${supabaseUrl}/functions/v1/mcp`,
+      /^https:\/\/api\.knowno\.app\/functions\/v1\/mcp$/,
     );
     expect(section.getByText("Claude").nextElementSibling).toHaveTextContent(
       "커넥터 설정에서 커스텀 커넥터를 추가하고 서버 주소를 넣은 뒤 smartman으로 로그인해요",

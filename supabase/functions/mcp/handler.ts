@@ -52,19 +52,24 @@ export type HandlerDeps = IdSource & {
 const INSTRUCTIONS =
   "Smartman is a flashcard app. These tools read the signed-in user's decks and cards and add new decks and cards; they never change or delete anything. Find a deck's id with list_decks, read a deck with list_cards, find cards with search_cards, make a deck with create_deck and add cards with add_cards. New cards reach the user's phone and the web at their next sync.";
 
-/** The origin the client used: the gateway names it in the X-Forwarded headers. */
-function origin(request: Request): string {
-  const url = new URL(request.url);
-  const host = request.headers.get("X-Forwarded-Host") ?? url.host;
-  const proto =
-    (request.headers.get("X-Forwarded-Proto") ?? url.protocol.slice(0, -1))
-      .toLowerCase();
-  const port = host.includes(":")
-    ? ""
-    : request.headers.get("X-Forwarded-Port") ?? "";
-  const standard = (proto === "https" && port === "443") ||
-    (proto === "http" && port === "80");
-  return `${proto}://${host}${port !== "" && !standard ? `:${port}` : ""}`;
+/** The project's own host, where Supabase Auth keeps its issuer under a custom domain too. */
+const PROJECT_HOST = "jaxltcczmioxrineznfu.supabase.co";
+
+/**
+ * The hosts the function is served at, the custom domain first: the address 설정 shows and the
+ * one a request from any other host is given (ADR 0133). A new host is added here.
+ */
+export const PUBLIC_HOSTS = ["api.knowno.app", PROJECT_HOST] as const;
+
+/** Auth's issuer, which RFC 8414 requires the advertised authorization server to equal. */
+const AUTH_ISSUER = `https://${PROJECT_HOST}/auth/v1`;
+
+/** The function's URL at the host the client used, when the gateway names a listed one. */
+function resourceUrl(request: Request): string {
+  const forwarded = request.headers.get("X-Forwarded-Host")?.toLowerCase();
+  const host = PUBLIC_HOSTS.find((listed) => listed === forwarded) ??
+    PUBLIC_HOSTS[0];
+  return `https://${host}${FUNCTION_PATH}`;
 }
 
 type Exchange = {
@@ -96,7 +101,7 @@ export function createHandler(
 
 async function handle(request: Request, deps: HandlerDeps): Promise<Exchange> {
   const path = new URL(request.url).pathname.replace(/\/$/, "");
-  const resource = `${origin(request)}${FUNCTION_PATH}`;
+  const resource = resourceUrl(request);
   if (path === `/mcp${METADATA_SUFFIX}`) {
     if (request.method !== "GET") {
       return {
@@ -110,7 +115,7 @@ async function handle(request: Request, deps: HandlerDeps): Promise<Exchange> {
     return {
       response: Response.json({
         resource,
-        authorization_servers: [`${origin(request)}/auth/v1`],
+        authorization_servers: [AUTH_ISSUER],
         bearer_methods_supported: ["header"],
         resource_name: "smartman",
       }),

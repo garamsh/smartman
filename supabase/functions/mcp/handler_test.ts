@@ -318,8 +318,7 @@ async function send(
     }),
   });
   const headers = new Headers({
-    "X-Forwarded-Host": "project.supabase.co",
-    "X-Forwarded-Proto": "https",
+    "X-Forwarded-Host": "jaxltcczmioxrineznfu.supabase.co",
     "Content-Type": "application/json",
     ...options.headers,
   });
@@ -374,7 +373,7 @@ async function call(
 }
 
 const METADATA =
-  "https://project.supabase.co/functions/v1/mcp/oauth-protected-resource";
+  "https://jaxltcczmioxrineznfu.supabase.co/functions/v1/mcp/oauth-protected-resource";
 
 Deno.test("a request without a token is answered 401 with the resource metadata's address, and one with a connector's token is served", async () => {
   const missing = await send({
@@ -426,11 +425,78 @@ Deno.test("the protected resource metadata names the MCP URL and the project's A
   });
   assert.equal(run.status, 200);
   assert.deepEqual(run.json, {
-    resource: "https://project.supabase.co/functions/v1/mcp",
-    authorization_servers: ["https://project.supabase.co/auth/v1"],
+    resource: "https://jaxltcczmioxrineznfu.supabase.co/functions/v1/mcp",
+    authorization_servers: ["https://jaxltcczmioxrineznfu.supabase.co/auth/v1"],
     bearer_methods_supported: ["header"],
     resource_name: "smartman",
   });
+});
+
+Deno.test("on the custom domain the 401 and the metadata name its URL as the resource, the authorization server staying Auth's issuer", async () => {
+  const headers = { "X-Forwarded-Host": "api.knowno.app" };
+  const challenge = await send({
+    token: null,
+    headers,
+    body: { jsonrpc: "2.0", id: 1, method: "ping" },
+  });
+  assert.equal(challenge.status, 401);
+  assert.equal(
+    challenge.headers.get("WWW-Authenticate"),
+    'Bearer resource_metadata="https://api.knowno.app/functions/v1/mcp/oauth-protected-resource"',
+  );
+  const metadata = await send({
+    token: null,
+    headers,
+    method: "GET",
+    path: "/mcp/oauth-protected-resource",
+  });
+  assert.deepEqual(metadata.json, {
+    resource: "https://api.knowno.app/functions/v1/mcp",
+    authorization_servers: ["https://jaxltcczmioxrineznfu.supabase.co/auth/v1"],
+    bearer_methods_supported: ["header"],
+    resource_name: "smartman",
+  });
+});
+
+Deno.test("a forwarded host outside PUBLIC_HOSTS is never named; the custom domain's URL is, as a listed host's own is", async () => {
+  for (
+    const host of [
+      "evil.example",
+      "api.knowno.app.evil.example",
+      "localhost:54321",
+    ]
+  ) {
+    const refused = await send({
+      token: null,
+      headers: { "X-Forwarded-Host": host },
+      method: "GET",
+      path: "/mcp/oauth-protected-resource",
+    });
+    assert.equal(
+      (refused.json as Row).resource,
+      "https://api.knowno.app/functions/v1/mcp",
+      host,
+    );
+    const challenge = await send({
+      token: null,
+      headers: { "X-Forwarded-Host": host },
+    });
+    assert.equal(
+      challenge.headers.get("WWW-Authenticate"),
+      'Bearer resource_metadata="https://api.knowno.app/functions/v1/mcp/oauth-protected-resource"',
+      host,
+    );
+  }
+  // The control: a listed host other than the first is named as itself.
+  const listed = await send({
+    token: null,
+    method: "GET",
+    path: "/mcp/oauth-protected-resource",
+  });
+  assert.equal(
+    (listed.json as Row).resource,
+    "https://jaxltcczmioxrineznfu.supabase.co/functions/v1/mcp",
+  );
 });
 
 Deno.test("initialize answers the offered version when served and the newest otherwise, with the tools capability", async () => {
