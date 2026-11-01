@@ -7,6 +7,7 @@ import '../../design/app_section_label.dart';
 import '../../design/theme.dart';
 import '../../design/word_break.dart';
 import '../../l10n/app_localizations.dart';
+import 'card_frame.dart';
 import 'card_text.dart';
 import 'content.dart';
 import 'content_view.dart';
@@ -28,8 +29,8 @@ const _studyGaps =
 
 /// The card as study draws it, from the card editor's "미리보기" (ADR 0117):
 /// one card of study's current card's size, centred on the screen, its front alone and,
-/// after a tap, its back, or, for a card studied on one face, that face
-/// with its blanks empty and, after a tap, filled. Each tap turns the card
+/// after a tap, its back, or, for a card drawn whole, its 칸 in place with
+/// each blank empty and, after a tap, revealed. Each tap turns the card
 /// over in 3D, or switches it at once when the system asks to reduce
 /// motion. "앞면" or "뒷면" names the side over a card of two sides, and a
 /// line under the card says what a tap does.
@@ -76,8 +77,9 @@ class _CardPreviewScreenState extends State<CardPreviewScreen>
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
-    final face = oneFaceOf(widget.front, widget.back);
-    final hint = switch ((face != null, _turned)) {
+    final cells = cellsToDraw(widget.front, widget.back);
+    final whole = isDrawnWhole(cells);
+    final hint = switch ((whole, _turned)) {
       (false, false) => l10n.previewTapToBack,
       (false, true) => l10n.previewTapToFront,
       (true, false) => l10n.previewTapToReveal,
@@ -100,7 +102,7 @@ class _CardPreviewScreenState extends State<CardPreviewScreen>
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (face == null)
+                if (!whole)
                   AppSectionLabel(_turned ? l10n.cardBack : l10n.cardFront),
                 // Study's card height, kept below what the screen leaves it.
                 Flexible(
@@ -125,7 +127,7 @@ class _CardPreviewScreenState extends State<CardPreviewScreen>
                                 ..setEntry(3, 2, 0.001)
                                 ..rotateY(back ? angle - pi : angle),
                               child: _Face(
-                                face: face,
+                                cells: whole ? cells : null,
                                 front: widget.front,
                                 back: widget.back,
                                 turned: back,
@@ -161,14 +163,14 @@ class _CardPreviewScreenState extends State<CardPreviewScreen>
 /// the last (ADR 0123).
 class _Face extends StatelessWidget {
   const _Face({
-    required this.face,
+    required this.cells,
     required this.front,
     required this.back,
     required this.turned,
   });
 
-  /// The one face of a card with a blank, or null for one of two sides.
-  final List<Content>? face;
+  /// The 칸 of a card drawn whole, or null for one of two sides.
+  final List<Cell>? cells;
   final List<Content> front;
   final List<Content> back;
   final bool turned;
@@ -176,7 +178,7 @@ class _Face extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    final face = this.face;
+    final cells = this.cells;
     return DecoratedBox(
       decoration: BoxDecoration(
         color: colors.surface,
@@ -188,9 +190,9 @@ class _Face extends StatelessWidget {
         child: SizedBox.expand(
           child: CardScroll(
             padding: AppSpace.s16,
-            builder: (context, width, height) => switch ((face, turned)) {
-              (final face?, _) => SteppedWholeCardView(
-                face,
+            builder: (context, width, height) => switch ((cells, turned)) {
+              (final cells?, _) => SteppedWholeCardView(
+                cells,
                 revealed: turned,
                 style: AppType.front,
                 width: width,

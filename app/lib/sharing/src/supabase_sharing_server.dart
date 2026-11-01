@@ -62,20 +62,14 @@ final class SupabaseSharingServer implements SharingServer {
           final from = cards.length;
           final rows = await _client
               .from('cards')
-              .select('front, back')
+              .select('front, back, template, template_version')
               .eq('deck_id', deck.value)
               .isFilter('deleted_at', null)
               .order('created_at', ascending: true)
               .order('id', ascending: true)
               .range(from, from + (want < _page ? want : _page) - 1);
           for (final row in rows) {
-            final fields = _Fields(row);
-            cards.add(
-              PublicCard(
-                front: decodeContent(fields.json('front')),
-                back: decodeContent(fields.json('back')),
-              ),
-            );
+            cards.add(_decodeCard(_Fields(row)));
           }
           final full = limit != null && cards.length >= limit;
           if (rows.length < _page || full) return cards;
@@ -233,6 +227,21 @@ PublicDeckSummary _decodeSummary(_Fields row) => PublicDeckSummary(
   publishedAt: DateTime.parse(row.string('published_at')),
 );
 
+PublicCard _decodeCard(_Fields row) {
+  if (isFramed(
+    row.stringOrNull('template'),
+    row.integerOrNull('template_version'),
+  )) {
+    final cells = decodeCells(row.json('front'));
+    final sides = sidesOf(cells);
+    return PublicCard(front: sides.front, back: sides.back, cells: cells);
+  }
+  return PublicCard(
+    front: decodeContent(row.json('front')),
+    back: decodeContent(row.json('back')),
+  );
+}
+
 /// A row PostgREST returned, read field by field; a field of the wrong type
 /// throws [FormatException].
 extension type _Fields(Map<String, dynamic> row) {
@@ -248,6 +257,8 @@ extension type _Fields(Map<String, dynamic> row) {
   String? stringOrNull(String key) => _read<String?>(key);
 
   int integer(String key) => _read<int>(key);
+
+  int? integerOrNull(String key) => _read<int?>(key);
 
   /// A `jsonb` value, encoded as the local database stores it.
   String json(String key) => jsonEncode(_read<List<dynamic>>(key));

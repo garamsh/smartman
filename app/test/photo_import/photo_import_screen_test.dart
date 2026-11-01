@@ -1774,7 +1774,9 @@ void main() {
         final saved = (await tester.runAsync(
           () => import.repository.listCards(import.french.id),
         ))!;
-        final card = saved.firstWhere((card) => isWholeCard(card.front));
+        final card = saved.firstWhere(
+          (card) => card.front.any((block) => block is TableContent),
+        );
         expect(card.front, [const TextContent('인칭 대명사'), table]);
         expect(card.back, [
           const TextContent('인칭 대명사\n구분 | 높임 | 낮춤\n2인칭 | 당신 | 너'),

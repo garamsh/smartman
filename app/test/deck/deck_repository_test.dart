@@ -267,6 +267,96 @@ void main() {
       expect(row.updatedAt.isAfter(french.updatedAt), isTrue);
     });
 
+    group('adding a framed card', () {
+      const cloze = ClozeContent('___ is red.', ['Rose']);
+      const cells = [BlankCell(cloze), TextCell(back: 'A flower.')];
+      final sides = sidesOf(cells);
+      final incoming = IncomingCard(
+        front: sides.front,
+        back: sides.back,
+        cells: cells,
+        onDuplicate: DuplicateChoice.mergeBack,
+      );
+
+      Future<CardRow> row(DeckId deck) => (db.select(
+        db.cards,
+      )..where((card) => card.deckId.equals(deck.value))).getSingle();
+
+      test('stores its 칸 list in free v2, each block with an id, its back '
+          'empty', () async {
+        final deck = await repository.createDeck('Colours');
+        await repository.addCards(AddToDeck(deck.id), [incoming]);
+
+        final stored = await row(deck.id);
+        expect(stored.template, 'free');
+        expect(stored.templateVersion, 2);
+        expect(stored.back, '[]');
+        expect(decodeCells(stored.front), cells);
+        expect(
+          decodeCells(stored.front).every((cell) => cell.id != null),
+          isTrue,
+        );
+        expect(stored.cardKey, frameKey(cells).value);
+        expect((await cardsOf(deck.id)).single.cells, cells);
+
+        // Control: a card of two sides stays at free v1.
+        final other = await repository.createDeck('Other');
+        await repository.addCards(AddToDeck(other.id), [
+          IncomingCard(
+            front: sides.front,
+            back: sides.back,
+            onDuplicate: DuplicateChoice.addNew,
+          ),
+        ]);
+        expect((await row(other.id)).templateVersion, 1);
+      });
+
+      test('a merged back joins a stored 칸 list as a 글 with a back alone, '
+          'never in the back column', () async {
+        final deck = await repository.createDeck('Colours');
+        await repository.addCards(AddToDeck(deck.id), [incoming]);
+
+        final added = await repository.addCards(AddToDeck(deck.id), [
+          IncomingCard(
+            front: sides.front,
+            back: const [TextContent('Also a colour.')],
+            onDuplicate: DuplicateChoice.mergeBack,
+          ),
+        ]);
+
+        expect(added.merged, 1);
+        final stored = await row(deck.id);
+        expect(stored.back, '[]');
+        expect(stored.templateVersion, 2);
+        expect(decodeCells(stored.front), [
+          ...cells,
+          const TextCell(back: 'Also a colour.'),
+        ]);
+      });
+
+      test('a back already on the card, or none, merges nothing into a stored '
+          '칸 list', () async {
+        final deck = await repository.createDeck('Colours');
+        await repository.addCards(AddToDeck(deck.id), [incoming]);
+
+        final added = await repository.addCards(AddToDeck(deck.id), [
+          IncomingCard(
+            front: sides.front,
+            back: const [TextContent('A flower.')],
+            onDuplicate: DuplicateChoice.mergeBack,
+          ),
+          IncomingCard(
+            front: sides.front,
+            back: const [],
+            onDuplicate: DuplicateChoice.mergeBack,
+          ),
+        ]);
+
+        expect(added.merged, 0);
+        expect(decodeCells((await row(deck.id)).front), cells);
+      });
+    });
+
     group("a deck's image", () {
       late Directory directory;
       late FakeMediaServer server;
