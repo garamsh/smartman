@@ -1,14 +1,25 @@
 import { v7 } from "uuid";
 import { field } from "@/supabase/row";
-import { block, type CardDraft, textBlocks } from "./authoring";
+import { block, type Block, type CardDraft, cardKey, textBlocks } from "./authoring";
 import { describeContent, parseContent } from "./card-content";
 
-/** A photo's reviewed candidate retains its structured content until an explicit save. */
+/**
+ * A photo's reviewed candidate retains its structured content until an explicit save: its front
+ * and back as word to meaning, which its section's form turns (`section-form.ts`), the id of the
+ * reversed card "양쪽 방향" adds, and the pronunciation and extras the form may show.
+ */
 export type Candidate = CardDraft & {
   topic: string;
   kind: "vocabulary" | "note";
-  selected: boolean;
+  identify: boolean;
+  pronunciation: string | null;
+  extras: Extra[];
+  reverseId: string;
+  /** Included (true) or left out (false) by the user; null until either, when the list decides. */
+  selected: boolean | null;
 };
+/** A note the page prints for a whole entry, such as a synonym, as the phone's `Extra`. */
+export type Extra = { label: string; text: string };
 /** Parses the function's current response and maps its fields as the phone does. */
 export function parseCandidates(body: unknown): Candidate[] | null {
   const cards = field(body, "cards");
@@ -53,7 +64,83 @@ export function parseCandidates(body: unknown): Candidate[] | null {
     if (!parsed) return null;
     if (type === "cloze" || type === "table") back = textBlocks(describeContent(parsed));
     if (!parseContent(back) || back.length === 0) return null;
-    result.push({ id: v7(), topic, kind, front: frontBlocks, back, selected: true });
+    const spoken = field(card, "pronunciation") ?? null;
+    const pronunciation = spoken === null ? null : isText(spoken) ? spoken.trim() : undefined;
+    const extras = parseExtras(field(card, "extras"));
+    if (pronunciation === undefined || !extras) return null;
+    result.push({
+      id: v7(),
+      topic,
+      kind,
+      identify: type === "identify",
+      pronunciation,
+      extras,
+      reverseId: v7(),
+      front: frontBlocks,
+      back,
+      selected: null,
+    });
   }
-  return result;
+  return mergeCandidates(result);
+}
+
+function isText(value: unknown): value is string {
+  return typeof value === "string" && value.trim() !== "";
+}
+
+/** A card's extras, each a non-empty label and text, trimmed, as the phone's `_parseExtra`; null otherwise. */
+function parseExtras(value: unknown): Extra[] | null {
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value)) return null;
+  const extras: Extra[] = [];
+  for (const extra of value) {
+    const label = field(extra, "label");
+    const text = field(extra, "text");
+    if (!isText(label) || !isText(text)) return null;
+    extras.push({ label: label.trim(), text: text.trim() });
+  }
+  return extras;
+}
+
+/** [blocks]' key under the phone's card key normalization. */
+function keyOf(blocks: Block[]): string {
+  return cardKey(parseContent(blocks) ?? []);
+}
+
+/** Every sense of [side]'s senses blocks, as stored. */
+function sensesOf(side: Block[]): unknown[] {
+  return side.flatMap((item) => {
+    const list: unknown = field(item.payload, "senses");
+    return item.type === "senses" && Array.isArray(list) ? list.map((sense: unknown) => sense) : [];
+  });
+}
+
+/**
+ * One photo's candidates with each card key's merged into its first, as the phone's `ImportRow`:
+ * a vocabulary entry's senses joined without repeats; a note's later back appended as a text
+ * block unless a line of the back already holds it, as the phone's `mergeBack`.
+ */
+function mergeCandidates(cards: Candidate[]): Candidate[] {
+  const merged = new Map<string, Candidate>();
+  for (const card of cards) {
+    const key = keyOf(card.front);
+    const first = merged.get(key);
+    if (!first) merged.set(key, card);
+    else if (first.kind === "vocabulary" && card.kind === "vocabulary") {
+      const seen = new Set(sensesOf(first.back).map((sense) => JSON.stringify(sense)));
+      const added = sensesOf(card.back).filter((sense) => !seen.has(JSON.stringify(sense)));
+      const all = [...sensesOf(first.back), ...added];
+      first.back = first.back.map((item) =>
+        item.type === "senses" ? { ...item, payload: { senses: all } } : item,
+      );
+    } else if (!first.front.some((item) => item.type === "cloze" || item.type === "table")) {
+      const back = describeContent(parseContent(card.back) ?? []);
+      const lines = describeContent(parseContent(first.back) ?? [])
+        .split("\n")
+        .map((line) => keyOf(textBlocks(line)));
+      if (back.trim() && !lines.includes(keyOf(textBlocks(back))))
+        first.back = [...first.back, ...textBlocks(back)];
+    }
+  }
+  return [...merged.values()];
 }

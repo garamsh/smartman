@@ -1,9 +1,6 @@
-import { Chip } from "@/design/chip";
-
 import { formatDate, formatTime } from "../format";
 import { termsLabel } from "../labels";
 import type { AdminUser } from "../read-admin";
-import { AdminSection, group } from "./admin-section";
 import { PublicDecks } from "./public-decks";
 import { UserDecks } from "./user-decks";
 import { UserPlan } from "./user-plan";
@@ -32,32 +29,37 @@ export function UserView({ user, timeZone }: { user: AdminUser; timeZone: string
     <div className="flex flex-col gap-section-gap">
       <header className="flex flex-wrap items-center gap-2">
         <h1 className="text-display break-all">{user.email}</h1>
-        {user.admin && <Chip tone="brand">관리자</Chip>}
-        {user.suspension !== null && <Chip tone="amber">정지됨</Chip>}
+        {user.admin && (
+          <span className="rounded-full bg-brand-tint px-2 py-0.5 text-micro font-semibold text-ink">
+            관리자
+          </span>
+        )}
+        {user.suspension !== null && (
+          <span className="rounded-full bg-tint-red px-2 py-0.5 text-micro font-semibold text-dont-know-text">
+            정지됨
+          </span>
+        )}
       </header>
-      <dl className={group}>
+      <dl className="flex flex-col gap-2 rounded-card bg-surface p-5">
         {facts.map(([term, value]) => (
-          <div key={term} className="flex items-baseline justify-between gap-3 px-4 py-3">
-            <dt className="text-body text-ink-2">{term}</dt>
-            <dd className="text-right text-body-strong tabular-nums">{value}</dd>
+          <div key={term} className="flex items-baseline justify-between gap-3">
+            <dt className="text-secondary text-muted">{term}</dt>
+            <dd className="text-body-strong">{value}</dd>
           </div>
         ))}
       </dl>
-      <UserPlan userId={user.id} email={user.email} plan={user.plan} timeZone={timeZone} />
-      <UserDecks decks={user.allDecks} />
-      <AdminSection label="공개 덱">
-        <PublicDecks
-          decks={user.publicDecks}
-          timeZone={timeZone}
-          empty="공개한 덱이 없어요. 이 사용자가 덱을 공개하면 여기에 보여요."
-        />
-      </AdminSection>
       <UserSuspension
         userId={user.id}
         email={user.email}
         suspension={user.suspension}
         timeZone={timeZone}
       />
+      <UserPlan userId={user.id} email={user.email} plan={user.plan} timeZone={timeZone} />
+      <UserDecks decks={user.allDecks} />
+      <section aria-label="공개 덱" className="flex flex-col gap-3">
+        <h2 className="text-section">공개 덱</h2>
+        <PublicDecks decks={user.publicDecks} timeZone={timeZone} empty="공개한 덱이 없어요." />
+      </section>
     </div>
   );
 }

@@ -248,7 +248,7 @@ describe("the trial on one photo", () => {
       trial.getByLabelText("사진"),
       new File([new Uint8Array([1, 2, 3])], "page.jpg", { type: "image/jpeg" }),
     );
-    await user.click(trial.getByRole("button", { name: "시험" }));
+    await user.click(trial.getByRole("button", { name: "시험하기" }));
     expect(await trial.findByText("카드 2장을 만들었어요.")).toBeInTheDocument();
     expect(
       within(trial.getByRole("list", { name: "만든 카드" }))
@@ -290,7 +290,7 @@ describe("the trial on one photo", () => {
       screen.getByLabelText("사진"),
       new File([new Uint8Array([1])], "unreadable.jpg", { type: "image/jpeg" }),
     );
-    await user.click(screen.getByRole("button", { name: "시험" }));
+    await user.click(screen.getByRole("button", { name: "시험하기" }));
     expect(
       await screen.findByText("이 사진을 읽지 못했어요. 다른 사진을 골라 주세요."),
     ).toBeInTheDocument();
