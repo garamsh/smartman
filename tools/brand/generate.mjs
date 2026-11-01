@@ -1,7 +1,8 @@
 #!/usr/bin/env node
-// Writes every brand file from tools/brand/mark.svg and tools/brand/wordmarks.json, the outlines
-// of 알아몰라 and knowno in Pretendard ExtraBold (app/assets/fonts/): the SVGs of web/public/, and
-// the PNGs of app/assets/brand/ and web/public/. `make brand` runs it, then the launcher icon and
+// Writes every brand file from the drawings in tools/brand/, the mark and the mascot's expressions
+// over the one body.svg, and wordmarks.json, the outlines of 알아몰라 and knowno in Pretendard
+// ExtraBold (app/assets/fonts/): the SVGs of web/public/, and the PNGs of app/assets/brand/ and
+// web/public/. `make brand` runs it, then the launcher icon and
 // splash generators over its output. With --check it writes nothing and fails on a file that
 // differs from what it would write: an SVG by any byte, a PNG by a mean difference per channel of
 // 1 in 255 or more, since librsvg's anti-aliasing differs a little between platforms.
@@ -17,9 +18,16 @@ const ink = "#3B2118";
 const inkOnDark = "#FFF1E3";
 const cream = "#FCEBD5";
 
-const mark = /<svg[^>]*>\s*<title>[^<]*<\/title>([\s\S]*)<\/svg>/.exec(
-  readFileSync(join(root, "tools/brand/mark.svg"), "utf8"),
-)[1];
+/** What the drawing tools/brand/[name].svg holds inside its root. */
+const inner = (name) =>
+  /<svg[^>]*>\s*<title>[^<]*<\/title>([\s\S]*)<\/svg>/.exec(
+    readFileSync(join(root, `tools/brand/${name}.svg`), "utf8"),
+  )[1];
+
+/** The drawing [name], with body.svg drawn where it says. */
+const drawing = (name) => inner(name).replaceAll('<use href="body.svg"/>', inner("body"));
+
+const mark = drawing("mark");
 const wordmarks = JSON.parse(readFileSync(join(root, "tools/brand/wordmarks.json"), "utf8"));
 
 const svg = (width, height, body, size = { width, height }) =>
@@ -34,7 +42,7 @@ const centred = (art, scale, ground = "") => {
 const onCircle = centred(mark, 0.88, `<circle cx="512" cy="512" r="512" fill="${cream}"/>`);
 
 /** The mark close up on a full cream square, its body running off the foot. */
-const onSquare = `<rect width="1024" height="1024" fill="${cream}"/><g transform="translate(-179 -60) scale(1.35)">${mark}</g>`;
+const onSquare = `<rect width="1024" height="1024" fill="${cream}"/><g transform="translate(-75 32) scale(1.15)">${mark}</g>`;
 
 /** The mark on the cream circle, in a box [size] across at ([x], [y]). */
 const circled = (x, y, size) =>
@@ -68,13 +76,21 @@ const stacked = (ink) =>
   );
 
 const canvas = (body) => svg(1024, 1024, body);
-const circleMark = canvas(onCircle);
 const markAlone = canvas(mark);
 
+/** The mascot's expressions, the mark itself the thinking one. */
+const expressions = {
+  thinking: markAlone,
+  happy: canvas(drawing("happy")),
+  sad: canvas(drawing("sad")),
+  sleepy: canvas(drawing("sleepy")),
+};
+
 const vectors = {
-  "web/public/favicon.svg": circleMark,
-  "web/public/brand/knowno-circle.svg": circleMark,
-  "web/public/brand/knowno-mark.svg": markAlone,
+  "web/public/favicon.svg": canvas(onSquare),
+  ...Object.fromEntries(
+    Object.entries(expressions).map(([name, art]) => [`web/public/brand/knowno-${name}.svg`, art]),
+  ),
   "web/public/brand/knowno-lockup-light.svg": lockup(ink),
   "web/public/brand/knowno-lockup-dark.svg": lockup(inkOnDark),
   "web/public/brand/knowno-stacked-light.svg": stacked(ink),
@@ -111,7 +127,9 @@ const rasters = [
   ...densities("knowno-lockup-dark", vectors["web/public/brand/knowno-lockup-dark.svg"], lockupSize, { height: 30 }),
   ...densities("knowno-stacked-light", vectors["web/public/brand/knowno-stacked-light.svg"], stackedSize, { width: 200 }),
   ...densities("knowno-stacked-dark", vectors["web/public/brand/knowno-stacked-dark.svg"], stackedSize, { width: 200 }),
-  ...densities("knowno-circle", circleMark, { width: 1024, height: 1024 }, { width: 128 }),
+  ...Object.entries(expressions).flatMap(([name, art]) =>
+    densities(`knowno-${name}`, art, { width: 1024, height: 1024 }, { width: 128 }),
+  ),
   // The launcher icons' sources: the mark close up on a full cream square, and the mark alone on no ground,
   // which is iOS 18's dark icon and Android's adaptive foreground; flutter_launcher_icons insets
   // the latter by 16%, inside the 66 of 108 dp every mask keeps.
@@ -123,7 +141,7 @@ const rasters = [
   square("app/assets/brand/splash/splash-dark.png", canvas(centred(onCircle, 0.8)), 640),
   square("app/assets/brand/splash/android12-light.png", canvas(centred(mark, 0.6)), 1152),
   square("app/assets/brand/splash/android12-dark.png", canvas(centred(onCircle, 0.6)), 1152),
-  square("web/public/favicon-32.png", circleMark, 32),
+  square("web/public/favicon-32.png", canvas(onSquare), 32, true),
   square("web/public/apple-touch-icon.png", canvas(onSquare), 180, true),
   square("web/public/icon-192.png", canvas(onSquare), 192, true),
   square("web/public/icon-512.png", canvas(onSquare), 512, true),
@@ -164,7 +182,7 @@ async function check() {
     process.exit(1);
   }
   console.log(
-    `checked ${Object.keys(vectors).length} SVGs and ${rasters.length} PNGs, the table in tools/brand/generate.mjs, against tools/brand/mark.svg and wordmarks.json`,
+    `checked ${Object.keys(vectors).length} SVGs and ${rasters.length} PNGs, the table in tools/brand/generate.mjs, against the drawings in tools/brand/`,
   );
 }
 
@@ -177,7 +195,7 @@ async function write() {
     mkdirSync(dirname(join(root, raster.path)), { recursive: true });
     writeFileSync(join(root, raster.path), await render(raster));
   }
-  console.log(`wrote ${Object.keys(vectors).length} SVGs and ${rasters.length} PNGs from tools/brand/mark.svg and wordmarks.json`);
+  console.log(`wrote ${Object.keys(vectors).length} SVGs and ${rasters.length} PNGs from the drawings in tools/brand/`);
 }
 
 await (process.argv.includes("--check") ? check() : write());

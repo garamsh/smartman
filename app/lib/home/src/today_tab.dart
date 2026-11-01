@@ -9,7 +9,7 @@ import '../../account/account.dart';
 import '../../deck/deck.dart';
 import '../../design/app_button.dart';
 import '../../design/app_chip.dart';
-import 'mascot.dart';
+import '../../design/mascot.dart';
 import '../../design/streak_flame.dart';
 import '../../design/theme.dart';
 import '../../design/word_break.dart';
@@ -127,8 +127,9 @@ class TodayTab extends StatelessWidget {
   }
 }
 
-/// How to start while no deck holds a card: add cards to the one deck, or
-/// open it; with more decks, go to the 덱 tab to add cards in one of them.
+/// How to start while no deck holds a card, the mascot glad of the deck just
+/// made: add cards to the one deck, or open it; with more decks, go to the 덱
+/// tab to add cards in one of them.
 class _NoCards extends StatelessWidget {
   const _NoCards({required this.decks, required this.onShowDecks});
 
@@ -144,7 +145,7 @@ class _NoCards extends StatelessWidget {
       ),
     );
     return FirstRun(
-      mascot: false,
+      mascot: MascotExpression.happy,
       title: l10n.noCardsTitle,
       body: l10n.noCardsBody,
       actions: switch (decks) {
@@ -352,7 +353,10 @@ class _BacklogCard extends StatelessWidget {
         Row(
           spacing: AppSpace.s16,
           children: [
-            const Mascot(size: AppSize.mascotGuide),
+            const Mascot(
+              expression: MascotExpression.thinking,
+              size: AppSize.mascotGuide,
+            ),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -437,7 +441,10 @@ class _DoneCard extends StatelessWidget {
         child: Column(
           spacing: AppSpace.s8,
           children: [
-            const Mascot(size: AppSize.mascotMedium + AppSpace.s12),
+            const Mascot(
+              expression: MascotExpression.happy,
+              size: AppSize.mascotMedium,
+            ),
             const SizedBox(height: AppSpace.s4),
             Semantics(
               header: true,

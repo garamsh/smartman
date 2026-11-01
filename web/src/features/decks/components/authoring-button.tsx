@@ -180,7 +180,7 @@ function NewDeck({ close }: { close: () => void }) {
         )}
         <button
           disabled={pending}
-          className="pressable min-h-cta rounded-button bg-ink px-5 text-label text-on-primary disabled:opacity-50"
+          className="pressable min-h-cta rounded-button bg-primary px-5 text-label text-on-primary disabled:opacity-50"
         >
           {pending ? "만드는 중" : "만들기"}
         </button>
@@ -285,7 +285,7 @@ function ManualEntry({ deck, close }: { deck: Deck; close: () => void }) {
           onClick={() => {
             save(true);
           }}
-          className="pressable min-h-cta flex-1 rounded-button bg-ink px-3 text-label text-on-primary disabled:opacity-50"
+          className="pressable min-h-cta flex-1 rounded-button bg-primary px-3 text-label text-on-primary disabled:opacity-50"
         >
           {pending ? "저장 중" : "저장하고 다음 카드"}
         </button>
@@ -311,7 +311,7 @@ function ManualEntry({ deck, close }: { deck: Deck; close: () => void }) {
             <button
               type="button"
               onClick={close}
-              className="pressable min-h-button rounded-button bg-dont-know px-4 text-label text-on-primary"
+              className="pressable min-h-button rounded-button bg-dont-know px-4 text-label text-on-ink"
             >
               버리기
             </button>

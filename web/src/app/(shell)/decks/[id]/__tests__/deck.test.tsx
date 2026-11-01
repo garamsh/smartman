@@ -90,7 +90,10 @@ describe("the deck page", () => {
     const card = screen.getByRole("region", { name: "오늘 학습" });
     expect(card).toHaveClass("bg-surface", "text-ink", "shadow-card");
     expect(card).toHaveTextContent(/^오늘 학습약 \d+분2장학습하기/);
-    expect(screen.getByRole("link", { name: "학습하기" })).toHaveClass("bg-ink", "text-on-primary");
+    expect(screen.getByRole("link", { name: "학습하기" })).toHaveClass(
+      "bg-primary",
+      "text-on-primary",
+    );
     expectTextReadable(card);
     expect(screen.getByRole("link", { name: "덱" })).toHaveAttribute("href", "/decks");
   });
@@ -186,11 +189,12 @@ describe("the deck page", () => {
     const empty = screen.getByRole("region", { name: "아직 카드가 없어요" });
     expect(empty).toHaveTextContent("카드를 추가해 시작해 보세요.");
     expect(screen.queryByRole("searchbox", { name: "카드 검색" })).not.toBeInTheDocument();
-    // No mascot: it heads the first-run home alone (ADR 0116).
-    expect(empty.querySelector('img[src*="knowno-circle"]')).toBeNull();
-    // Control: a deck with cards lists them instead.
+    // The sleepy mascot over the words (ADR 0140).
+    expect(empty.querySelector('img[src*="knowno-sleepy"]')).not.toBeNull();
+    // Control: a deck with cards lists them instead, with no mascot.
     cleanup();
     await open("d-fr");
+    expect(document.querySelector('img[src*="knowno-sleepy"]')).toBeNull();
     expect(screen.queryByRole("region", { name: "아직 카드가 없어요" })).not.toBeInTheDocument();
   });
 

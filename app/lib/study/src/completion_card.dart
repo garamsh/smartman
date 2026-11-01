@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../design/app_button.dart';
+import '../../design/mascot.dart';
 import '../../design/streak_flame.dart';
 import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
@@ -8,7 +9,7 @@ import 'session.dart';
 import 'study_style.dart';
 
 /// The completion card in the current card's place once no card is left
-/// today: the heading, today's answers, time and streak, then
+/// today: the happy mascot, the heading, today's answers, time and streak, then
 /// the choice to go on with the new cards past today's, through [onStudyOn],
 /// or to stop. With none left, a line says so and stopping is the card's one
 /// primary action.
@@ -56,6 +57,12 @@ class CompletionCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             spacing: AppSpace.s12,
             children: [
+              const Center(
+                child: Mascot(
+                  expression: MascotExpression.happy,
+                  size: AppSize.mascotMedium,
+                ),
+              ),
               Semantics(
                 header: true,
                 child: Text(

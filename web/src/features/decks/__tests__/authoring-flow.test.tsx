@@ -498,6 +498,7 @@ describe("photo import", () => {
     expect(
       await screen.findByText("카드를 읽지 못했어요. 잠시 후 다시 시도해 주세요."),
     ).toBeInTheDocument();
+    expect(document.querySelector('img[src*="knowno-sad"]')).not.toBeNull();
     expect(sent.count).toBe(1);
     await userEvent.click(screen.getByRole("button", { name: "다시 시도" }));
     expect(
@@ -516,6 +517,7 @@ describe("photo import", () => {
     expect(
       await screen.findByText("카드를 찾지 못했어요. 더 밝고 반듯하게 찍어 보세요."),
     ).toBeInTheDocument();
+    expect(document.querySelector('img[src*="knowno-sad"]')).not.toBeNull();
     expect(screen.getByLabelText("다른 사진 고르기", { selector: "input" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "다시 시도" })).not.toBeInTheDocument();
   });
@@ -526,6 +528,8 @@ describe("photo import", () => {
       await screen.findByRole("heading", { name: "사진 1장을 읽지 못했어요" }),
     ).toBeInTheDocument();
     expect(sent.count).toBe(2);
+    // Never beside a failure's red: the row's icon is the screen's one mark.
+    expect(document.querySelector('img[src*="knowno-thinking"]')).toBeNull();
     expect(screen.getByText("카드 1장")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "사진 1 빼기" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "사진 2 다시 시도" })).not.toBeInTheDocument();
@@ -837,6 +841,7 @@ describe("photo import", () => {
         expect(bodies).toHaveLength(2);
       });
       expect(screen.getByRole("heading", { name: "카드를 찾고 있어요" })).toBeInTheDocument();
+      expect(document.querySelector('img[src*="knowno-thinking"]')).not.toBeNull();
       release();
       expect(
         await screen.findByRole("heading", { name: "카드 2장을 만들었어요" }),

@@ -4,8 +4,8 @@ import 'theme.dart';
 
 /// What a button does, which decides how prominent it is.
 enum AppButtonVariant {
-  /// The screen's or the sheet's one primary action: the ink fill, inverted
-  /// in the dark theme.
+  /// The screen's or the sheet's one primary action: the coral fill with a
+  /// cocoa label.
   primary,
 
   /// The study coach's action: a coral fill with a cocoa label.
@@ -84,7 +84,7 @@ class AppButton extends StatelessWidget {
     final minimumSize = Size(AppSize.tapTarget, height);
     final pressed = loading ? null : onPressed;
     final (fill, onFill) = switch (variant) {
-      AppButtonVariant.primary => (colors.ink, colors.onPrimary),
+      AppButtonVariant.primary => (colors.primary, colors.onPrimary),
       AppButtonVariant.onHero => (colors.onHero, colors.brand),
       AppButtonVariant.destructiveFinal => (
         colors.dontKnowText,

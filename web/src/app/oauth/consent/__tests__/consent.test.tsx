@@ -103,8 +103,8 @@ describe("the consent page", () => {
     const buttons = screen.getAllByRole("button");
     expect(buttons.map((button) => button.textContent)).toEqual(["취소", "연결"]);
     expect(buttons[0]).toHaveClass("border-outline");
-    expect(buttons[0]).not.toHaveClass("bg-ink");
-    expect(buttons[1]).toHaveClass("bg-ink", "text-on-primary");
+    expect(buttons[0]).not.toHaveClass("bg-primary");
+    expect(buttons[1]).toHaveClass("bg-primary", "text-on-primary");
     expect(container.querySelectorAll(".rounded-group")).toHaveLength(1);
     expect(typeSizesOf(container).length).toBeLessThanOrEqual(3);
   });

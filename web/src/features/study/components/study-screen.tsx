@@ -13,6 +13,7 @@ import {
 } from "react";
 import { v7 } from "uuid";
 
+import { Mascot } from "@/design/brand";
 import { Chip } from "@/design/chip";
 
 import type { Answer, AnswerWrite } from "../answer-write";
@@ -157,7 +158,7 @@ export function StudyScreen({
               onClick={() => {
                 setEngine("loading");
               }}
-              className={`${button} bg-ink text-on-primary`}
+              className={`${button} bg-primary text-on-primary`}
             >
               다시 시도
             </button>
@@ -479,7 +480,7 @@ function Session({ plan, back }: { plan: SessionPlan; back: string }) {
             onClick={() => {
               writes.retry();
             }}
-            className={`${button} self-start bg-ink text-on-primary`}
+            className={`${button} self-start bg-primary text-on-primary`}
           >
             다시 시도
           </button>
@@ -492,7 +493,10 @@ function Session({ plan, back }: { plan: SessionPlan; back: string }) {
           className="flex min-w-0 flex-[999_1_520px] flex-col items-center gap-3 pt-6"
         >
           {view.kind === "empty" ? (
-            <p className="py-16 text-center text-body text-muted">오늘은 학습할 카드가 없어요</p>
+            <div className="flex flex-col items-center gap-4 py-16">
+              <Mascot expression="sleepy" className="size-mascot-medium" />
+              <p className="text-center text-body text-muted">오늘은 학습할 카드가 없어요</p>
+            </div>
           ) : (
             <>
               {/* Two rows of one height: the previous card's place and the current card. The

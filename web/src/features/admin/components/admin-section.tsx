@@ -15,7 +15,7 @@ const buttonBase =
  * that cannot be undone (`design.md` §Details).
  */
 export const button = {
-  primary: `${buttonBase} bg-ink text-on-primary`,
+  primary: `${buttonBase} bg-primary text-on-primary`,
   secondary: `${buttonBase} border border-outline bg-surface text-ink`,
   destructive: `${buttonBase} px-1 text-dont-know-text`,
   destructiveFinal: `${buttonBase} bg-dont-know-text text-on-dont-know-text`,
