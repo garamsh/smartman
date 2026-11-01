@@ -93,16 +93,13 @@ export const CARD_LIST: ReplyForm = {
   maxTokens: MAX_OUTPUT_TOKENS,
 };
 
-/** A turn sent after the photo's, such as an earlier reply and a request to go on from it. */
-export type Turn = {
-  readonly role: "assistant" | "user";
-  readonly text: string;
-};
-
-/** How a call departs from the function's own: its reply's form, and turns after the photo's. */
+/**
+ * How a call departs from the function's own: its reply's form, and a text sent after the photo,
+ * such as a request to go on after the entry an earlier reply was cut at.
+ */
 export type CallOptions = {
   readonly form?: ReplyForm;
-  readonly after?: readonly Turn[];
+  readonly followUp?: string;
 };
 
 export type ExtractDeps = {
@@ -134,7 +131,7 @@ export async function extractCards(
     composeInstructions(prompt, form.contract),
     image,
     languages,
-    { form, after: options.after ?? [] },
+    { form, followUp: options.followUp },
     deps,
   );
   const attempts = [call.attempt];
@@ -169,7 +166,7 @@ async function callModel(
   instructions: string,
   image: Image,
   languages: LanguageHints,
-  request: { readonly form: ReplyForm; readonly after: readonly Turn[] },
+  request: { readonly form: ReplyForm; readonly followUp?: string },
   deps: ExtractDeps,
 ): Promise<Call> {
   const started = deps.now();
@@ -203,12 +200,11 @@ async function callModel(
                 type: "image_url",
                 image_url: { url: `data:${image.type};base64,${image.base64}` },
               },
+              ...(request.followUp === undefined
+                ? []
+                : [{ type: "text", text: request.followUp }]),
             ],
           },
-          ...request.after.map((turn) => ({
-            role: turn.role,
-            content: turn.text,
-          })),
         ],
         response_format: {
           type: "json_schema",
