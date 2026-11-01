@@ -17,8 +17,6 @@ export const PROTOCOL_VERSIONS = [
   "2025-03-26",
 ] as const;
 
-/** The path the platform's gateway serves the function under, which it strips before calling it. */
-const FUNCTION_PATH = "/functions/v1/mcp";
 const METADATA_SUFFIX = "/oauth-protected-resource";
 
 /** How a request ended. */
@@ -51,24 +49,6 @@ export type HandlerDeps = IdSource & {
 
 const INSTRUCTIONS =
   "Smartman is a flashcard app. These tools read the signed-in user's decks and cards and add new decks and cards; they never change or delete anything. Find a deck's id with list_decks, read a deck with list_cards, find cards with search_cards, make a deck with create_deck and add cards with add_cards. New cards reach the user's phone and the web at their next sync.";
-
-/**
- * The project's custom domains, served over HTTPS beside `SUPABASE_URL`'s own host (ADR 0133).
- * A new one is added here.
- */
-export const CUSTOM_DOMAINS: readonly string[] = ["api.knowno.app"];
-
-/**
- * The function's URL at the custom domain the gateway names as the client's host, or at the
- * project's own origin for any other host, which is never named.
- */
-function resourceUrl(request: Request, projectOrigin: string): string {
-  const forwarded = request.headers.get("X-Forwarded-Host")?.toLowerCase();
-  const origin = forwarded !== undefined && CUSTOM_DOMAINS.includes(forwarded)
-    ? `https://${forwarded}`
-    : projectOrigin;
-  return `${origin}${FUNCTION_PATH}`;
-}
 
 type Exchange = {
   response: Response;
@@ -111,7 +91,7 @@ async function handle(request: Request, deps: HandlerDeps): Promise<Exchange> {
       entry: { ...empty, outcome: "not_configured" },
     };
   }
-  const resource = resourceUrl(request, config.projectOrigin);
+  const resource = config.resourceUrl;
   if (path === `/mcp${METADATA_SUFFIX}`) {
     if (request.method !== "GET") {
       return {
