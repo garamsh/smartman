@@ -1,0 +1,185 @@
+{
+  "photo": [
+    {
+      "name": "a vocabulary entry with 앞면에 단어 is one 단어 asking its term, its labels and examples kept",
+      "cards": [
+        {"front": "train", "answer": "기차\n훈련하다", "topic": "단어", "kind": "vocabulary", "type": "concept", "senses": [
+          {"labels": [{"kind": "part_of_speech", "category": "noun", "text": "명"}, {"kind": "other", "category": null, "text": "사물"}], "meaning": "기차", "examples": ["take a train"]},
+          {"labels": [{"kind": "part_of_speech", "category": "verb", "text": "동"}], "meaning": "훈련하다", "examples": []}
+        ]}
+      ],
+      "form": {"direction": "forward", "firstSenseOnly": false, "showPos": true, "showPronunciation": false, "showExtras": false},
+      "saved": [
+        [{"type": "senses", "v": 2, "payload": {"term": "train", "ask": "term", "senses": [
+          {"labels": [{"kind": "part_of_speech", "category": "noun", "text": "명"}, {"kind": "other", "category": null, "text": "사물"}], "meaning": "기차", "examples": ["take a train"]},
+          {"labels": [{"kind": "part_of_speech", "category": "verb", "text": "동"}], "meaning": "훈련하다", "examples": []}
+        ]}}]
+      ]
+    },
+    {
+      "name": "앞면에 뜻 is the same 단어 asking its meaning",
+      "cards": [
+        {"front": "big", "answer": "크다", "topic": "단어", "kind": "vocabulary", "type": "concept", "senses": [{"labels": [], "meaning": "크다", "examples": []}]}
+      ],
+      "form": {"direction": "backward", "firstSenseOnly": false, "showPos": true, "showPronunciation": false, "showExtras": false},
+      "saved": [
+        [{"type": "senses", "v": 2, "payload": {"term": "big", "ask": "meaning", "senses": [{"labels": [], "meaning": "크다", "examples": []}]}}]
+      ]
+    },
+    {
+      "name": "양쪽 방향 모두 makes both",
+      "cards": [
+        {"front": "big", "answer": "크다", "topic": "단어", "kind": "vocabulary", "type": "concept", "senses": [{"labels": [], "meaning": "크다", "examples": []}]}
+      ],
+      "form": {"direction": "both", "firstSenseOnly": false, "showPos": true, "showPronunciation": false, "showExtras": false},
+      "saved": [
+        [{"type": "senses", "v": 2, "payload": {"term": "big", "ask": "term", "senses": [{"labels": [], "meaning": "크다", "examples": []}]}}],
+        [{"type": "senses", "v": 2, "payload": {"term": "big", "ask": "meaning", "senses": [{"labels": [], "meaning": "크다", "examples": []}]}}]
+      ]
+    },
+    {
+      "name": "pronunciation and extras are one 글 of a back alone, after the 단어, in either direction",
+      "cards": [
+        {"front": "apple", "answer": "사과", "topic": "단어", "kind": "vocabulary", "type": "concept", "pronunciation": "ˈæpəl", "extras": [{"label": "유의어", "text": "pome"}, {"label": "복수", "text": "apples"}], "senses": [{"labels": [], "meaning": "사과", "examples": []}]}
+      ],
+      "form": {"direction": "both", "firstSenseOnly": false, "showPos": true, "showPronunciation": true, "showExtras": true},
+      "saved": [
+        [
+          {"type": "senses", "v": 2, "payload": {"term": "apple", "ask": "term", "senses": [{"labels": [], "meaning": "사과", "examples": []}]}},
+          {"type": "text", "v": 2, "payload": {"front": "", "back": "ˈæpəl\n유의어 pome\n복수 apples"}}
+        ],
+        [
+          {"type": "senses", "v": 2, "payload": {"term": "apple", "ask": "meaning", "senses": [{"labels": [], "meaning": "사과", "examples": []}]}},
+          {"type": "text", "v": 2, "payload": {"front": "", "back": "ˈæpəl\n유의어 pome\n복수 apples"}}
+        ]
+      ]
+    },
+    {
+      "name": "a form that hides them writes no 글, keeps the first sense alone, and drops part-of-speech labels alone",
+      "cards": [
+        {"front": "train", "answer": "기차", "topic": "단어", "kind": "vocabulary", "type": "concept", "pronunciation": "treɪn", "extras": [{"label": "유의어", "text": "coach"}], "senses": [
+          {"labels": [{"kind": "part_of_speech", "category": "noun", "text": "명"}, {"kind": "other", "category": null, "text": "사물"}], "meaning": "기차", "examples": []},
+          {"labels": [], "meaning": "훈련하다", "examples": []}
+        ]}
+      ],
+      "form": {"direction": "forward", "firstSenseOnly": true, "showPos": false, "showPronunciation": false, "showExtras": false},
+      "saved": [
+        [{"type": "senses", "v": 2, "payload": {"term": "train", "ask": "term", "senses": [{"labels": [{"kind": "other", "category": null, "text": "사물"}], "meaning": "기차", "examples": []}]}}]
+      ]
+    },
+    {
+      "name": "two entries of one key are one 단어 of their senses without repeats",
+      "cards": [
+        {"front": "face", "answer": "얼굴", "topic": "단어", "kind": "vocabulary", "type": "concept", "senses": [{"labels": [], "meaning": "얼굴", "examples": []}]},
+        {"front": "FACE", "answer": "얼굴\n직면하다", "topic": "단어", "kind": "vocabulary", "type": "concept", "senses": [{"labels": [], "meaning": "얼굴", "examples": []}, {"labels": [], "meaning": "직면하다", "examples": []}]}
+      ],
+      "saved": [
+        [{"type": "senses", "v": 2, "payload": {"term": "face", "ask": "term", "senses": [{"labels": [], "meaning": "얼굴", "examples": []}, {"labels": [], "meaning": "직면하다", "examples": []}]}}]
+      ]
+    },
+    {
+      "name": "a note is a 글",
+      "cards": [
+        {"front": "수도", "answer": "서울", "topic": "도시", "kind": "note", "type": "concept"}
+      ],
+      "form": {"swapped": false},
+      "saved": [
+        [{"type": "text", "v": 2, "payload": {"front": "수도", "back": "서울"}}]
+      ]
+    },
+    {
+      "name": "앞면과 뒷면 바꾸기 swaps a note's 글",
+      "cards": [
+        {"front": "수도", "answer": "서울", "topic": "도시", "kind": "note", "type": "concept"}
+      ],
+      "form": {"swapped": true},
+      "saved": [
+        [{"type": "text", "v": 2, "payload": {"front": "서울", "back": "수도"}}]
+      ]
+    },
+    {
+      "name": "two notes of one key are one 글, the later answer on a line of its back unless held",
+      "cards": [
+        {"front": "수도", "answer": "서울", "topic": "도시", "kind": "note", "type": "concept"},
+        {"front": "수도", "answer": "부산", "topic": "도시", "kind": "note", "type": "concept"},
+        {"front": "수도", "answer": " 서울 ", "topic": "도시", "kind": "note", "type": "concept"}
+      ],
+      "saved": [
+        [{"type": "text", "v": 2, "payload": {"front": "수도", "back": "서울\n부산"}}]
+      ]
+    },
+    {
+      "name": "an identify card is a 글 as a note is",
+      "cards": [
+        {"front": "'잡아라'의 '아'", "answer": "양성모음", "topic": "모음조화", "kind": "note", "type": "identify"}
+      ],
+      "saved": [
+        [{"type": "text", "v": 2, "payload": {"front": "'잡아라'의 '아'", "back": "양성모음"}}]
+      ]
+    },
+    {
+      "name": "a cloze card is its 빈칸 문장 alone, with no filled-text back",
+      "cards": [
+        {"front": "한국의 수도는 ___이다", "answer": "서울", "topic": "도시", "kind": "note", "type": "cloze", "cloze": {"answers": ["서울"]}}
+      ],
+      "saved": [
+        [{"type": "cloze", "v": 1, "payload": {"text": "한국의 수도는 ___이다", "answers": ["서울"]}}]
+      ]
+    },
+    {
+      "name": "a form does not swap a cloze card",
+      "cards": [
+        {"front": "한국의 수도는 ___이다", "answer": "서울", "topic": "도시", "kind": "note", "type": "cloze", "cloze": {"answers": ["서울"]}}
+      ],
+      "form": {"swapped": true},
+      "saved": [
+        [{"type": "cloze", "v": 1, "payload": {"text": "한국의 수도는 ___이다", "answers": ["서울"]}}]
+      ]
+    },
+    {
+      "name": "a table card is a 글 of its name and its 표, with no filled-text back",
+      "cards": [
+        {"front": "수도", "answer": "서울", "topic": "도시", "kind": "note", "type": "table", "table": {"columns": ["나라", "수도"], "rows": [["한국", "서울"]], "blanks": [{"row": 0, "column": 1}]}}
+      ],
+      "saved": [
+        [
+          {"type": "text", "v": 2, "payload": {"front": "수도", "back": ""}},
+          {"type": "table", "v": 2, "payload": {"columns": ["나라", "수도"], "rows": [["한국", "서울"]], "blanks": [{"row": 0, "column": 1}], "spans": []}}
+        ]
+      ]
+    }
+  ],
+  "sheet": [
+    {
+      "name": "a row of a front and a back column is a 글",
+      "rows": [["수도", "서울", "", ""]],
+      "columns": {"front": 0, "back": 1, "label": null, "example": null},
+      "saved": [
+        [{"type": "text", "v": 2, "payload": {"front": "수도", "back": "서울"}}]
+      ]
+    },
+    {
+      "name": "a label column makes a row a 단어, its words its labels",
+      "rows": [["train", "기차", "명 사물", ""]],
+      "columns": {"front": 0, "back": 1, "label": 2, "example": null},
+      "saved": [
+        [{"type": "senses", "v": 2, "payload": {"term": "train", "ask": "term", "senses": [{"labels": [{"kind": "part_of_speech", "category": "noun", "text": "명"}, {"kind": "other", "category": null, "text": "사물"}], "meaning": "기차", "examples": []}]}}]
+      ]
+    },
+    {
+      "name": "an example column makes a row a 단어, its lines the examples",
+      "rows": [["train", "기차", "", "take a train\n\n catch a train "]],
+      "columns": {"front": 0, "back": 1, "label": null, "example": 3},
+      "saved": [
+        [{"type": "senses", "v": 2, "payload": {"term": "train", "ask": "term", "senses": [{"labels": [], "meaning": "기차", "examples": ["take a train", "catch a train"]}]}}]
+      ]
+    }
+  ],
+  "held": [
+    {"name": "a line of the stored back holds the back", "stored": "서울\n부산", "back": " 서울 ", "held": true},
+    {"name": "each line of a back of two senses is held", "stored": "[명] 기차\n[동] 훈련하다", "back": "[명] 기차\n[동] 훈련하다", "held": true},
+    {"name": "a stored line spells a back of several lines", "stored": "서울 부산", "back": "서울\n부산", "held": true},
+    {"name": "a back of two lines, one of them new, is not held", "stored": "[명] 기차", "back": "[명] 기차\n[동] 훈련하다", "held": false},
+    {"name": "a back no line holds is not held", "stored": "서울", "back": "부산", "held": false}
+  ]
+}

@@ -1,6 +1,6 @@
 # ADR 0125: Add cards from an xlsx or csv file by choosing columns and reviewing before save
 
-> Status: accepted; on the phone, its SSF drawing, its requests of 100 cards, its "저장됨" and its stable ids superseded by ADR-0142
+> Status: accepted; on the phone, its SSF drawing, its requests of 100 cards, its "저장됨" and its stable ids superseded by ADR-0142; §Writes' free version 1 superseded by ADR 0137
 > Date: 2026-10-29
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.

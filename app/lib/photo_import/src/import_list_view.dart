@@ -112,7 +112,7 @@ class _ImportListViewState extends State<ImportListView> {
               for (final (i, row) in section.rows.indexed)
                 _RowTile(
                   key: ObjectKey(row),
-                  sides: row.cards(section.form).first,
+                  sides: sidesOf(row.cards(section.form).first),
                   wholeFront: row.wholeFront,
                   included: _list.isIncluded(row),
                   inDeck: _list.isDuplicate(row),

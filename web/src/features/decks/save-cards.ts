@@ -7,17 +7,15 @@ import { selectAll } from "@/supabase/select-all";
 import { requestTimeoutMs } from "@/supabase/failure";
 import { field, parseTime } from "@/supabase/row";
 import {
-  cardKey,
   frameKey,
   frameRefusal,
   mediaOf,
   mergeBack,
   parseCellsDraft,
-  parseDraft,
   type CardDraft,
   type StoredCard,
 } from "./authoring";
-import { parseCardContent, parseCells, parseContent, plainText } from "./card-content";
+import { parseCardContent, parseCells, plainText, sidesOf } from "./card-content";
 import { parseCardId, parseDeckId } from "./library";
 
 /**
@@ -47,33 +45,11 @@ const cardNeedsUpdate =
 type OnDuplicate = "refuse" | "add" | "merge";
 type Client = Awaited<ReturnType<typeof createClient>>;
 
-/** How a card reaches the server: its wire shape, its key, and the `free` version it records. */
-type Format = {
-  parse: (value: unknown) => CardDraft | null;
-  key: (card: CardDraft) => string | null;
-  version: 1 | 2;
-};
-/** A card of two sides, as photo import and spreadsheets write until #550. */
-const sides: Format = {
-  parse: parseDraft,
-  key: ({ front }) => {
-    const read = parseContent(front);
-    return read && cardKey(read);
-  },
-  version: 1,
-};
-/** A card of 칸, `free` v2 (ADR 0137). A new card holds no media: the web uploads none. */
-const framed: Format = {
-  parse: (value) => {
-    const card = parseCellsDraft(value);
-    return card && mediaOf(parseCells(card.front) ?? []).length === 0 ? card : null;
-  },
-  key: ({ front }) => {
-    const read = parseCells(front);
-    return read && frameKey(read);
-  },
-  version: 2,
-};
+/** A new card of 칸, `free` v2 (ADR 0137). It holds no media: the web uploads none. */
+function parseNewCard(value: unknown): CardDraft | null {
+  const card = parseCellsDraft(value);
+  return card && mediaOf(parseCells(card.front) ?? []).length === 0 ? card : null;
+}
 
 /** Inserts explicit reviewed cards under the current owner, using stable ids for safe retries. */
 export async function saveCards(
@@ -103,7 +79,7 @@ export async function addCard(
   if (typeof allowDuplicate !== "boolean") return malformed;
   const refused = frameRefusal(input);
   if (refused) return { saved: false, message: refused };
-  return writeCards(deckId, [input], "manual", allowDuplicate ? "add" : "refuse", framed);
+  return writeCards(deckId, [input], "manual", allowDuplicate ? "add" : "refuse");
 }
 
 /**
@@ -204,7 +180,6 @@ async function writeCards(
   input: unknown,
   source: "manual" | "import",
   onDuplicate: OnDuplicate,
-  format: Format = sides,
 ): Promise<SaveCardsResult> {
   if (
     !parseDeckId(deckId) ||
@@ -215,7 +190,7 @@ async function writeCards(
     !boundedJson(input)
   )
     return malformed;
-  const cards = input.map(format.parse);
+  const cards = input.map(parseNewCard);
   if (cards.some((card) => !card || !parseCardId(card.id))) return malformed;
   const client = await createClient();
   const session = await readUserId(client);
@@ -247,13 +222,13 @@ async function writeCards(
   );
   const seenIds = new Set<string>();
   for (const [at, card] of cards.entries()) {
-    if (!card || seenIds.has(card.id)) return malformed;
+    const cells = card && parseCells(card.front);
+    if (!card || !cells || seenIds.has(card.id)) return malformed;
     seenIds.add(card.id);
-    const key = format.key(card);
-    if (key === null) return malformed;
+    const key = frameKey(cells);
     const duplicate = keys.get(key);
     if (onDuplicate === "merge" && duplicate) {
-      merges.push({ into: duplicate, back: plainText(parseContent(card.back) ?? []) });
+      merges.push({ into: duplicate, back: plainText(sidesOf(cells).back) });
       continue;
     }
     if (onDuplicate === "refuse" && duplicate && duplicate !== card.id)
@@ -266,7 +241,7 @@ async function writeCards(
       card_key: key,
       source,
       template: "free",
-      template_version: format.version,
+      template_version: 2,
       created_at: now,
       updated_at: now,
     });
@@ -289,7 +264,7 @@ async function writeCards(
     if (!merged) return failed;
     targets.set(into, merged);
   }
-  const inserted = rows.map((row) => ({ ...row, back: targets.get(row.id)?.back ?? row.back }));
+  const inserted = rows.map((row) => ({ ...row, front: targets.get(row.id)?.front ?? row.front }));
   const updated = [...read].flatMap(([id, card]) => {
     const merged = targets.get(id);
     return merged && merged !== card ? [{ id, ...merged }] : [];

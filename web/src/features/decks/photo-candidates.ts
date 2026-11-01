@@ -68,8 +68,9 @@ export function parseCandidates(body: unknown, resumed = false): Candidate[] | n
     } else if (type !== "concept" && type !== "identify") return null;
     const parsed = parseContent(frontBlocks);
     if (!parsed) return null;
-    if (type === "cloze" || type === "table") back = textBlocks(describeContent(parsed));
-    if (!parseContent(back) || back.length === 0) return null;
+    const whole = type === "cloze" || type === "table";
+    if (whole) back = [];
+    if (!parseContent(back) || (!whole && back.length === 0)) return null;
     const spoken = field(card, "pronunciation") ?? null;
     const pronunciation = spoken === null ? null : isText(spoken) ? spoken.trim() : undefined;
     const extras = parseExtras(field(card, "extras"));
@@ -132,8 +133,8 @@ function sensesOf(side: Block[]): unknown[] {
 
 /**
  * One photo's candidates with each card key's merged into its first, as the phone's `ImportRow`:
- * a vocabulary entry's senses joined without repeats; a note's later back appended as a text
- * block unless a line of the back already holds it, as the phone's `mergeBack`.
+ * a vocabulary entry's senses joined without repeats; a note's later back appended on a line of
+ * its text unless the back already holds it, as the phone's `mergeBack`.
  */
 function mergeCandidates(cards: Candidate[]): Candidate[] {
   const merged = new Map<string, Candidate>();
@@ -148,10 +149,14 @@ function mergeCandidates(cards: Candidate[]): Candidate[] {
       first.back = first.back.map((item) =>
         item.type === "senses" ? { ...item, payload: { senses: all } } : item,
       );
-    } else if (!first.front.some((item) => item.type === "cloze" || item.type === "table")) {
+    } else if (
+      first.kind === "note" &&
+      !first.front.some((item) => item.type === "cloze" || item.type === "table")
+    ) {
+      const held = parseContent(first.back) ?? [];
       const back = describeContent(parseContent(card.back) ?? []);
-      if (back.trim() && !holdsBack(parseContent(first.back) ?? [], back))
-        first.back = [...first.back, ...textBlocks(back)];
+      if (back.trim() && !holdsBack(held, back))
+        first.back = textBlocks(`${describeContent(held)}\n${back}`);
     }
   }
   return [...merged.values()];

@@ -107,7 +107,7 @@ final class RowSense {
       : [for (final label in labels) '[${label.shown}]'].join(' ');
 }
 
-/// A card a row saves: its two sides as content blocks.
+/// The two sides a row draws in the list, the projection of its first card.
 typedef CardSides = ({List<Content> front, List<Content> back});
 
 /// The candidates of one card key on one photo, combined into one row the
@@ -156,39 +156,40 @@ final class ImportRow {
     return plainText(blocks);
   }
 
-  /// The word side in [form]: the front, and the pronunciation on a line
-  /// below it when shown.
-  String word(VocabularyForm form) => switch (pronunciation) {
-    final pronunciation? when form.showPronunciation =>
-      '$front\n$pronunciation',
-    _ => front,
-  };
-
-  /// The meaning side in [form]: a senses block of the kept senses, or the
-  /// first alone, each without its part-of-speech labels when the form hides
-  /// them, its other labels kept; then each extra, one per line, as a text
-  /// block when shown (ADR 0075).
-  List<Content> meaning(VocabularyForm form) {
+  /// The 칸 of a vocabulary row in [form], [ask] naming the side shown first:
+  /// a 단어 of the kept senses, or the first alone, each without its
+  /// part-of-speech labels when the form hides them, its other labels kept;
+  /// then a 글 of a back alone of what the form shows of the pronunciation and
+  /// the extras (ADR 0075, ADR 0137). With no sense kept nothing is saved, and
+  /// a 글 of the word stands for the 단어 in the list.
+  List<Cell> _word(VocabularyForm form, WordAsk ask) {
     final kept = senses.where((sense) => sense.kept);
     final shown = form.firstSenseOnly ? kept.take(1) : kept;
+    final added = [
+      if (form.showPronunciation) ?pronunciation,
+      if (form.showExtras)
+        for (final extra in extras) '${extra.label} ${extra.text}',
+    ];
     return [
-      if (shown.isNotEmpty)
-        SensesContent([
-          for (final sense in shown)
-            CardSense(
-              labels: [
-                for (final label in sense.labels)
-                  if (form.showPos || label is! PartOfSpeechLabel) label,
-              ],
-              meaning: sense.meaning,
-              examples: sense.examples,
-            ),
-        ]),
-      if (form.showExtras && extras.isNotEmpty)
-        TextContent(
-          [for (final extra in extras) '${extra.label} ${extra.text}']
-              .join('\n'),
+      if (shown.isEmpty)
+        ask == WordAsk.term ? TextCell(front: front) : TextCell(back: front)
+      else
+        WordCell(
+          term: front,
+          senses: [
+            for (final sense in shown)
+              CardSense(
+                labels: [
+                  for (final label in sense.labels)
+                    if (form.showPos || label is! PartOfSpeechLabel) label,
+                ],
+                meaning: sense.meaning,
+                examples: sense.examples,
+              ),
+          ],
+          ask: ask,
         ),
+      if (added.isNotEmpty) TextCell(back: added.join('\n')),
     ];
   }
 
@@ -196,23 +197,26 @@ final class ImportRow {
   /// row (ADR 0068).
   List<Content>? get wholeFront => sources.first.wholeFront;
 
-  /// The cards the row saves in [form]. A table or cloze row saves one, its
-  /// [wholeFront] with that front's filled text as its back, in any form.
-  List<CardSides> cards(SectionForm form) => switch (form) {
-    _ when wholeFront != null => [
-      (front: wholeFront!, back: [TextContent(plainText(wholeFront!))]),
+  /// The 칸 of a [wholeFront]; null without one, or for one holding a block
+  /// this build does not know.
+  List<Cell>? get _wholeCells => switch (wholeFront) {
+    final blocks? => cellsFromSides(blocks, const []),
+    null => null,
+  };
+
+  /// The cards the row saves in [form], each a list of 칸. A table or cloze
+  /// row saves one, its [wholeFront] alone, in any form.
+  List<List<Cell>> cards(SectionForm form) => switch ((_wholeCells, form)) {
+    (final cells?, _) => [cells],
+    (_, final VocabularyForm form) when kind == CardKind.vocabulary => [
+      if (form.direction != Direction.backward) _word(form, WordAsk.term),
+      if (form.direction != Direction.forward) _word(form, WordAsk.meaning),
     ],
-    VocabularyForm(:final direction) when kind == CardKind.vocabulary => [
-      if (direction != Direction.backward)
-        (front: [TextContent(word(form))], back: meaning(form)),
-      if (direction != Direction.forward)
-        (front: meaning(form), back: [TextContent(word(form))]),
-    ],
-    NoteForm(swapped: true) => [
-      (front: [TextContent(answer)], back: [TextContent(front)]),
+    (_, NoteForm(swapped: true)) => [
+      [TextCell(front: answer, back: front)],
     ],
     _ => [
-      (front: [TextContent(front)], back: [TextContent(answer)]),
+      [TextCell(front: front, back: answer)],
     ],
   };
 }
@@ -319,9 +323,8 @@ final class ImportList {
   /// word to its meaning unless the form turns it. A further card, such as
   /// "양쪽 다"'s reversed one, whose key the deck holds merges back when
   /// saved, as any duplicate does, and leaves the row included.
-  bool isDuplicate(ImportRow row) => existingKeys.contains(
-    CardKey.fromFront(plainText(row.cards(sectionOf(row).form).first.front)),
-  );
+  bool isDuplicate(ImportRow row) =>
+      existingKeys.contains(frameKey(row.cards(sectionOf(row).form).first));
 
   /// Whether [row] is saved: as the user set it, else unless it is an
   /// identify card or the deck holds it. A row with nothing to save is not.
@@ -335,12 +338,8 @@ final class ImportList {
     for (final section in sections)
       for (final row in section.rows)
         if (isIncluded(row))
-          for (final card in row.cards(section.form))
-            IncomingCard(
-              front: card.front,
-              back: card.back,
-              onDuplicate: DuplicateChoice.mergeBack,
-            ),
+          for (final cells in row.cards(section.form))
+            IncomingCard.framed(cells, onDuplicate: DuplicateChoice.mergeBack),
   ];
 
   /// How many cards saving writes or merges into: one per card key among

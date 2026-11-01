@@ -439,7 +439,10 @@ void main() {
         expect(header, isFalse);
         final result = cardsOfRows(rows, _frontBack, header: header);
         expect(
-          [for (final card in result.cards) (card.row, plainText(card.front))],
+          [
+            for (final card in result.cards)
+              (card.row, plainText(sidesOf(card.cells).front)),
+          ],
           [(1, 'apple'), (2, 'banana')],
         );
       },
@@ -462,28 +465,32 @@ void main() {
   });
 
   group('rows into cards', () {
-    test('maps the chosen front and back columns to text sides, ignoring the others, below a header', () {
+    test('maps the chosen front and back columns to a 글, ignoring the others, below a header', () {
       final rows = _csv('메모,뜻,단어\n외우기,사과,apple\n,바나나,banana');
       const columns = SheetColumns(front: 2, back: 1);
       final result = cardsOfRows(rows, columns, header: true);
       expect(
         [
           for (final card in result.cards)
-            (card.row, plainText(card.front), plainText(card.back)),
+            (
+              card.row,
+              plainText(sidesOf(card.cells).front),
+              plainText(sidesOf(card.cells).back),
+            ),
         ],
         [(2, 'apple', '사과'), (3, 'banana', '바나나')],
       );
       expect(cardsOfRows(rows, columns, header: false).cards[0].row, 1);
     });
 
-    test('fills the back\'s meaning from optional label and example columns, as direct entry writes it', () {
+    test('fills a 단어\'s meaning from optional label and example columns, as direct entry writes it', () {
       final rows = _csv('apple,사과,명,"an apple\nan apple a day"\nrun,달리다,,');
       final result = cardsOfRows(
         rows,
         const SheetColumns(front: 0, back: 1, label: 2, example: 3),
         header: false,
       );
-      expect(result.cards.map((card) => card.back), [
+      expect(result.cards.map((card) => sidesOf(card.cells).back), [
         [
           const SensesContent([
             CardSense(
@@ -502,7 +509,7 @@ void main() {
         const SheetColumns(front: 0, back: 1, label: 2),
         header: false,
       );
-      expect(labelOnly.cards[0].back, [
+      expect(sidesOf(labelOnly.cards[0].cells).back, [
         const SensesContent([
           CardSense(
             labels: [PartOfSpeechLabel(PartOfSpeech.noun, '명')],
@@ -518,7 +525,7 @@ void main() {
         const SheetColumns(front: 0, back: 1, example: 2),
         header: false,
       );
-      expect(result.cards.single.back, [
+      expect(sidesOf(result.cards.single.cells).back, [
         const SensesContent([
           CardSense(meaning: '달리다', examples: ['run fast']),
         ]),

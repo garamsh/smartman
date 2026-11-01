@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { type TestCell, xlsxOf } from "@/testing/xlsx";
-import { parseContent } from "../card-content";
+import { parseCells, sidesOf } from "../card-content";
 import {
   fileLimitBytes,
   openSpreadsheet,
@@ -28,6 +28,8 @@ const sheet = async (rows: TestCell[][]) =>
   rowsOf((await opened(fileOf(xlsxOf([{ name: "단어", rows }]), "words.xlsx"))).read(0));
 const csv = async (text: string) => rowsOf((await opened(fileOf(text, "words.csv"))).read(0));
 const ids = (row: number) => `00000000-0000-7000-8000-${String(row).padStart(12, "0")}`;
+/** The sides a row's 칸 draw. */
+const cellsOf = (card: { blocks: unknown }) => sidesOf(parseCells(card.blocks) ?? []);
 
 describe("the limits, refused before the file is read", () => {
   it("refuses a file over 5 MB without reading a byte, beside one at the limit that is read", async () => {
@@ -208,7 +210,7 @@ describe("the header toggle's default", () => {
       header,
       ids,
     );
-    expect(result.cards.map((card) => [card.row, parseContent(card.front)])).toEqual([
+    expect(result.cards.map((card) => [card.row, cellsOf(card).front])).toEqual([
       [1, [{ kind: "text", text: "apple" }]],
       [2, [{ kind: "text", text: "banana" }]],
     ]);
@@ -230,10 +232,10 @@ describe("the header toggle's default", () => {
 });
 
 describe("rows into cards", () => {
-  const front = (card: { front: unknown }) => parseContent(card.front);
-  const back = (card: { back: unknown }) => parseContent(card.back);
+  const front = (card: { blocks: unknown }) => cellsOf(card).front;
+  const back = (card: { blocks: unknown }) => cellsOf(card).back;
 
-  it("maps the chosen front and back columns to text sides, ignoring the others, below a header", async () => {
+  it("maps the chosen front and back columns to a 글, ignoring the others, below a header", async () => {
     const rows = await csv("메모,뜻,단어\n외우기,사과,apple\n,바나나,banana");
     const result = cardsOfRows(rows, { front: 2, back: 1, label: null, example: null }, true, ids);
     expect(result.cards.map((card) => [card.row, front(card), back(card)])).toEqual([
@@ -247,7 +249,7 @@ describe("rows into cards", () => {
     ).toBe(1);
   });
 
-  it("fills the back's meaning from optional label and example columns, as direct entry writes it", async () => {
+  it("fills a 단어's meaning from optional label and example columns, as direct entry writes it", async () => {
     const rows = await csv('apple,사과,명,"an apple\nan apple a day"\nrun,달리다,,');
     const result = cardsOfRows(rows, { front: 0, back: 1, label: 2, example: 3 }, false, ids);
     expect(result.cards.map(back)).toEqual([
@@ -266,7 +268,7 @@ describe("rows into cards", () => {
       [{ kind: "senses", senses: [{ labels: [], meaning: "달리다", examples: [] }] }],
     ]);
     const labelOnly = cardsOfRows(rows, { front: 0, back: 1, label: 2, example: null }, false, ids);
-    expect(back(labelOnly.cards[0] ?? { back: null })).toEqual([
+    expect(back(labelOnly.cards[0] ?? { blocks: [] })).toEqual([
       {
         kind: "senses",
         senses: [

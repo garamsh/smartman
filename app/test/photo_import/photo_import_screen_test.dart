@@ -1674,7 +1674,8 @@ void main() {
       (tester) async {
         final import = await _Import.open(tester);
         await import.extractCards(words);
-        expect(_shown("face\n['feis]"), findsNothing);
+        const pronunciation = "[동]직면하다, 마주하다\n[명]표면, 겉면\n['feis]";
+        expect(_shown(pronunciation), findsNothing);
 
         await import.menu('빈출 숙어');
         expect(
@@ -1690,13 +1691,10 @@ void main() {
 
         await import.menu('최빈출 단어');
         await import.pickItem('Show pronunciation');
-        expect(_shown("face\n['feis]"), findsOneWidget);
+        expect(_shown(pronunciation), findsOneWidget);
         await import.menu('최빈출 단어');
         await import.pickItem('Show synonyms and more');
-        expect(
-          _shown('[동]직면하다, 마주하다\n[명]표면, 겉면\n유의어 confront'),
-          findsOneWidget,
-        );
+        expect(_shown('$pronunciation\n유의어 confront'), findsOneWidget);
         await import.close();
       },
     );
@@ -1722,7 +1720,7 @@ void main() {
     });
 
     testWidgets(
-      'a table row shows it whole and filled, opens no edit sheet, saves its blocks with their filled text as its back, and its section offers no swap',
+      'a table row shows it whole and filled, opens no edit sheet, saves a 글 of its name and its 표 with no filled-text back, and its section offers no swap',
       (tester) async {
         const table = TableContent(
           columns: ['구분', '높임', '낮춤'],
@@ -1778,9 +1776,8 @@ void main() {
           (card) => card.front.any((block) => block is TableContent),
         );
         expect(card.front, [const TextContent('인칭 대명사'), table]);
-        expect(card.back, [
-          const TextContent('인칭 대명사\n구분 | 높임 | 낮춤\n2인칭 | 당신 | 너'),
-        ]);
+        expect(card.back, isEmpty);
+        expect(card.cells, const [TextCell(front: '인칭 대명사'), BlankCell(table)]);
         await import.close();
       },
     );

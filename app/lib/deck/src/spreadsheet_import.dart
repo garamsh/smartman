@@ -17,6 +17,7 @@ import '../../design/word_break.dart';
 import '../../l10n/app_localizations.dart';
 import 'add_cards.dart';
 import 'appearance_sheet.dart';
+import 'card_frame.dart';
 import 'card_list.dart';
 import 'failure.dart';
 import 'failure_message.dart';
@@ -348,11 +349,7 @@ class _SpreadsheetImportScreenState
       }
       final added = await repository.addCards(target, [
         for (final card in cards)
-          IncomingCard(
-            front: card.front,
-            back: card.back,
-            onDuplicate: DuplicateChoice.addNew,
-          ),
+          IncomingCard.framed(card.cells, onDuplicate: DuplicateChoice.addNew),
       ], source: const FromFile());
       // A new deck is offered 덱 꾸미기 once it exists, as one made by hand is.
       if (target is AddToNewDeck && mounted) {
@@ -791,7 +788,7 @@ class _CardRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
-    final front = describeContent(l10n, card.front);
+    final front = describeContent(l10n, sidesOf(card.cells).front);
     final row = l10n.spreadsheetRow(card.row);
     return Semantics(
       container: true,
@@ -825,7 +822,9 @@ class _CardRow extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      keepWords(describeContent(l10n, card.back)),
+                      keepWords(
+                        describeContent(l10n, sidesOf(card.cells).back),
+                      ),
                       style: AppType.secondary.copyWith(color: colors.muted),
                     ),
                   ],
