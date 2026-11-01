@@ -51,16 +51,18 @@ export function mergeBack(stored: StoredCard, back: string): StoredCard | null {
   const framed = isFramed(stored.template, stored.templateVersion);
   const read = parseCardContent(stored);
   const side = framed ? read?.back : parseContent(stored.back);
-  if (!read || !side) return null;
+  const list: unknown = framed ? stored.front : stored.back;
+  if (!read || !side || !Array.isArray(list)) return null;
   if (back.trim() === "" || holdsBack(side, back)) return stored;
+  const blocks: unknown[] = list;
   if (framed) {
     const payload = { front: "", back };
     const cell = { type: "text", v: frameVersions.get("text"), id: v7(), payload };
-    return { ...stored, front: [...(stored.front as unknown[]), cell] };
+    return { ...stored, front: [...blocks, cell] };
   }
   return {
     ...stored,
-    back: [...(stored.back as unknown[]), block("text", { text: back })],
+    back: [...blocks, block("text", { text: back })],
     ...(isEarlier(stored.template, stored.templateVersion)
       ? { template: "free", templateVersion: 1 }
       : {}),
