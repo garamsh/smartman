@@ -142,9 +142,14 @@ class _AudioBlockFieldsState extends ConsumerState<AudioBlockFields> {
   int? _recorded;
   Timer? _tick;
   late final AudioRecording _recording = ref.read(audioRecordingProvider);
-  late final RecordingBlock _recorder = ref.read(
-    recordingBlockProvider.notifier,
-  );
+  // Read here, not on first use: dispose releases it, where ref is unsafe.
+  late final RecordingBlock _recorder;
+
+  @override
+  void initState() {
+    super.initState();
+    _recorder = ref.read(recordingBlockProvider.notifier);
+  }
 
   @override
   void dispose() {

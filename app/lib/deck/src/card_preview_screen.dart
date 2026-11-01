@@ -35,10 +35,11 @@ const _studyGaps =
 /// motion. "앞면" or "뒷면" names the side over a card of two sides, and a
 /// line under the card says what a tap does.
 class CardPreviewScreen extends StatefulWidget {
-  const CardPreviewScreen({super.key, required this.front, required this.back});
+  const CardPreviewScreen({super.key, required this.cells});
 
-  final List<Content> front;
-  final List<Content> back;
+  /// The card's 칸, read as a saved card's are, so each part shows where
+  /// study shows it.
+  final List<Cell> cells;
 
   @override
   State<CardPreviewScreen> createState() => _CardPreviewScreenState();
@@ -77,8 +78,9 @@ class _CardPreviewScreenState extends State<CardPreviewScreen>
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
-    final cells = cellsToDraw(widget.front, widget.back);
+    final cells = widget.cells;
     final whole = isDrawnWhole(cells);
+    final sides = sidesOf(cells);
     final hint = switch ((whole, _turned)) {
       (false, false) => l10n.previewTapToBack,
       (false, true) => l10n.previewTapToFront,
@@ -128,8 +130,8 @@ class _CardPreviewScreenState extends State<CardPreviewScreen>
                                 ..rotateY(back ? angle - pi : angle),
                               child: _Face(
                                 cells: whole ? cells : null,
-                                front: widget.front,
-                                back: widget.back,
+                                front: sides.front,
+                                back: sides.back,
                                 turned: back,
                               ),
                             );

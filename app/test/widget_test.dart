@@ -389,7 +389,7 @@ void main() {
 
     await addCard(tester, 'Chat', '');
 
-    expect(find.text('Write something'), findsOneWidget);
+    expect(find.bySemanticsLabel('Add a back or a blank'), findsOneWidget);
     expect(find.text('Edit card'), findsNothing);
     expect(find.widgetWithText(AppBar, 'New card'), findsOneWidget);
     await unmountApp(tester);
@@ -410,14 +410,13 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    /// Adds a Meanings block to the back, whose one meaning has a label
-    /// field.
+    /// Adds a Word, whose one meaning has a label field.
     Future<void> addMeanings(WidgetTester tester) async {
-      await tester.ensureVisible(find.bySemanticsLabel('Add to back'));
+      await tester.ensureVisible(find.bySemanticsLabel('Add block'));
       await tester.pumpAndSettle();
-      await tester.tap(find.bySemanticsLabel('Add to back'));
+      await tester.tap(find.bySemanticsLabel('Add block'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Meanings').last);
+      await tester.tap(find.text('Word').last);
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.widgetWithText(TextField, 'Label'));
       await tester.pumpAndSettle();
@@ -454,10 +453,10 @@ void main() {
         );
         expect(tester.testTextInput.isVisible, isTrue);
 
-        await tester.tap(find.bySemanticsLabel('Add to back'));
+        await tester.tap(find.bySemanticsLabel('Add block'));
         await tester.pumpAndSettle();
-        expect(find.text('Meanings'), findsOneWidget, reason: 'its sheet');
-        await tester.tap(find.text('Meanings'));
+        expect(find.text('Word'), findsOneWidget, reason: 'its sheet');
+        await tester.tap(find.text('Word'));
         await tester.pumpAndSettle();
 
         await tester.tap(back);
@@ -489,7 +488,7 @@ void main() {
         await tester.pumpAndSettle();
         expect(tester.testTextInput.isVisible, isTrue);
 
-        // From the Meanings block's heading, which handles no drag.
+        // From the Word's heading, which handles no drag.
         // The keyboard's 336 over the form, which then holds more than fits.
         tester.view.viewInsets = const FakeViewPadding(bottom: 336);
         addTearDown(tester.view.resetViewInsets);
@@ -497,13 +496,13 @@ void main() {
         final form = tester.state<ScrollableState>(
           find
               .ancestor(
-                of: find.text('Meanings'),
+                of: find.text('Word').first,
                 matching: find.byType(Scrollable),
               )
               .first,
         );
         expect(form.position.maxScrollExtent, greaterThan(0), reason: 'setup');
-        await tester.drag(find.text('Meanings'), const Offset(0, 200));
+        await tester.drag(find.text('Word').first, const Offset(0, 200));
         await tester.pumpAndSettle();
         expect(tester.testTextInput.isVisible, isFalse);
         await unmountApp(tester);

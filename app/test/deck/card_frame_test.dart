@@ -374,7 +374,7 @@ void main() {
       expect(cellsOf(card), isNull);
     });
 
-    test('a framed card opens read-only in this build', () async {
+    test('a framed card opens in the editor', () async {
       final card = await stored(
         front: const [
           {
@@ -387,7 +387,7 @@ void main() {
         template: freeTemplate,
         version: cardFrameVersion,
       );
-      expect(canEdit(card), isFalse);
+      expect(canEdit(card), isTrue);
     });
 
     test('a framed card that breaks its shape is unreadable', () async {

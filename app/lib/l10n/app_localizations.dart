@@ -314,22 +314,10 @@ abstract class AppLocalizations {
   /// **'줄에서 ___를 빼 주세요'**
   String get clozeBlankMarker;
 
-  /// Title of the sheet of block types the front's add row opens in the card editor, and what a screen reader reads for that row.
+  /// The row after the card editor's last group, after a +, the sheet of 칸 types it opens, and what a screen reader reads for it.
   ///
   /// In ko, this message translates to:
-  /// **'앞면에 추가'**
-  String get addToFront;
-
-  /// Title of the sheet of block types the back's add row opens in the card editor, and what a screen reader reads for that row.
-  ///
-  /// In ko, this message translates to:
-  /// **'뒷면에 추가'**
-  String get addToBack;
-
-  /// The quiet row at the end of each side's group in the card editor, after a +; it opens the sheet of block types.
-  ///
-  /// In ko, this message translates to:
-  /// **'추가'**
+  /// **'칸 추가'**
   String get addBlock;
 
   /// A text block's type, in the add sheet and over the block in the card editor.
@@ -338,22 +326,16 @@ abstract class AppLocalizations {
   /// **'글'**
   String get blockText;
 
-  /// The hint of a 글 block's field in the card editor.
+  /// A 단어 칸's type, in the add sheet and over its group in the card editor.
   ///
   /// In ko, this message translates to:
-  /// **'단어, 문장, 설명'**
-  String get blockTextDescription;
-
-  /// A senses block's type, in the add sheet and over the block in the card editor.
-  ///
-  /// In ko, this message translates to:
-  /// **'뜻 목록'**
+  /// **'단어'**
   String get blockSenses;
 
-  /// The line under 뜻 목록 in the add sheet.
+  /// The line under 단어 in the add sheet.
   ///
   /// In ko, this message translates to:
-  /// **'라벨과 뜻을 여러 개 적어요'**
+  /// **'단어와 뜻을 함께 적어요'**
   String get blockSensesDescription;
 
   /// A table block's type, in the add sheet and over the block in the card editor.
@@ -590,23 +572,41 @@ abstract class AppLocalizations {
   /// **'앞면 소리 자동 재생'**
   String get autoplayAudio;
 
-  /// Screen-reader name of a block's menu in the card editor, which moves it up or down or deletes it.
+  /// Screen-reader name of a 칸's menu in the card editor, which moves it up or down or deletes it.
   ///
   /// In ko, this message translates to:
-  /// **'{side} {number}번째 블록 메뉴'**
-  String blockMenu(String side, int number);
+  /// **'{number}번째 칸 메뉴'**
+  String blockMenu(int number);
+
+  /// Error under the card editor's column on save when the card shows nothing before the reveal.
+  ///
+  /// In ko, this message translates to:
+  /// **'앞면에 보일 내용을 하나 이상 넣어 주세요'**
+  String get cardNothingBefore;
+
+  /// Error under the card editor's column on save when the reveal adds nothing to the card.
+  ///
+  /// In ko, this message translates to:
+  /// **'뒷면이나 빈칸을 하나 이상 넣어 주세요'**
+  String get cardNothingAdded;
+
+  /// The word field of a 단어 칸, and its chip in 앞면에 보일 것.
+  ///
+  /// In ko, this message translates to:
+  /// **'단어'**
+  String get wordTerm;
+
+  /// The row of a 단어 칸 choosing whether the word or its meanings show before the reveal.
+  ///
+  /// In ko, this message translates to:
+  /// **'앞면에 보일 것'**
+  String get wordAskFirst;
 
   /// Item of a block's menu in the card editor that deletes the block, and of a sense's menu or a preset's menu that deletes it.
   ///
   /// In ko, this message translates to:
   /// **'삭제'**
   String get deleteBlock;
-
-  /// Error under a side of a 자유 card on save while that side holds no block and the card must show it.
-  ///
-  /// In ko, this message translates to:
-  /// **'블록을 하나 이상 넣어 주세요'**
-  String get sideBlockRequired;
 
   /// What a screen reader reads for a 표 block's toolbar over the table.
   ///
@@ -725,7 +725,7 @@ abstract class AppLocalizations {
   /// Hint under the preview's card while it shows a card studied on one face with its blanks empty.
   ///
   /// In ko, this message translates to:
-  /// **'카드를 탭하면 빈칸이 채워져요'**
+  /// **'카드를 탭하면 답이 보여요'**
   String get previewTapToReveal;
 
   /// Hint under the preview's card while it shows a card studied on one face with its blanks filled.
@@ -733,12 +733,6 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'다시 탭하면 빈칸으로 돌아가요'**
   String get previewTapToHide;
-
-  /// Muted line under the back's group in the card editor while the card holds a blank and its back holds nothing to save.
-  ///
-  /// In ko, this message translates to:
-  /// **'빈칸 카드는 앞면에서 바로 답을 맞혀요. 뒷면은 비워 둬도 돼요.'**
-  String get clozeBackHint;
 
   /// Hint inside a sense's label field in a 뜻 목록 block, and what a screen reader reads for it while the block is one meaning.
   ///

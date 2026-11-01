@@ -17,7 +17,7 @@ const _labelMinWidth = 40.0;
 /// target is [kMinInteractiveDimension] high though the chip is a line high.
 const _labelTapInset = (kMinInteractiveDimension - labelChipHeight) / 2;
 
-/// One sense of a 뜻 목록 block as the editor edits it: its labels as
+/// One sense of a 단어 as the editor edits it: its labels as
 /// typed, its meaning, and its examples, one per line (ADR 0100).
 class SenseDraft {
   SenseDraft([CardSense? sense])
@@ -74,11 +74,11 @@ class SenseDraft {
       labels.map((label) => label.shown).join(' ');
 }
 
-/// A 뜻 목록 block's fields inside its side's group: each sense a row of its
-/// label chip, its meaning and, with more than one sense, a ⋯ menu that
-/// moves it up or down or deletes it, the rows separated by a hairline; then
-/// "+ 뜻 추가". No field is named by its side, which the group's label names
-/// already (#449). With [showErrors], an empty meaning says so under it.
+/// A 단어's meanings inside its group: each sense a row of its label chip, its
+/// meaning and, with more than one sense, a ⋯ menu that moves it up or down
+/// or deletes it, the rows separated by a hairline; then "+ 뜻 추가". No field
+/// is named by a side (#449). With [showErrors], an empty meaning says so
+/// under it.
 class SenseFields extends StatelessWidget {
   const SenseFields({
     super.key,

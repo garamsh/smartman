@@ -20,7 +20,7 @@ const labelChipHeight = 24 + 2 * AppSpace.s4;
 /// field's outline stays inside the group's corners.
 const groupInset = AppSpace.s4;
 
-/// One white group of rows: a side of a card in the editor, or the label
+/// One white group of rows: a 칸 of a card in the editor, or the label
 /// presets. Its [children] are separated by a hairline, never boxed one by
 /// one, and its fields are drawn without a border until they have the
 /// focus, when a 1.5 px ink outline shows (#454).

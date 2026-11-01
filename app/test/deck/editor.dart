@@ -4,18 +4,18 @@ import 'package:smartman/deck/src/block_list.dart';
 
 import '../home/deck_screens.dart';
 
-/// The block list of [side]: the first on screen is the front's.
-Finder blockList(CardSide side) => find.byType(BlockList).at(side.index);
+/// The card's column of 칸.
+final blockList = find.byType(BlockList);
 
-/// The [index]th text field of [side]'s block list.
-Finder blockField(CardSide side, [int index = 0]) => find
-    .descendant(of: blockList(side), matching: find.byType(TextField))
-    .at(index);
+/// The [index]th text field of the column: a new card's 앞면 is the first and
+/// its 뒷면 the second.
+Finder blockField([int index = 0]) =>
+    find.descendant(of: blockList, matching: find.byType(TextField)).at(index);
 
-/// The text field labelled or hinted [label] inside [side]'s block list,
-/// found by its decoration, so it is found once it holds text too.
-Finder labelledField(CardSide side, String label) => find.descendant(
-  of: blockList(side),
+/// The text field labelled or hinted [label] in the column, found by its
+/// decoration, so it is found once it holds text too.
+Finder labelledField(String label) => find.descendant(
+  of: blockList,
   matching: find.byWidgetPredicate(
     (widget) =>
         widget is TextField &&
@@ -24,11 +24,23 @@ Finder labelledField(CardSide side, String label) => find.descendant(
   ),
 );
 
-/// The "+ 추가" row at the end of [side]'s group, found by what a screen
-/// reader reads for it.
-Finder addRow(CardSide side) => find.bySemanticsLabel(
-  side == CardSide.front ? 'Add to front' : 'Add to back',
-);
+/// The field of the [index]th row named [name] inline in the column, found
+/// by what a screen reader reads for it.
+Finder namedField(String name, [int index = 0]) => find
+    .descendant(
+      of: find.descendant(
+        of: blockList,
+        matching: find.byWidgetPredicate(
+          (widget) => widget is Semantics && widget.properties.label == name,
+        ),
+      ),
+      matching: find.byType(TextField),
+    )
+    .at(index);
+
+/// The "+ 칸 추가" row after the last group, found by what a screen reader
+/// reads for it.
+final addRow = find.bySemanticsLabel('Add block');
 
 /// Brings [finder] into view and taps it.
 Future<void> tapVisible(DeckScreens screens, Finder finder) async {
@@ -44,39 +56,24 @@ Future<void> typeInto(WidgetTester tester, Finder field, String text) async {
   await tester.pump();
 }
 
-/// Types [text] into the [index]th text field of [side]'s blocks.
-Future<void> typeBlock(
-  WidgetTester tester,
-  CardSide side,
-  String text, [
-  int index = 0,
-]) => typeInto(tester, blockField(side, index), text);
+/// Types [text] into the [index]th text field of the column.
+Future<void> typeBlock(WidgetTester tester, String text, [int index = 0]) =>
+    typeInto(tester, blockField(index), text);
 
-/// Adds a block of [type] to [side] through its button and sheet.
-Future<void> addBlock(DeckScreens screens, CardSide side, String type) async {
-  await tapVisible(screens, addRow(side));
+/// Adds a 칸 of [type] through "+ 칸 추가" and its sheet.
+Future<void> addBlock(DeckScreens screens, String type) async {
+  await tapVisible(screens, addRow);
   await screens.tap(find.text(type).last);
 }
 
-/// Chooses [action] in the menu of [side]'s [number]th block.
-Future<void> actOnBlock(
-  DeckScreens screens,
-  CardSide side,
-  int number,
-  String action,
-) async {
-  final name = side == CardSide.front ? 'Front' : 'Back';
-  await tapVisible(screens, find.byTooltip('$name block $number menu'));
+/// Chooses [action] in the menu of the [number]th 칸.
+Future<void> actOnBlock(DeckScreens screens, int number, String action) async {
+  await tapVisible(screens, find.byTooltip('Block $number menu'));
   await screens.tap(find.text(action).last);
 }
 
-/// Replaces [side]'s blocks with one new block of [type]: the side's first
-/// block, a new card's empty Text, is deleted, and [type] added in its place.
-Future<void> replaceFirstBlock(
-  DeckScreens screens,
-  CardSide side,
-  String type,
-) async {
-  await actOnBlock(screens, side, 1, 'Delete');
-  await addBlock(screens, side, type);
+/// Replaces the first 칸, a new card's empty Text, with a new one of [type].
+Future<void> replaceFirstBlock(DeckScreens screens, String type) async {
+  await actOnBlock(screens, 1, 'Delete');
+  await addBlock(screens, type);
 }
