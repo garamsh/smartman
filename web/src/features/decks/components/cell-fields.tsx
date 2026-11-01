@@ -165,8 +165,8 @@ function RowMenu({
           aria-label={label}
           onKeyDown={(event) => {
             if (event.key === "Escape") {
+              // Stops the dialog's own Escape: it closes the menu alone.
               event.preventDefault();
-              event.stopPropagation();
               setOpen(false);
               button.current?.focus();
             }

@@ -163,6 +163,12 @@ test("writes every 칸 type as free v2, and opens and saves a stored card over i
     await sheet.getByRole("button", { name, exact: true }).click();
     await expect(sheet).toBeHidden();
   };
+  // Escape closes a 칸's menu alone, never the sheet around it.
+  await dialog.getByRole("button", { name: "1번째 칸 메뉴" }).click();
+  await expect(page.getByRole("menu")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("menu")).toHaveCount(0);
+  await expect(dialog).toBeVisible();
   await addCell("단어");
   await page.getByRole("textbox", { name: "단어", exact: true }).fill("capital");
   await page.getByRole("textbox", { name: "라벨", exact: true }).fill("명");

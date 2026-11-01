@@ -19,6 +19,7 @@ import {
   encodeCells,
   frameKey,
   movedSpans,
+  parseCellsDraft,
   type WrittenCell,
   withBlankToggled,
   withCellText,
@@ -233,6 +234,20 @@ describe("a v1 card of each fixture placement", () => {
     });
     for (const placement of [1, 2, 3, 4, 5, 6, 7])
       expect(saved.some(({ name }) => name.includes(`placement ${String(placement)}`))).toBe(true);
+  });
+});
+
+describe("parseCellsDraft", () => {
+  it("refuses what the frame refuses and an unknown 칸, beside a card it accepts", () => {
+    const chart = { type: "chart", v: 1, id: "c", payload: {} };
+    expect(parseCellsDraft({ id: "a", blocks: [glue("a", "")] })).toBeNull();
+    expect(parseCellsDraft({ id: "a", blocks: [glue("a", "b"), chart] })).toBeNull();
+    expect(parseCellsDraft({ id: "a", blocks: [] })).toBeNull();
+    expect(parseCellsDraft({ id: "a", blocks: [glue("a", "b")] })).toEqual({
+      id: "a",
+      front: [glue("a", "b")],
+      back: [],
+    });
   });
 });
 
