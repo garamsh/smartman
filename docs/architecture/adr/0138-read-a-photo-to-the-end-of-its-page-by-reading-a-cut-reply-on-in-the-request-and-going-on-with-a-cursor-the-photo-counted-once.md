@@ -11,6 +11,11 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 - **[ADR 0135](0135-keep-the-cards-a-reply-cut-at-the-output-cap-completed-say-the-photo-was-read-in-part-and-measure-three-ways-to-read-a-dense-page-whole.md)'s measured result**, on the owner's page of 100 entries: the cut reply's cards alone read 85, a cap of 18,000 read 98, and the lean reply and one continuation each read 100. The PM chose continuation. Lean is not adopted, since it lost 6.5 points of vocabulary F1 over the 90 samples.
 - **A denser page cuts even one continuation:** 200 entries need about three replies of 16,384 tokens, at about 51 s each.
 - **The limits:** the model call's 60 s timeout, no call starting after 75 s of a request ([ADR 0130](0130-retry-a-failed-photo-once-within-one-usage-and-record-each-extraction-s-outcome.md)), and the Edge Function's 150 s wall clock. So one request holds about two full replies.
+- **The PM's eval of 2026-11-01 at `d354b1e47ea8ef19d20082d971abf67cd08db1e1`**, before the confirming call, Claude Haiku 5.5, prompt v9:
+  - sample 90 read 100 of 100;
+  - the owner's photo of 100 entries read 100 of 100 at $0.0125;
+  - sample 91 read 85 of 200 in one call that ended with `finish_reason` `stop` at 11,053 completion tokens, under the cap. The model ended the page early by its own choice, so no reply was cut and nothing read on.
+- **The eval's ordinary pages** hold at most 21 entries each (`tools/eval/samples/`): only the dense pages, 90 and 91, hold more.
 - **What the record may hold:** no image, card or prompt text ([`ai-extraction.md`](../ai-extraction.md) §Privacy).
 - **Alternatives for going on past one request:**
   - **Keep the read cards on the server.** The record would hold card text.
@@ -19,7 +24,9 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 
 ## Decision
 
-- **Read on in the request.** When a reply is cut and keeps cards, the function asks again with the same photo, model and prompt, and a text naming the cards read so far and the last fronts read. It goes on after each cut reply until a reply is whole or adds no card.
+- **Read on in the request.** When a reply is cut and keeps cards, the function asks again with the same photo, model and prompt, and a text naming the cards read so far and the last fronts read and asking for an empty list when no entry comes after them.
+  - A whole reply of 40 cards or more is read on the same way, to confirm the page ends there: a model may stop a dense page early. 40 is twice the largest ordinary page in the eval, so an ordinary page makes no such call.
+  - The function goes on after each reply that was cut or added 40 cards or more, until a reply adds fewer and was not cut, or adds none.
   - A call starts only before 75 s of the request, as ADR 0130's retry does.
   - A front already read is left out, compared after the card key normalization.
   - A failed call is asked again once in the request.
@@ -44,7 +51,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
   - `public.record_resumed_extraction` adds each request with a cursor to the photo's record.
   - `truncated` now records, for a photo answered with cards, whether its page was left unread past them.
 - **A cursor the record did not keep is not offered:** the record stays telemetry for everything else.
-- **The eval reads each photo as the function and its clients do:** the `today` way reads a cut reply on until the page is done, with no time budget. `continue` is removed.
+- **The eval reads each photo as the function and its clients do:** the `today` way reads on by the same rule until the page is done, with no time budget. `continue` is removed.
   - The new sample `91-dense-list-200-fr-ko-print` holds 200 French words numbered 1 to 200, 30 of them with two senses.
   - A run prices an image at the most calls `today` may make: 11.
 - **Lean stays unadopted:** ADR 0135's measured result stands.
@@ -59,6 +66,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 
 ## Signs the decision was wrong
 
+- An ordinary page often answers 40 cards or more: the confirming call is paid on pages it was not meant for.
 - Pages of 100 or 200 entries still end with fronts missing: the follow-up does not tell the model where to go on, and the eval's samples 90 and 91 read under 100%.
 - Continuations repeat entries under a different front, such as a sense moved to the front: the comparison by front lets duplicates through.
 - Many cursors expire unused, or `410` is frequent: 10 minutes is too short for a client that reads several photos at once.
