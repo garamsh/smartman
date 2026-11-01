@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { http, HttpResponse } from "msw";
 import { render } from "@/testing/render";
-import { deckRow, uuidOf } from "@/testing/library";
+import { cardRow, deckRow, uuidOf } from "@/testing/library";
 import { FakePostgrest } from "@/testing/mocks/postgrest";
 import { server } from "@/testing/mocks/server";
 import { supabaseUrl, testAccessToken } from "@/testing/mocks/handlers";
@@ -252,7 +252,7 @@ describe("photo request", () => {
     expect(calls).toBe(0);
     const valid = new FormData();
     valid.set("photo", upload());
-    expect(await readPhoto(valid)).toMatchObject({ cards: [{ topic: "도시", selected: true }] });
+    expect(await readPhoto(valid)).toMatchObject({ cards: [{ topic: "도시", selected: null }] });
     expect(calls).toBe(1);
     setRequestCookies([]);
     expect(await readPhoto(valid)).toEqual({ failure: { kind: "signIn" } });
@@ -671,6 +671,47 @@ describe("photo import", () => {
       expect(screen.queryByRole("menu")).not.toBeInTheDocument();
       expect(screen.getByRole("button", { name: "과일 카드 모양, 앞면에 단어" })).toHaveFocus();
       expect(screen.getByRole("heading", { name: "단어를 찾았어요" })).toBeInTheDocument();
+    });
+    it("marks a card the deck holds 이미 덱에 있어요 and leaves it out, beside a new one included", async () => {
+      db.seed("cards", cardRow("held", "deck", "수도"));
+      answer({ status: 200, body: { cards: [card, { ...card, front: "인구", answer: "많음" }] } });
+      await choose(1);
+      await screen.findByRole("heading", { name: "카드 2장을 만들었어요" });
+      await waitFor(() => {
+        expect(screen.getByRole("checkbox", { name: "수도 선택" })).not.toBeChecked();
+      });
+      expect(screen.getByRole("button", { name: "수도 편집" })).toHaveTextContent(
+        "이미 덱에 있어요",
+      );
+      expect(screen.getByRole("checkbox", { name: "인구 선택" })).toBeChecked();
+      expect(screen.getByRole("button", { name: "인구 편집" })).not.toHaveTextContent(
+        "이미 덱에 있어요",
+      );
+      await userEvent.click(screen.getByRole("checkbox", { name: "수도 선택" }));
+      expect(screen.getByRole("checkbox", { name: "수도 선택" })).toBeChecked();
+    });
+    it("merges a photo's cards of one front into one row, joining their backs and senses", async () => {
+      const pear = { ...apple, senses: [{ labels: [], meaning: "배나무", examples: [] }] };
+      answer({
+        status: 200,
+        body: {
+          cards: [
+            card,
+            { ...card, answer: "서울특별시" },
+            { ...card, answer: "서울" },
+            apple,
+            { ...apple, front: "Apple", senses: [...apple.senses, ...pear.senses] },
+          ],
+        },
+      });
+      await choose(1);
+      expect(
+        await screen.findByRole("heading", { name: "카드 2장을 만들었어요" }),
+      ).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "수도 편집" })).toHaveTextContent("서울서울특별시");
+      expect(screen.getByRole("button", { name: "apple 편집" })).toHaveTextContent(
+        "apple[명]사과사과나무배나무",
+      );
     });
     it("heads identify cards as 판별 apart from the page's own, left out until checked", async () => {
       answer({ status: 200, body: { cards: [card, identify] } });

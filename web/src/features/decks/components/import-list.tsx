@@ -25,6 +25,8 @@ export function ImportList({
   changeForm,
   collapsed,
   toggleGroup,
+  included,
+  inDeck,
   toggleCard,
   toggleSection,
   edit,
@@ -38,9 +40,12 @@ export function ImportList({
   /** The photos whose groups are collapsed, by id. */
   collapsed: ReadonlySet<string>;
   toggleGroup: (photo: string) => void;
-  toggleCard: (card: Candidate) => void;
+  /** Whether a card is saved, and whether the chosen deck already holds it. */
+  included: (card: Candidate, section: Section) => boolean;
+  inDeck: (card: Candidate, section: Section) => boolean;
+  toggleCard: (card: Candidate, section: Section) => void;
   toggleSection: (section: Section) => void;
-  edit: (card: Candidate) => void;
+  edit: (card: Candidate, section: Section) => void;
 }) {
   function sections(group: PhotoGroup) {
     return group.sections.map((section) => {
@@ -58,7 +63,7 @@ export function ImportList({
               pronunciations={section.cards.some((card) => card.pronunciation !== null)}
               extras={section.cards.some((card) => card.extras.length > 0)}
               swappable={section.cards.some((card) => !isWhole(card))}
-              anyIncluded={section.cards.some((card) => card.selected)}
+              anyIncluded={section.cards.some((card) => included(card, section))}
               change={(next) => {
                 changeForm(section, next);
               }}
@@ -73,11 +78,13 @@ export function ImportList({
                 key={card.id}
                 card={card}
                 form={form}
+                included={included(card, section)}
+                inDeck={inDeck(card, section)}
                 toggle={() => {
-                  toggleCard(card);
+                  toggleCard(card, section);
                 }}
                 edit={() => {
-                  edit(card);
+                  edit(card, section);
                 }}
               />
             ))}
@@ -155,57 +162,75 @@ function DeckLine({ name, choose }: { name: string | null; choose: () => void })
 }
 
 /**
- * A candidate's row: its round check, and its first card in its section's form, or a whole card's
- * front, to edit.
+ * A candidate's row, as the phone's `_RowTile`: its round check, then its first card in its
+ * section's form, the front at 44% of the row beside its back, or a whole card's front; muted
+ * while left out, and "이미 덱에 있어요" under it while the chosen deck holds it.
  */
 function CandidateRow({
   card,
   form,
+  included,
+  inDeck,
   toggle,
   edit,
 }: {
   card: Candidate;
   form: SectionForm;
+  included: boolean;
+  inDeck: boolean;
   toggle: () => void;
   edit: () => void;
 }) {
   const [shown] = cardsOf(card, form);
   const front = parseContent(shown?.front ?? card.front) ?? [];
   const back = parseContent(shown?.back ?? card.back) ?? [];
+  const note = inDeck && (
+    <span className="mt-1 block text-caption text-muted">이미 덱에 있어요</span>
+  );
   return (
-    <li className="flex min-w-0 items-start gap-2 p-3">
+    <li className="flex min-w-0 items-start">
       <button
         type="button"
         role="checkbox"
-        aria-checked={card.selected}
+        aria-checked={included}
         aria-label={`${describeContent(front)} 선택`}
         onClick={toggle}
-        className="pressable flex size-tap-target shrink-0 items-center justify-center rounded-full text-body"
+        className="pressable flex size-12 shrink-0 items-center justify-center rounded-full text-body"
       >
         <span
           aria-hidden
-          className={`flex size-6 items-center justify-center rounded-full border ${card.selected ? "border-ink bg-ink text-on-primary" : "border-outline"}`}
+          className={`flex size-6 items-center justify-center rounded-full border ${included ? "border-ink bg-ink text-on-primary" : "border-outline"}`}
         >
-          {card.selected && <Check className="size-4" />}
+          {included && <Check className="size-4" />}
         </span>
       </button>
       {isWhole(card) ? (
-        <div className="min-w-0 flex-1 overflow-x-auto py-2">
+        <div
+          className={`min-w-0 flex-1 overflow-x-auto py-3 pr-4 ${included ? "text-ink" : "text-muted"}`}
+        >
           <WholeCard blocks={front} revealed />
+          {note}
         </div>
       ) : (
         <button
           type="button"
           aria-label={`${describeContent(front)} 편집`}
           onClick={edit}
-          className="pressable min-h-tap-target min-w-0 flex-1 py-2 text-left text-body break-words"
+          className="pressable min-h-tap-target min-w-0 flex-1 py-3 pr-4 text-left break-keep"
         >
-          <span className="block font-bold whitespace-pre-line">
-            <SideText blocks={front} />
+          <span className="flex gap-3">
+            <span
+              className={`w-[44%] shrink-0 text-body-strong break-words whitespace-pre-line ${included ? "text-ink" : "text-muted"}`}
+            >
+              <SideText blocks={front} />
+            </span>
+            <span
+              className={`min-w-0 flex-1 text-secondary break-words whitespace-pre-line ${included ? "text-ink-2" : "text-muted"}`}
+            >
+              <SideText blocks={back} />
+            </span>
           </span>
-          <span className="mt-1 block text-caption whitespace-pre-line text-muted">
-            <SideText blocks={back} />
-          </span>
+          {note}
         </button>
       )}
     </li>

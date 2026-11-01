@@ -1,6 +1,6 @@
 import { v7 } from "uuid";
 import { field } from "@/supabase/row";
-import { block, type CardDraft, textBlocks } from "./authoring";
+import { block, type Block, type CardDraft, cardKey, textBlocks } from "./authoring";
 import { describeContent, parseContent } from "./card-content";
 
 /**
@@ -15,7 +15,8 @@ export type Candidate = CardDraft & {
   pronunciation: string | null;
   extras: Extra[];
   reverseId: string;
-  selected: boolean;
+  /** Included (true) or left out (false) by the user; null until either, when the list decides. */
+  selected: boolean | null;
 };
 /** A note the page prints for a whole entry, such as a synonym, as the phone's `Extra`. */
 export type Extra = { label: string; text: string };
@@ -67,7 +68,6 @@ export function parseCandidates(body: unknown): Candidate[] | null {
     const pronunciation = spoken === null ? null : isText(spoken) ? spoken.trim() : undefined;
     const extras = parseExtras(field(card, "extras"));
     if (pronunciation === undefined || !extras) return null;
-    // An identify card starts left out, as the phone's `isIncluded`.
     result.push({
       id: v7(),
       topic,
@@ -78,10 +78,10 @@ export function parseCandidates(body: unknown): Candidate[] | null {
       reverseId: v7(),
       front: frontBlocks,
       back,
-      selected: type !== "identify",
+      selected: null,
     });
   }
-  return result;
+  return mergeCandidates(result);
 }
 
 function isText(value: unknown): value is string {
@@ -100,4 +100,47 @@ function parseExtras(value: unknown): Extra[] | null {
     extras.push({ label: label.trim(), text: text.trim() });
   }
   return extras;
+}
+
+/** [blocks]' key under the phone's card key normalization. */
+function keyOf(blocks: Block[]): string {
+  return cardKey(parseContent(blocks) ?? []);
+}
+
+/** Every sense of [side]'s senses blocks, as stored. */
+function sensesOf(side: Block[]): unknown[] {
+  return side.flatMap((item) => {
+    const list: unknown = field(item.payload, "senses");
+    return item.type === "senses" && Array.isArray(list) ? list.map((sense: unknown) => sense) : [];
+  });
+}
+
+/**
+ * One photo's candidates with each card key's merged into its first, as the phone's `ImportRow`:
+ * a vocabulary entry's senses joined without repeats; a note's later back appended as a text
+ * block unless a line of the back already holds it, as the phone's `mergeBack`.
+ */
+function mergeCandidates(cards: Candidate[]): Candidate[] {
+  const merged = new Map<string, Candidate>();
+  for (const card of cards) {
+    const key = keyOf(card.front);
+    const first = merged.get(key);
+    if (!first) merged.set(key, card);
+    else if (first.kind === "vocabulary" && card.kind === "vocabulary") {
+      const seen = new Set(sensesOf(first.back).map((sense) => JSON.stringify(sense)));
+      const added = sensesOf(card.back).filter((sense) => !seen.has(JSON.stringify(sense)));
+      const all = [...sensesOf(first.back), ...added];
+      first.back = first.back.map((item) =>
+        item.type === "senses" ? { ...item, payload: { senses: all } } : item,
+      );
+    } else if (!first.front.some((item) => item.type === "cloze" || item.type === "table")) {
+      const back = describeContent(parseContent(card.back) ?? []);
+      const lines = describeContent(parseContent(first.back) ?? [])
+        .split("\n")
+        .map((line) => keyOf(textBlocks(line)));
+      if (back.trim() && !lines.includes(keyOf(textBlocks(back))))
+        first.back = [...first.back, ...textBlocks(back)];
+    }
+  }
+  return [...merged.values()];
 }

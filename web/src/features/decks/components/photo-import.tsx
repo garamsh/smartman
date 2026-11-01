@@ -4,7 +4,9 @@ import { useEffect, useEffectEvent, useRef, useState, useTransition } from "reac
 import { useRouter } from "next/navigation";
 import { Check, CircleAlert, Clock, ImagePlus, LoaderCircle } from "lucide-react";
 import { v7 } from "uuid";
-import { createDeck, readAllowance, saveCards } from "../actions";
+import { createDeck, readAllowance, readCardKeys, saveCards } from "../actions";
+import { cardKey } from "../authoring";
+import { parseContent } from "../card-content";
 import { preparePhoto, sendPhoto } from "../extract-photo";
 import { describeFailure, isRetakeable, isRetryable, type PhotoFailure } from "../photo-failure";
 import { type Candidate } from "../photo-candidates";
@@ -65,6 +67,21 @@ export function PhotoImport({
   // Each section's form once set, by section id; one not set takes the deck's remembered form.
   const [forms, setForms] = useState<Record<string, SectionForm>>({});
   const [remembered] = useState(readForms);
+  // The card keys the chosen deck holds, by deck id; a deck not read yet marks nothing.
+  const [held, setHeld] = useState<Record<string, ReadonlySet<string>>>({});
+  useEffect(() => {
+    if (target === "new") return;
+    let current = true;
+    // A deck whose keys cannot be read marks nothing, and a duplicate is still refused on saving.
+    void readCardKeys(target)
+      .catch(() => null)
+      .then((keys) => {
+        if (current && keys) setHeld((all) => ({ ...all, [target]: new Set(keys) }));
+      });
+    return () => {
+      current = false;
+    };
+  }, [target]);
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
   const [editing, setEditing] = useState<Candidate | null>(null);
   const [discarding, setDiscarding] = useState(false);
@@ -203,9 +220,20 @@ export function PhotoImport({
       defaultForm(section.kind, section.identify)
     );
   }
-  // The cards saving writes: each selected candidate's, in its section's form.
+  /** Whether the chosen deck holds [card]'s first card in its form, as the phone's `isDuplicate`. */
+  function inDeck(card: Candidate, section: Section): boolean {
+    const [first] = cardsOf(card, formOf(section));
+    return !!first && !!held[target]?.has(cardKey(parseContent(first.front) ?? []));
+  }
+  /** Whether [card] is saved: as the user set it, else unless it is an identify card or in the deck. */
+  function included(card: Candidate, section: Section): boolean {
+    return card.selected ?? (!card.identify && !inDeck(card, section));
+  }
+  // The cards saving writes: each included candidate's, in its section's form.
   const toSave = sections.flatMap((section) =>
-    section.cards.filter((card) => card.selected).flatMap((card) => cardsOf(card, formOf(section))),
+    section.cards
+      .filter((card) => included(card, section))
+      .flatMap((card) => cardsOf(card, formOf(section))),
   );
   /** Chooses the deck the cards go into, taking that deck's remembered forms where it has them. */
   function chooseTarget(next: string) {
@@ -260,7 +288,7 @@ export function PhotoImport({
   }
   /** Includes every card of [section], or leaves every one out when any is included. */
   function toggleSection(section: Section) {
-    const include = !section.cards.some((card) => card.selected);
+    const include = !section.cards.some((card) => included(card, section));
     for (const card of section.cards) changeCandidate({ ...card, selected: include });
   }
   /** Adds the cards; a new deck is named first, in its own sheet, as the phone's save asks. */
@@ -460,12 +488,15 @@ export function PhotoImport({
               if (!next.delete(id)) next.add(id);
               setCollapsed(next);
             }}
-            toggleCard={(card) => {
-              changeCandidate({ ...card, selected: !card.selected });
+            included={included}
+            inDeck={inDeck}
+            toggleCard={(card, section) => {
+              changeCandidate({ ...card, selected: !included(card, section) });
             }}
             toggleSection={toggleSection}
-            edit={(card) => {
-              setEditing(structuredClone(card));
+            edit={(card, section) => {
+              // An edit keeps the row as it was, so an edited duplicate is not left out.
+              setEditing({ ...structuredClone(card), selected: included(card, section) });
             }}
           />
           {photos.length < maxPhotos && (
