@@ -289,9 +289,9 @@ What keeps a screen calm rather than decorated ([ADR 0118](adr/0118-name-each-co
 
 - Whether deleting a card should become undoable, so it needs no confirmation. Its study history is deleted with it today, which an undo would have to restore.
 
-### Proposed: the 칸 frame
+### Planned: the 칸 frame
 
-Proposed in [ADR 0137](adr/0137-frame-a-card-by-its-blocks-each-block-type-deciding-whether-it-has-a-front-and-a-back.md), awaiting the owner's approval of the design and of its migration (#488). Nothing below holds today; once approved and implemented, it replaces the current decisions it names.
+Accepted in [ADR 0137](adr/0137-frame-a-card-by-its-blocks-each-block-type-deciding-whether-it-has-a-front-and-a-back.md) (#488) and not built yet. Nothing below holds today; the implementation moves it into the current decisions it names.
 
-- **Copy.** 칸 is the term for what a card is made of: "+ 칸 추가" and the sheet "칸 추가", if the owner takes O5 (a) over 블록. 앞면 and 뒷면 stay the terms for a 글's two fields and for where a 사진 or 소리 sits; 단어 and 뜻 name a 단어 칸's fields, never a side.
+- **Copy.** 칸 is the term for what a card is made of: "+ 칸 추가" and the sheet "칸 추가". 앞면 and 뒷면 stay the terms for a 글's two fields and for where a 사진 or 소리 sits; 단어 and 뜻 name a 단어 칸's fields, never a side.
 - **Details.** "One white group per meaning" reads a 칸 of a card in place of a side of a card. A 사진's, a 소리's and a 단어's choice of side is two `AppChip.action` chips.

@@ -1,7 +1,7 @@
 # ADR 0137: Frame a card by its blocks, each block type deciding whether it has a front and a back
 
-> Status: proposed
-> Date: 2026-11-01
+> Status: accepted
+> Date: 2026-11-02
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.
 
@@ -27,7 +27,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
   - **#475's options (a), (b) and (c)**: blanks on the front only, blanks inside the 글 block, or both. The owner chose none of them.
   - **Keep the two side lists and add a per-block "side" everywhere.** Every block would carry a side, a cloze included, so the side a blank sits on would still be a field with no meaning, which is the frame the owner asked to drop.
   - **Grade each blank block apart, as cards of their own.** The owner asked for one card; ADR 0068 keeps a card with several blanks one card, one key and one state.
-  - **Draw every card in place, a 글's back under its front,** with no split card. One rule, but every card without a blank, the most common card, would change its previous card's look, which the issue forbids for a card that already studied well. Offered as choice O6.
+  - **Draw every card in place, a 글's back under its front,** with no split card. One rule, but every card without a blank, the most common card, would change its previous card's look, which the issue forbids for a card that already studied well. The owner kept the split (O6).
 
 ## Decision
 
@@ -95,7 +95,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 
 ### Storage
 
-- A card in the frame records the template `free` at version 2. Its 칸 list is stored in `cards.front`, and `cards.back` is `[]` (choice O1). No column is added, so sync, the revision trigger, the tombstone purge and the media read policy, which reads `front || back` (`supabase/migrations/20261027100000_media_card_read.sql`), are unchanged.
+- A card in the frame records the template `free` at version 2. Its 칸 list is stored in `cards.front`, and `cards.back` is `[]` (O1). No column is added, so sync, the revision trigger, the tombstone purge and the media read policy, which reads `front || back` (`supabase/migrations/20261027100000_media_card_read.sql`), are unchanged.
 - A build of the frame reads a `free` v1 card, or one of no template or of `flip`, `cloze` or `table` v1, by converting it on read with the migration's rule below, and writes it in the frame on its next save. A template or version it does not know opens read-only, as today.
 - The card key is the text shown before the reveal with every blank filled, in 칸 order: a 글's front, a 단어's asked side, a cloze or table filled, a photo's media id and box answers, a front sound's media id, normalized as today. For every card whose front blocks are moved unchanged it equals the stored key.
 - A merged back from photo import appends a 글 with a back alone, unless a line already equals it under the key's normalization.
@@ -113,9 +113,9 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 | — | no blank: 글, 뜻 목록, unboxed 사진, 소리 on either side | sided 칸 and placed 칸, a front `text` paired with a back `text`, a word with its senses | unchanged: split, the same blocks in each half |
 | 1 | import or copy cloze: `[cloze]` / `[text filled]` | `[cloze]`, the back dropped as derived | unchanged on the phone and the web |
 | 2 | import or copy table: `[text, table]` / `[text filled]` | `[글 name, table]`, the back dropped as derived | unchanged |
-| 3 | former 빈칸 form: `[cloze]` / empty or blocks | `[cloze]`, then the back's blocks unless derived | unchanged while the back is empty or derived; else choice O2 |
-| 4 | front blank beside other blocks, back anything | the front's 칸, then the back's unless derived | unchanged for the front; a back not derived, which study never drew (#481), by choice O2 |
-| 5 | blank on the back alone | the front's 칸, then the back's blank 칸 as questions | the phone unchanged for the blanks; a back 글, which the phone drew at the prompt (#481), by choice O3; the web now as the phone (#482) |
+| 3 | former 빈칸 form: `[cloze]` / empty or blocks | `[cloze]`, then the back's blocks unless derived | unchanged while the back is empty or derived; else the back shows after the answer (O2) |
+| 4 | front blank beside other blocks, back anything | the front's 칸, then the back's unless derived | unchanged for the front; a back not derived, which study never drew (#481), shows after the answer (O2) |
+| 5 | blank on the back alone | the front's 칸, then the back's blank 칸 as questions | the phone unchanged for the blanks; a back 글, which the phone drew at the prompt (#481), shows after the answer (O3); the web now as the phone (#482) |
 | 6 | 사진 with boxes, either side | moved unchanged, a question | unchanged on a front; on a back as #5 |
 | 7 | v6 text with a literal `___` | a 글 | unchanged |
 
@@ -123,7 +123,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
   - `private.card_frame_backup` keeps every row it changes: card id, user id, `front`, `back`, `template`, `template_version` and the `front` it wrote;
   - every live card of `free` v1, or of none or of `flip`, `cloze` or `table` v1, takes its 칸 list in `front`, `[]` in `back` and `free` v2; its `card_key` and `updated_at` are kept, and its revision is drawn anew so every device pulls it;
   - a tombstone, and a template or version no build wrote, is left alone.
-- **Dry run first**, as `supabase/senses-dry-run.sh` is: read-only against a copy of production, it counts the live cards by placement 1 to 7 and by no blank, the derived backs it would drop by reason, the backs O2 and O3 decide, and the cards it leaves, with up to five samples of each, for the owner before the migration runs. #475's counts were not run, so this report is the first.
+- **Dry run first**: `supabase/card-frame-dry-run.sql`, one select run read-only on production, counts the live cards by placement 1 to 7 and by no blank, the derived backs the migration drops by reason, the backs O2 and O3 decide, the O2 cards whose back holds a blank, which the rule above moves as a question, and the cards it leaves, with up to five card ids of each and no card content. The owner approves the migration on these counts (`server.md` §Gate). #475's counts were not run, so this report is the first.
 - **Device**: schema step 14 applies the same rule to every live card of those templates, keeping each card's `dirty`, `updated_at` and key; a device holding the card synced takes the server's copy on the tie, and an edit not yet pushed, already in the frame after its step, is pushed over it, as ADR 0114's sync has it.
 - **Rollback**, `private.revert_card_frame()`, run again until no device writes the frame:
   - a backed-up card whose `front` still equals the one the migration wrote takes back its `front`, `back`, `template` and `template_version` exactly;
@@ -137,16 +137,20 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 - **#480** and **#483** are closed. Their fixes stand: the 빈칸 문장 칸 keeps its line editor and its action.
 - **#479** is fixed independently and first, since every blank 칸 depends on selecting in its line.
 
-### Choices left to the owner, each with the recommendation this design takes
+### The owner's choices
 
-- **O1, where the 칸 list is stored.** (a) In `front`, `back` `[]`, `free` v2: no column, sync or policy change; the column's name says less than it holds until a later ADR renames it. (b) A new `blocks` column: an honest name, but a device schema column, a sync payload field and the media read policy change with it. **Recommended: (a).**
-- **O2, a back beside a front blank that study never drew** (placements 3 and 4, not derived). (a) It becomes the card's added parts, shown after the reveal, as its writer meant. (b) It leaves the card and stays in the backup table alone. **Recommended: (a).**
-- **O3, a 글 on the back beside a back-only blank,** which the phone drew at the prompt. (a) A 글 with a back alone, shown after the reveal. (b) A 글 with a front alone, at the prompt as the phone drew it. **Recommended: (a)**, since it was written as a back and the web drew it so.
-- **O4, the vocabulary 칸.** (a) 단어, the word and its meanings in one 칸 with `ask`. (b) The 뜻 목록 kept as a placed 칸, the word a separate 글. **Recommended: (a)**: one group asks for exactly a vocabulary card's fields, and photo import's "앞면에 뜻" is its `ask`.
-- **O5, the word on screens.** (a) 칸, the owner's word: "+ 칸 추가", "칸 추가". (b) 블록. **Recommended: (a)**; a 사진's "빈칸 추가" stays, and the two are told apart by 빈.
-- **O6, a card without a blank.** (a) Split, as today, and in place only when a self-revealing 칸 is present. (b) Every card in place. **Recommended: (a)**, since (b) changes the previous card of every text card.
+The owner decided all six on 2026-11-02 (#488):
 
-### Supersedes, once accepted
+- **O1, where the 칸 list is stored:** in the existing `front` column, with `back` `[]` and `free` v2. No column, sync payload or media read policy changes, and the column's name says less than it holds until a later ADR renames it.
+- **O2, a back beside a front blank that study never drew** (placements 3 and 4, not derived): it shows after the answer, as the card's added parts.
+- **O3, the back text of a card whose only blank is on its back,** which the phone drew at the prompt: it shows after the answer, since it was written as a back and the web drew it so.
+- **O4, the vocabulary 칸:** 단어, the word and its meanings in one 칸, the user choosing through `ask` which shows first. One group asks for exactly a vocabulary card's fields, and photo import's "앞면에 뜻" is its `ask`.
+- **O5, the word on screens:** 칸, the owner's word: "+ 칸 추가", "칸 추가". A 사진's "빈칸 추가" stays, and the two are told apart by 빈.
+- **O6, a card without a blank:** split as today, and drawn in place only when a self-revealing 칸 is present, so no text card's previous card changes.
+
+### Supersedes, once implemented
+
+Each stands until the implementation lands:
 
 - ADR 0106's study mode from blanks (`oneFaceOf`) and its two side lists, keeping its versions, ids and unknown shapes;
 - ADR 0108's add control on either side, and its back-only one face;
@@ -160,7 +164,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 - One union serves the editor, photo import and MCP, so a card an AI writes renders as a hand-made one; the app, the web and the function each keep a validator of it, held together by shared fixtures.
 - A vocabulary card is one 단어 group in place of a 글 on the front and a 뜻 목록 on the back.
 - Every live card is rewritten once and pulled by every device once; the migration holds the revision trigger's per-user advisory lock for every user until it commits, as ADR 0114's did. The backup table needs rows in `supabase/preview-seed.sql`.
-- `cards.front` holds the whole card until a later rename (O1 (a)).
+- `cards.front` holds the whole card until a later rename (O1).
 - A shape-5 card keeps its stored key, which no longer holds its back blank's text, until its next edit; a new card equal to it is then not found a duplicate.
 - `sync.md`, `server.md`, `media.md` and `home.md` take the implementation's changes when it lands.
 

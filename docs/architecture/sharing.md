@@ -93,8 +93,8 @@ The `sharing` domain: publishing a deck, and browsing, previewing, copying, repo
 - Whether the browse screen should page beyond its first 100 decks. No listing holds that many yet.
 - Whether a user should be able to see and undo their blocks. No screen lists them today.
 
-### Proposed: the 칸 frame
+### Planned: the 칸 frame
 
-Proposed in [ADR 0137](adr/0137-frame-a-card-by-its-blocks-each-block-type-deciding-whether-it-has-a-front-and-a-back.md), awaiting the owner's approval of the design and of its migration (#488). Nothing below holds today; once approved and implemented, it replaces the current decisions it names.
+Accepted in [ADR 0137](adr/0137-frame-a-card-by-its-blocks-each-block-type-deciding-whether-it-has-a-front-and-a-back.md) (#488) and not built yet. Nothing below holds today; the implementation moves it into the current decisions it names.
 
 - A copy holds the 칸 list as stored, its photos and sounds rewritten under new ids as today; the media read policy is unchanged, since the list stays in `front`. The preview draws each card as the deck screen's row does, split or whole.

@@ -77,9 +77,9 @@ Each line names a file and what it covers; the file holds the cases. The deck li
 
 ## Open questions
 
-### Proposed: the 칸 frame
+### Planned: the 칸 frame
 
-Proposed in [ADR 0137](adr/0137-frame-a-card-by-its-blocks-each-block-type-deciding-whether-it-has-a-front-and-a-back.md), awaiting the owner's approval of the design and of its migration (#488). Nothing below holds today; once approved and implemented, it replaces the current decisions it names.
+Accepted in [ADR 0137](adr/0137-frame-a-card-by-its-blocks-each-block-type-deciding-whether-it-has-a-front-and-a-back.md) (#488) and not built yet. Nothing below holds today; the implementation moves it into the current decisions it names.
 
 - **Card content.** `card-content.ts` reads and refuses the 칸 frame by `deck.md`'s rules and fixtures, converts an earlier card on read as the phone does, and decides whole from any 칸 with blanks, not from the front alone. The deck page's rows draw a card as its previous card is drawn; its search reads every 칸, revealed.
 - **Authoring.** Direct entry draws one group per 칸 as the phone's editor does, and every write, photo import's included, writes `free` v2 in the input format.
