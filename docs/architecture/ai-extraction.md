@@ -393,3 +393,10 @@ The `extract-cards` Edge Function that turns a photo of clear study material, su
 - Which argument Google refuses in our request. Every Gemini model tried fails with it: Gemini Flash (`google/gemini-3.8-flash`) and Gemini 4 Argon with `400 INVALID_ARGUMENT`, unbilled, and Gemini 2.5 Pro with two model errors that stopped it (#189).
 - The samples are rendered pages, not phone photos. Real photos can be added to `tools/eval/samples/` with a ground-truth file each.
 - `SUPABASE_SERVICE_ROLE_KEY` is Supabase's legacy key form. A project that disables legacy keys would need the function to read `SUPABASE_SECRET_KEYS` instead.
+
+### Planned: the 칸 frame
+
+Accepted in [ADR 0137](adr/0137-frame-a-card-by-its-blocks-each-block-type-deciding-whether-it-has-a-front-and-a-back.md) (#488) and not built yet. Nothing below holds today; the implementation moves it into the current decisions it names.
+
+- **Contract.** Unchanged: the function returns the same cards, and the mapping to 칸 is the app's and the web's.
+- **Sections and forms.** A vocabulary entry is saved as one 단어 칸, `ask` `term` for "앞면에 단어" and `meaning` for "앞면에 뜻", "양쪽 방향 모두" making both; its pronunciation and extras a 글 with a back alone. A note is a 글, its front and answer swapped by "앞면과 뒷면 바꾸기". A cloze card is its 빈칸 문장 alone and a table card a 글 of its name and its 표, with no filled-text back.
