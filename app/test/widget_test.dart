@@ -38,8 +38,9 @@ const _ada = UserId('00000000-0000-4000-8000-00000000000a');
 /// An extraction client the test never calls.
 final class _NoExtraction implements ExtractionClient {
   @override
-  Future<List<CandidateCard>?> extract(
+  Future<Extracted?> extract(
     JpegPhoto photo, {
+    String? cursor,
     required Future<void> cancel,
   }) => throw UnimplementedError('not called');
 
