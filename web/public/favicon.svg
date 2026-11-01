@@ -1,7 +1,24 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><title>smartman</title><style>g{stroke:#1F2A44} @media (prefers-color-scheme: dark){g{stroke:#FFFFFF}}</style><g transform="translate(-9.73 -8.27) scale(0.4173)"><g fill="none"  stroke-width="11" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M73 60 A55 55 0 1 0 127 60"/>
-    <path d="M52 44 L100 30 L148 44 L100 58 Z"/>
-    <path d="M73 50 L73 60 Q100 66 127 60 L127 50"/>
-    <circle cx="78" cy="108" r="16"/><circle cx="122" cy="108" r="16"/>
-    <path d="M94 107 Q100 101 106 107"/>
-  </g></g></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024"><title>knowno</title><circle cx="512" cy="512" r="512" fill="#FCEBD5"/><g transform="translate(61.44 61.44) scale(0.88)">
+<g fill="#E2483A">
+<ellipse cx="352" cy="896" rx="74" ry="36"/>
+<ellipse cx="682" cy="896" rx="74" ry="36"/>
+</g>
+<path fill="#FB7262" d="M500 104C676 100 788 236 812 430C826 548 884 676 874 776C866 858 762 890 516 892C270 894 156 862 148 782C138 676 192 552 206 432C228 240 324 108 500 104Z"/>
+<g fill="#F4544A">
+<ellipse cx="256" cy="560" rx="44" ry="36"/>
+<ellipse cx="762" cy="500" rx="42" ry="34"/>
+</g>
+<circle cx="396" cy="414" r="92" fill="#FFFFFF"/>
+<circle cx="620" cy="350" r="84" fill="#FFFFFF"/>
+<circle cx="424" cy="386" r="52" fill="#3B2118"/>
+<circle cx="646" cy="324" r="48" fill="#3B2118"/>
+<circle cx="444" cy="366" r="16" fill="#FFFFFF"/>
+<circle cx="664" cy="306" r="15" fill="#FFFFFF"/>
+<g fill="none" stroke="#E2483A" stroke-width="18" stroke-linecap="round">
+<path d="M268 298Q300 262 346 268"/>
+<path d="M610 196Q652 184 690 214"/>
+</g>
+<path fill="none" stroke="#3B2118" stroke-width="16" stroke-linecap="round" d="M488 590Q520 556 552 584"/>
+<path fill="#FB7262" stroke="#E2483A" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" d="M340 840C346 770 384 712 452 676C496 654 548 668 544 706C540 738 500 750 474 776C452 798 438 822 432 850"/>
+<path fill="none" stroke="#E2483A" stroke-width="16" stroke-linecap="round" d="M764 660Q806 730 772 806"/>
+</g></svg>

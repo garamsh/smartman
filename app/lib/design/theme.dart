@@ -28,7 +28,7 @@ abstract final class AppSpace {
 }
 
 /// The corner radii of the app's rounded surfaces, on one scale: group 14,
-/// button 12, chip and label 6, sheet 22 (#454).
+/// button 18, chip and label 6, sheet 22 (#454, ADR 0139).
 abstract final class AppRadius {
   /// The bottom corners of the sign-in screen's brand panel.
   static const panel = 40.0;
@@ -49,7 +49,7 @@ abstract final class AppRadius {
   static const group = 14.0;
 
   /// A button.
-  static const button = 12.0;
+  static const button = 18.0;
 
   /// A chip, and a label before a meaning.
   static const chip = 6.0;
@@ -64,10 +64,10 @@ abstract final class AppRadius {
 /// The heights and sizes of the app's controls and brand marks.
 abstract final class AppSize {
   /// The screen's or the sheet's primary action, at the bottom.
-  static const cta = 56.0;
+  static const cta = 60.0;
 
   /// Every other button.
-  static const button = 52.0;
+  static const button = 54.0;
 
   /// A one-line field.
   static const field = 52.0;
@@ -298,20 +298,20 @@ abstract final class AppType {
   );
 }
 
-/// The brand's marks, drawn from the files under `assets/brand/`, each in a
-/// light-ground and a dark-ground version.
+/// The brand's marks, drawn from the files under `assets/brand/`.
 abstract final class AppBrand {
-  /// The symbol and the wordmark side by side.
+  /// The mark on its circle, 알아몰라 and knowno side by side, in a
+  /// light-ground or a dark-ground version.
   static String lockup(Brightness brightness) =>
-      'assets/brand/smartman-lockup-${brightness.name}.png';
+      'assets/brand/knowno-lockup-${brightness.name}.png';
 
-  /// The symbol over the wordmark.
+  /// The mark on its circle over 알아몰라 and knowno, in a light-ground or a
+  /// dark-ground version.
   static String stacked(Brightness brightness) =>
-      'assets/brand/smartman-stacked-${brightness.name}.png';
+      'assets/brand/knowno-stacked-${brightness.name}.png';
 
-  /// The mascot alone, navy for a light ground and white for a dark one.
-  static String symbol(Brightness brightness) =>
-      'assets/brand/smartman-symbol-${brightness.name}.png';
+  /// The mascot on its cream circle, the same on either ground.
+  static const circle = 'assets/brand/knowno-circle.png';
 }
 
 /// The shadows the app draws, in the theme's [AppColors.shadow].
@@ -383,36 +383,37 @@ final class AppColors extends ThemeExtension<AppColors> {
     required this.deckSand,
   });
 
-  /// Light tokens: navy ink on white surfaces over a pale blue-grey ground.
+  /// Light tokens: warm cocoa ink on warm white surfaces over a cream ground,
+  /// the mascot's coral in [brandTint] and [onHero].
   static const light = AppColors(
-    ground: Color(0xFFF4F6FA),
-    surface: Color(0xFFFFFFFF),
+    ground: Color(0xFFFFF6E8),
+    surface: Color(0xFFFFFCF7),
     raised: Color(0xFFFFFFFF),
-    ink: Color(0xFF1F2A44),
+    ink: Color(0xFF3B2118),
     onPrimary: Color(0xFFFFFFFF),
-    ink2: Color(0xFF4A5470),
-    muted: Color(0xFF687187),
-    hairline: Color(0xFFE3E7EF),
-    outline: Color(0xFFD5DBE7),
-    brandTint: Color(0xFFE8ECF5),
-    hero: Color(0xFF1F2A44),
-    onHero: Color(0xFFFFFFFF),
-    brand: Color(0xFF1F2A44),
+    ink2: Color(0xFF64483D),
+    muted: Color(0xFF80695E),
+    hairline: Color(0xFFF2E6D6),
+    outline: Color(0xFFE8D8C5),
+    brandTint: Color(0xFFFFE3D0),
+    hero: Color(0xFF3B2118),
+    onHero: Color(0xFFFB7262),
+    brand: Color(0xFF3B2118),
     know: Color(0xFF1D8054),
     onKnow: Color(0xFFFFFFFF),
-    dontKnow: Color(0xFFE2574A),
-    dontKnowText: Color(0xFFC2402F),
+    dontKnow: Color(0xFFD6335F),
+    dontKnowText: Color(0xFFB3123F),
     onDontKnowText: Color(0xFFFFFFFF),
-    shadow: Color(0xFF1F2A44),
+    shadow: Color(0xFF3B2118),
     tintAmber: Color(0xFFFFF1D6),
     tintGreen: Color(0xFFE3F4EC),
-    tintRed: Color(0xFFFCE8E6),
+    tintRed: Color(0xFFFCE4EB),
     knowCard: Color(0xFFEAF6EF),
     knowLine: Color(0xFF9ED3B6),
     onKnowTint: Color(0xFF1D6B47),
-    dontKnowCard: Color(0xFFFCEEEC),
-    dontKnowLine: Color(0xFFEBB3AA),
-    onDontKnowTint: Color(0xFFB03A2B),
+    dontKnowCard: Color(0xFFFCE9EE),
+    dontKnowLine: Color(0xFFEDB0C0),
+    onDontKnowTint: Color(0xFFA81238),
     streak: Color(0xFFC26A0A),
     deckBlue: Color(0xFFE8ECF5),
     deckSky: Color(0xFFE0F0FA),
@@ -422,37 +423,37 @@ final class AppColors extends ThemeExtension<AppColors> {
     deckSand: Color(0xFFF4ECDF),
   );
 
-  /// Dark tokens: pale ink on navy surfaces, the primary fill inverted, and
-  /// the greens and reds lightened to meet WCAG AA on [surface].
+  /// Dark tokens: cream ink on warm espresso surfaces, the primary fill
+  /// inverted, and the greens and reds lightened to meet WCAG AA on [surface].
   static const dark = AppColors(
-    ground: Color(0xFF0E1424),
-    surface: Color(0xFF18203A),
-    raised: Color(0xFF232D4D),
-    ink: Color(0xFFEEF1F7),
-    onPrimary: Color(0xFF1F2A44),
-    ink2: Color(0xFFB5BED3),
-    muted: Color(0xFF9AA3BA),
-    hairline: Color(0xFF2A3352),
-    outline: Color(0xFF2E3858),
-    brandTint: Color(0xFF2A3560),
-    hero: Color(0xFF232D4D),
-    onHero: Color(0xFFFFFFFF),
-    brand: Color(0xFF1F2A44),
+    ground: Color(0xFF1F1512),
+    surface: Color(0xFF2B1E1A),
+    raised: Color(0xFF382823),
+    ink: Color(0xFFFFF1E3),
+    onPrimary: Color(0xFF3B2118),
+    ink2: Color(0xFFDCCABB),
+    muted: Color(0xFFBDA89A),
+    hairline: Color(0xFF3D2C26),
+    outline: Color(0xFF4A372F),
+    brandTint: Color(0xFF57342A),
+    hero: Color(0xFF382823),
+    onHero: Color(0xFFFB7262),
+    brand: Color(0xFF3B2118),
     know: Color(0xFF5ED39A),
-    onKnow: Color(0xFF0E1424),
-    dontKnow: Color(0xFFFF8577),
-    dontKnowText: Color(0xFFFF8577),
-    onDontKnowText: Color(0xFF0E1424),
+    onKnow: Color(0xFF1F1512),
+    dontKnow: Color(0xFFFF8FB0),
+    dontKnowText: Color(0xFFFF8FB0),
+    onDontKnowText: Color(0xFF1F1512),
     shadow: Color(0xFF000000),
     tintAmber: Color(0xFF4A3B1E),
     tintGreen: Color(0xFF1E3F33),
-    tintRed: Color(0xFF4A2624),
+    tintRed: Color(0xFF4C2233),
     knowCard: Color(0xFF17302A),
     knowLine: Color(0xFF2E6B50),
     onKnowTint: Color(0xFF5ED39A),
-    dontKnowCard: Color(0xFF3A1F24),
-    dontKnowLine: Color(0xFF7A3A36),
-    onDontKnowTint: Color(0xFFFF8577),
+    dontKnowCard: Color(0xFF3D1C2A),
+    dontKnowLine: Color(0xFF7E3350),
+    onDontKnowTint: Color(0xFFFF8FB0),
     streak: Color(0xFFF5A623),
     deckBlue: Color(0xFF2A3560),
     deckSky: Color(0xFF1D3A50),
@@ -489,16 +490,18 @@ final class AppColors extends ThemeExtension<AppColors> {
   /// The outline of a secondary button and a field.
   final Color outline;
 
-  /// A quiet brand fill: a chip, an avatar's circle, a mascot's circle.
+  /// A quiet tint of the mascot's coral: a chip, an avatar's circle, a filled
+  /// blank.
   final Color brandTint;
 
   /// The study coach's fill and the study screen's notice.
   final Color hero;
 
-  /// Text and the button fill on [hero].
+  /// The mascot's coral: text and the button fill on [hero]; never on a light
+  /// ground, where it falls short of AA.
   final Color onHero;
 
-  /// The brand navy in both themes: the label of a button on [hero].
+  /// The brand's cocoa in both themes: the label of a button on [hero].
   final Color brand;
 
   /// "Know", as text and icons on [surface] or [ground], and as a fill under [onKnow].
@@ -551,8 +554,8 @@ final class AppColors extends ThemeExtension<AppColors> {
   Color get flameOutline => muted;
 
   /// The streak flame's warm core, from its fourth stage: [streak] halfway
-  /// toward [onHero], so the web's token set needs no flame of its own.
-  Color get flameCore => Color.lerp(streak, onHero, 0.5)!;
+  /// toward white, so the web's token set needs no flame of its own.
+  Color get flameCore => Color.lerp(streak, const Color(0xFFFFFFFF), 0.5)!;
 
   /// The streak flame's glow, from its fourth stage.
   Color get flameGlow => streak.withValues(alpha: 0.35);
@@ -821,7 +824,7 @@ ThemeData _theme(Brightness brightness, AppColors colors) {
         shape: control,
       ),
     ),
-    // On, the navy track; off, a muted thumb and outline, each at least 3:1
+    // On, the ink track; off, a muted thumb and outline, each at least 3:1
     // on the ground.
     switchTheme: SwitchThemeData(
       thumbColor: WidgetStateProperty.resolveWith(

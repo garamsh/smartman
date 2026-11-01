@@ -187,7 +187,7 @@ describe("the deck page", () => {
     expect(empty).toHaveTextContent("카드를 추가해 시작해 보세요.");
     expect(screen.queryByRole("searchbox", { name: "카드 검색" })).not.toBeInTheDocument();
     // No mascot: it heads the first-run home alone (ADR 0116).
-    expect(empty.querySelector('img[src*="smartman-symbol"]')).toBeNull();
+    expect(empty.querySelector('img[src*="knowno-circle"]')).toBeNull();
     // Control: a deck with cards lists them instead.
     cleanup();
     await open("d-fr");

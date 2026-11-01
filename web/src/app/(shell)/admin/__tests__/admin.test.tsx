@@ -244,7 +244,7 @@ describe("the reports page", () => {
     await user.click(screen.getByRole("button", { name: "숨기기" }));
     const question = screen.getByRole("group", { name: "'French' 덱을 공개 목록에서 숨길까요?" });
     expect(within(question).getByRole("button", { name: "숨기기" })).toHaveFocus();
-    // A reversible action's confirm comes last, after 취소, in the navy fill.
+    // A reversible action's confirm comes last, after 취소, in the ink fill.
     expect(
       within(question)
         .getAllByRole("button")

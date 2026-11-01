@@ -4,8 +4,7 @@ import 'mascot.dart';
 import '../../design/theme.dart';
 import '../../design/word_break.dart';
 
-/// How to start, where there is nothing to study yet: the mascot in a white
-/// circle where [mascot] is true, as on the first run alone, [title] read as
+/// How to start, where there is nothing to study yet: the mascot where [mascot] is true, as on the first run alone, [title] read as
 /// a heading, one [body] line, and the [actions] that start, stacked.
 class FirstRun extends StatelessWidget {
   const FirstRun({
@@ -33,9 +32,7 @@ class FirstRun extends StatelessWidget {
       ),
       children: [
         if (mascot) ...[
-          Center(
-            child: Mascot(size: AppSize.mascotLarge, fill: colors.surface),
-          ),
+          const Center(child: Mascot(size: AppSize.mascotLarge)),
           const SizedBox(height: AppSpace.s24),
         ],
         Semantics(

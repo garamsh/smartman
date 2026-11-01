@@ -51,7 +51,7 @@ class StudyCoachFinger extends StatelessWidget {
   }
 }
 
-/// A first-use coach's caption on the navy surface, in the place of the
+/// A first-use coach's caption on the hero surface, in the place of the
 /// screen's main action: the step's [line], a dot for each of [steps] with
 /// [step] (from 0) drawn long, "건너뛰기" and "다음", the last step's
 /// "시작하기". A screen reader hears the step of how many as it changes.

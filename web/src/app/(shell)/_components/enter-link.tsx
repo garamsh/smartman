@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useEffect, useRef } from "react";
 
 /**
- * The page's one study button, [label], in the navy fill, which opens [href], showing its Enter
+ * The page's one study button, [label], in the ink fill, which opens [href], showing its Enter
  * key from 1024 px wide: sized as a row inside a white card, or with [onGround] across the page's
  * two columns on its ground. Enter opens it from anywhere on the page but a control or a field,
  * which keep their own Enter.
