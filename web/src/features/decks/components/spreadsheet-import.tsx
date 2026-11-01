@@ -384,7 +384,7 @@ export function SpreadsheetImport({
                         onChange={(event) => {
                           setName(event.target.value);
                         }}
-                        className="min-h-tap-target min-w-0 flex-1 rounded-chip bg-transparent px-2 text-right text-body text-ink placeholder:text-muted focus:outline-[1.5px] focus:outline-ink"
+                        className="min-h-tap-target min-w-0 flex-1 rounded-field bg-transparent px-2 text-right text-body text-ink placeholder:text-muted focus:outline-[1.5px] focus:outline-ink"
                       />
                     </label>
                   )}
@@ -495,7 +495,7 @@ function Choice({
         onChange={(event) => {
           change(event.target.value);
         }}
-        className="min-h-tap-target min-w-0 max-w-[60%] truncate rounded-chip bg-transparent text-right text-body text-ink-2 focus-visible:outline-2 focus-visible:outline-ink disabled:opacity-50"
+        className="min-h-tap-target min-w-0 max-w-[60%] truncate rounded-field bg-transparent text-right text-body text-ink-2 focus-visible:outline-2 focus-visible:outline-ink disabled:opacity-50"
       >
         {options.map(([option, label]) => (
           <option key={option} value={option}>
