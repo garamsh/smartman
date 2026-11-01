@@ -170,6 +170,8 @@ void main() {
   Future<void> addCard(WidgetTester tester, String front, String back) async {
     await tester.tap(find.text('Add card'));
     await tester.pumpAndSettle();
+    await tester.tap(find.text('Enter by hand'));
+    await tester.pumpAndSettle();
     await enterFront(tester, front);
     await enterBack(tester, back);
     await tester.tap(find.text('Save'));
@@ -404,6 +406,8 @@ void main() {
       await createDeckAndOpen(tester, 'French');
       await tester.tap(find.text('Add card'));
       await tester.pumpAndSettle();
+      await tester.tap(find.text('Enter by hand'));
+      await tester.pumpAndSettle();
     }
 
     /// Adds a Meanings block to the back, whose one meaning has a label
@@ -598,6 +602,8 @@ void main() {
       // Its one primary opens the deck's card editor; with a card added, the
       // tab shows the day.
       await tester.tap(find.text('Add card'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Enter by hand'));
       await tester.pumpAndSettle();
       await enterFront(tester, 'Chat');
       await enterBack(tester, 'cat');
@@ -886,6 +892,8 @@ void main() {
         await tester.pumpAndSettle();
 
         await tester.tap(find.text('Add card'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Enter by hand'));
         await tester.pumpAndSettle();
         await enterFront(tester, 'Chien');
         await meetsGuidelines();

@@ -267,6 +267,31 @@ void main() {
       expect(row.updatedAt.isAfter(french.updatedAt), isTrue);
     });
 
+    test('listKeys gives the keys of the deck\'s live cards alone', () async {
+      final deck = await repository.createDeck('Colours');
+      final other = await repository.createDeck('Other');
+      Future<Card> add(DeckId into, String front) async {
+        final saved = await repository.addCard(
+          into,
+          front: [TextContent(front)],
+          back: const [TextContent('back')],
+        );
+        return (saved as CardSaved).card;
+      }
+
+      await add(deck.id, ' Rose  Red ');
+      final deleted = await add(deck.id, 'Gone');
+      await add(other.id, 'Elsewhere');
+      expect(await repository.listKeys(deck.id), {
+        CardKey.fromFront('rose red'),
+        CardKey.fromFront('gone'),
+      });
+      await repository.deleteCard(deleted.id);
+      expect(await repository.listKeys(deck.id), {
+        CardKey.fromFront('rose red'),
+      });
+    });
+
     group('adding a framed card', () {
       const cloze = ClozeContent('___ is red.', ['Rose']);
       const cells = [BlankCell(cloze), TextCell(back: 'A flower.')];

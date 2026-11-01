@@ -32,6 +32,11 @@ final class FromPhoto extends AddSource {
   const FromPhoto();
 }
 
+/// Cards read from a spreadsheet's rows, stored as [CardSource.import].
+final class FromFile extends AddSource {
+  const FromFile();
+}
+
 /// Cards copied from another user's public deck [origin], stored as
 /// [CardSource.copy] with that origin, their photos and sounds copied from
 /// [owner]'s media as the user's own (ADR 0113).

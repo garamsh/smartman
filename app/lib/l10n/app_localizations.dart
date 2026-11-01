@@ -2988,6 +2988,210 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'계속 쓰기'**
   String get keepWriting;
+
+  /// The option that adds cards from a spreadsheet file.
+  ///
+  /// In ko, this message translates to:
+  /// **'파일에서 고르기'**
+  String get spreadsheetPick;
+
+  /// The option's second line.
+  ///
+  /// In ko, this message translates to:
+  /// **'엑셀이나 CSV 파일의 행을 카드로 만들어요'**
+  String get spreadsheetPickBody;
+
+  /// The title of the sheet that opens a spreadsheet file.
+  ///
+  /// In ko, this message translates to:
+  /// **'파일에서 카드 추가'**
+  String get spreadsheetStartTitle;
+
+  /// The sheet's body, stating the limits before a file is chosen.
+  ///
+  /// In ko, this message translates to:
+  /// **'엑셀(.xlsx)이나 CSV 파일의 한 행이 카드 한 장이 돼요. 파일은 5MB, 1,000행까지 읽어요.'**
+  String get spreadsheetStartBody;
+
+  /// The button that opens the device's file picker.
+  ///
+  /// In ko, this message translates to:
+  /// **'파일 고르기'**
+  String get spreadsheetChoose;
+
+  /// What a screen reader reads while a file is read.
+  ///
+  /// In ko, this message translates to:
+  /// **'읽는 중'**
+  String get spreadsheetReading;
+
+  /// The action that replaces the file read.
+  ///
+  /// In ko, this message translates to:
+  /// **'다른 파일'**
+  String get spreadsheetAnother;
+
+  /// The title of the screen listing a file's cards.
+  ///
+  /// In ko, this message translates to:
+  /// **'카드 확인'**
+  String get spreadsheetReviewTitle;
+
+  /// The heading over the sheet and column choices.
+  ///
+  /// In ko, this message translates to:
+  /// **'열'**
+  String get spreadsheetColumns;
+
+  /// The row choosing a workbook's sheet.
+  ///
+  /// In ko, this message translates to:
+  /// **'시트'**
+  String get spreadsheetSheet;
+
+  /// The row choosing the label column.
+  ///
+  /// In ko, this message translates to:
+  /// **'라벨'**
+  String get spreadsheetLabelColumn;
+
+  /// The row choosing the example column.
+  ///
+  /// In ko, this message translates to:
+  /// **'예문'**
+  String get spreadsheetExampleColumn;
+
+  /// An optional column left unchosen.
+  ///
+  /// In ko, this message translates to:
+  /// **'없음'**
+  String get spreadsheetNoColumn;
+
+  /// The switch: the first row makes no card.
+  ///
+  /// In ko, this message translates to:
+  /// **'첫 행은 머리글'**
+  String get spreadsheetHeaderRow;
+
+  /// Said when two fields read one column.
+  ///
+  /// In ko, this message translates to:
+  /// **'항목마다 다른 열을 골라 주세요'**
+  String get spreadsheetDistinct;
+
+  /// Leaves every card out.
+  ///
+  /// In ko, this message translates to:
+  /// **'모두 빼기'**
+  String get spreadsheetExcludeAll;
+
+  /// Selects every card.
+  ///
+  /// In ko, this message translates to:
+  /// **'모두 선택'**
+  String get spreadsheetSelectAll;
+
+  /// A row's number in the sheet.
+  ///
+  /// In ko, this message translates to:
+  /// **'{row}행'**
+  String spreadsheetRow(int row);
+
+  /// What a screen reader reads for a card's check.
+  ///
+  /// In ko, this message translates to:
+  /// **'{row}행 {front}'**
+  String spreadsheetRowCard(int row, String front);
+
+  /// Rows that make no card.
+  ///
+  /// In ko, this message translates to:
+  /// **'앞면이나 뒷면이 빈 행 {count}개는 건너뛰어요'**
+  String spreadsheetSkipped(int count);
+
+  /// Rows refused for a long cell.
+  ///
+  /// In ko, this message translates to:
+  /// **'{rows}은 {limit}자가 넘는 칸이 있어 뺐어요'**
+  String spreadsheetTooLong(String rows, int limit);
+
+  /// The first five rows and how many more.
+  ///
+  /// In ko, this message translates to:
+  /// **'{rows} 외 {count}개 행'**
+  String spreadsheetRowsMore(String rows, int count);
+
+  /// A row repeating a stored card.
+  ///
+  /// In ko, this message translates to:
+  /// **'{row}행은 이 덱에 이미 있는 카드예요'**
+  String spreadsheetDuplicateStored(int row);
+
+  /// A row repeating an earlier row.
+  ///
+  /// In ko, this message translates to:
+  /// **'{row}행의 앞면이 {earlier}행과 같아요'**
+  String spreadsheetDuplicateRow(int row, int earlier);
+
+  /// Leaves the repeating row out.
+  ///
+  /// In ko, this message translates to:
+  /// **'{row}행 빼기'**
+  String spreadsheetLeaveOut(int row);
+
+  /// Saves with the repeating row.
+  ///
+  /// In ko, this message translates to:
+  /// **'그래도 추가'**
+  String get spreadsheetAddAnyway;
+
+  /// The sheet asked on leaving with unsaved cards.
+  ///
+  /// In ko, this message translates to:
+  /// **'읽은 카드를 버릴까요?'**
+  String get spreadsheetDiscardTitle;
+
+  /// The sheet's consequence.
+  ///
+  /// In ko, this message translates to:
+  /// **'저장하지 않은 카드는 사라져요.'**
+  String get spreadsheetDiscardBody;
+
+  /// A file of another type.
+  ///
+  /// In ko, this message translates to:
+  /// **'.xlsx나 .csv 파일을 골라 주세요'**
+  String get spreadsheetWrongType;
+
+  /// A file over the limit.
+  ///
+  /// In ko, this message translates to:
+  /// **'파일이 5MB보다 커서 읽지 못했어요. 파일을 나눠 다시 골라 주세요.'**
+  String get spreadsheetTooLarge;
+
+  /// A CSV that is not UTF-8.
+  ///
+  /// In ko, this message translates to:
+  /// **'CSV를 읽지 못했어요. UTF-8 CSV로 저장해 다시 골라 주세요.'**
+  String get spreadsheetNotUtf8;
+
+  /// A workbook that cannot be read.
+  ///
+  /// In ko, this message translates to:
+  /// **'파일을 읽지 못했어요. 엑셀에서 다시 저장해 골라 주세요.'**
+  String get spreadsheetUnreadable;
+
+  /// A sheet over the row limit.
+  ///
+  /// In ko, this message translates to:
+  /// **'행이 1,000개보다 많아 읽지 못했어요. 파일을 나눠 다시 골라 주세요.'**
+  String get spreadsheetTooManyRows;
+
+  /// A file the device could not hand over.
+  ///
+  /// In ko, this message translates to:
+  /// **'파일을 읽지 못했어요. 다시 골라 주세요.'**
+  String get spreadsheetNotRead;
 }
 
 class _AppLocalizationsDelegate

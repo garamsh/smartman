@@ -42,7 +42,7 @@ class DeckScreen extends ConsumerStatefulWidget {
 enum _DeckAction { rename, appearance, publish, unpublish, delete }
 
 /// The ways the add sheet offers to add a card.
-enum _Add { byHand, camera, album }
+enum _Add { byHand, camera, album, file }
 
 class _DeckScreenState extends ConsumerState<DeckScreen> {
   /// The card search, or null while it is closed.
@@ -56,9 +56,7 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
     super.initState();
     if (widget.addingCard) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        final photoImport = ref.read(photoImportProvider);
-        photoImport == null ? _open(null) : _addCard(photoImport);
+        if (mounted) unawaited(_addCard());
       });
     }
   }
@@ -68,7 +66,6 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
     final cards = ref.watch(cardsProvider(widget.deck.id));
-    final photoImport = ref.watch(photoImportProvider);
     final sharing = ref.watch(sharingServiceProvider);
     final online = switch (ref.watch(onlineProvider)) {
       AsyncData(:final value) => value,
@@ -243,9 +240,7 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
                 ? AppButtonVariant.primary
                 : AppButtonVariant.secondary,
             size: AppButtonSize.cta,
-            onPressed: photoImport == null
-                ? () => _open(null)
-                : () => _addCard(photoImport),
+            onPressed: _addCard,
           ),
         ),
       ),
@@ -307,9 +302,11 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
   }
 
   /// Offers the ways to add a card, named as the new-deck sheet names them:
-  /// by hand, or from a photo taken with the camera or picked from the album.
-  Future<void> _addCard(PhotoImport photoImport) async {
+  /// by hand, with photo import from a photo taken with the camera or picked
+  /// from the album, or from a spreadsheet.
+  Future<void> _addCard() async {
     final l10n = AppLocalizations.of(context);
+    final photoImport = ref.read(photoImportProvider);
     final choice = await showOptionSheet<_Add>(
       context,
       title: l10n.newCard,
@@ -319,12 +316,23 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
           body: l10n.addCardManuallyBody,
           value: _Add.byHand,
         ),
+        if (photoImport != null) ...[
+          (
+            title: l10n.photoCamera,
+            body: l10n.photoCameraBody,
+            value: _Add.camera,
+          ),
+          (
+            title: l10n.photoAlbum,
+            body: l10n.photoAlbumBody,
+            value: _Add.album,
+          ),
+        ],
         (
-          title: l10n.photoCamera,
-          body: l10n.photoCameraBody,
-          value: _Add.camera,
+          title: l10n.spreadsheetPick,
+          body: l10n.spreadsheetPickBody,
+          value: _Add.file,
         ),
-        (title: l10n.photoAlbum, body: l10n.photoAlbumBody, value: _Add.album),
       ],
     );
     if (!mounted) return;
@@ -332,9 +340,11 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
       case _Add.byHand:
         await _open(null);
       case _Add.camera:
-        await _importPhoto(photoImport, PhotoOrigin.camera);
+        await _importPhoto(PhotoOrigin.camera);
       case _Add.album:
-        await _importPhoto(photoImport, PhotoOrigin.album);
+        await _importPhoto(PhotoOrigin.album);
+      case _Add.file:
+        await importFromSpreadsheet(context, widget.deck.id);
       case null:
         return;
     }
@@ -342,7 +352,9 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
 
   /// Starts photo import for this deck from a photo by [origin]. When it
   /// saved into another deck, that deck's list replaces this one.
-  Future<void> _importPhoto(PhotoImport photoImport, PhotoOrigin origin) async {
+  Future<void> _importPhoto(PhotoOrigin origin) async {
+    final photoImport = ref.read(photoImportProvider);
+    if (photoImport == null) return;
     final navigator = Navigator.of(context);
     final deck = await photoImport(context, widget.deck.id, origin);
     if (deck == null || deck.id == widget.deck.id || !mounted) return;

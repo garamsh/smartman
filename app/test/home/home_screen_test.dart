@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
@@ -123,6 +124,7 @@ Future<_List> _open(
   Duration? pace,
   Set<String> unreadable = const {},
   Widget Function(DeckId? deck, PhotoOrigin origin)? photoImport,
+  SpreadsheetPick? spreadsheet,
   List<String> decks = const ['Alpha', 'Beta', 'Gamma'],
   bool minutesAsked = true,
   Locale locale = const Locale('en'),
@@ -227,6 +229,8 @@ Future<_List> _open(
         deckRepositoryProvider.overrideWithValue(repository),
         ...homeOverrides(db, storage: storage),
         if (photoImport != null) photoImportProvider.overrideWithValue(pushed),
+        if (spreadsheet != null)
+          spreadsheetPickProvider.overrideWithValue(spreadsheet),
       ],
       child: MaterialApp(
         theme: theme ?? lightTheme,
@@ -254,6 +258,15 @@ Finder _card(Finder inside) => find
       ),
     )
     .first;
+
+/// Hands out one row of a CSV as the file picked.
+final class _OneFile implements SpreadsheetPick {
+  const _OneFile();
+
+  @override
+  Future<OpenedFile?> pick() async =>
+      parseSpreadsheet('words.csv', utf8.encode('pear,배'));
+}
 
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
@@ -365,8 +378,9 @@ void main() {
         expect(button('Add card').variant, AppButtonVariant.primary);
         expect(button('Open deck').variant, AppButtonVariant.text);
 
-        // "Add card" opens the deck and its card editor.
+        // "Add card" opens the deck and its add sheet.
         await list.tap('Add card');
+        await list.tap('Enter by hand');
         expect(find.byType(CardEditorScreen), findsOneWidget);
         await tester.binding.handlePopRoute();
         await tester.pumpAndSettle();
@@ -1149,6 +1163,29 @@ void main() {
     );
 
     testWidgets(
+      'Choose a file on the new-deck sheet saves the rows reviewed into the deck chosen and opens it',
+      (tester) async {
+        final list = await _open(tester, spreadsheet: const _OneFile());
+        await list.decks();
+
+        await list.newDeck();
+        await list.tap('Choose a file');
+        await list.tap('Choose file');
+        await list.tap('Add to');
+        await list.tap('Beta');
+        await tester.tap(find.widgetWithText(AppButton, 'Add 1 card'));
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 50)),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byType(DeckScreen), findsOneWidget);
+        expect(find.text('Beta'), findsOneWidget);
+        await list.close();
+      },
+    );
+
+    testWidgets(
       'Create a deck under the rows opens the new-deck sheet, which makes one by hand, and offers no photo without photo import',
       (tester) async {
         final list = await _open(tester);
@@ -1161,6 +1198,7 @@ void main() {
         expect(find.text('Enter by hand'), findsOneWidget);
         expect(find.text('Take photo'), findsNothing);
         expect(find.text('Choose from album'), findsNothing);
+        expect(find.text('Choose a file'), findsOneWidget);
         await list.tap('Enter by hand');
         // The name sheet is "New deck", as photo import's is.
         expect(shownText('New deck'), findsOneWidget);
@@ -1339,7 +1377,7 @@ void main() {
         await list.newDeck();
 
         final rows = find.byType(AppListRow);
-        expect(rows, findsNWidgets(3));
+        expect(rows, findsNWidgets(4));
         expect(
           find.descendant(of: rows, matching: find.byType(Icon)),
           findsNothing,
@@ -1349,6 +1387,7 @@ void main() {
         expect(row('Enter by hand').subtitle, isNull);
         expect(row('Take photo').subtitle, isNotNull);
         expect(row('Choose from album').subtitle, isNotNull);
+        expect(row('Choose a file').subtitle, isNotNull);
         await list.close();
       },
     );
