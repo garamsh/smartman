@@ -7,7 +7,7 @@ import 'account_state.dart';
 import 'providers.dart';
 
 /// The signed-in account's initial in a circle of [size]: the primary fill
-/// with its text colour, so it is navy in the light theme and inverted in the
+/// with its text colour, so it is cocoa in the light theme and inverted in the
 /// dark one. An account without an email shows a person.
 class AccountAvatar extends ConsumerWidget {
   const AccountAvatar({super.key, required this.size});

@@ -167,7 +167,7 @@ describe("the 오늘 and 덱 pages", () => {
     expect(card.getByRole("link", { name: "모두 학습" })).toHaveClass("bg-ink", "text-on-primary");
     expectTextReadable(backlog);
     // The mascot with no badge: the card's one icon is play, on its button (ADR 0116).
-    expect(backlog.querySelector('img[src*="smartman-symbol"]')).not.toBeNull();
+    expect(backlog.querySelector('img[src*="knowno-circle"]')).not.toBeNull();
     expect([...backlog.querySelectorAll("svg")].map((icon) => icon.closest("a") !== null)).toEqual([
       true,
     ]);
@@ -534,7 +534,7 @@ describe("the 오늘 and 덱 pages", () => {
     }
   });
 
-  it("with nothing left draws the phone's done card: the next review in its three forms, the goal reached and 학습하기 in the navy fill", async () => {
+  it("with nothing left draws the phone's done card: the next review in its three forms, the goal reached and 학습하기 in the ink fill", async () => {
     const card = () => screen.getByRole("region", { name: "오늘 할 카드를 다 했어요" });
     // Thursday 15 January 2026 in Seoul. Each card is answered today, so the goal is reached.
     for (const [dueIn, line] of [
@@ -568,7 +568,7 @@ describe("the 오늘 and 덱 pages", () => {
     expect(within(card()).getAllByText("1일 연속")).toHaveLength(1);
     // The mascot with no z's beside it, the goal's chip its words, and the streak's chip its
     // flame, the one icon a chip keeps (ADR 0116).
-    expect(card().querySelector('img[src*="smartman-symbol"]')).not.toBeNull();
+    expect(card().querySelector('img[src*="knowno-circle"]')).not.toBeNull();
     expect(card().textContent).not.toMatch(/z/);
     expect(within(card()).getByText("목표 1장 달성").querySelector("svg")).toBeNull();
     expect(within(card()).getByText("1일 연속").querySelector("svg")).not.toBeNull();
@@ -847,7 +847,7 @@ describe("the 오늘 and 덱 pages", () => {
       expect(screen.getByRole("heading", { name: title })).toBeInTheDocument();
       expect(screen.getByText(pointer)).toBeInTheDocument();
       // The first-run home is the one empty state the mascot heads (ADR 0116).
-      expect(document.querySelector('img[src*="smartman-symbol"]')).not.toBeNull();
+      expect(document.querySelector('img[src*="knowno-circle"]')).not.toBeNull();
       expect(screen.queryByRole("heading", { name: /^오늘 할 카드/ })).not.toBeInTheDocument();
       expect(screen.queryByRole("region", { name: "덱 목록" })).not.toBeInTheDocument();
       // First-run creation is available on the web.
@@ -868,7 +868,7 @@ describe("the 오늘 and 덱 pages", () => {
       screen.queryByRole("heading", { name: "오늘 할 카드를 다 했어요" }),
     ).not.toBeInTheDocument();
     // No mascot: it heads the first-run home alone (ADR 0116).
-    expect(document.querySelector('img[src*="smartman-symbol"]')).toBeNull();
+    expect(document.querySelector('img[src*="knowno-circle"]')).toBeNull();
     // The web adds no card, so it offers no action.
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
     cleanup();

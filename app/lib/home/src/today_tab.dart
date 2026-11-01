@@ -352,7 +352,7 @@ class _BacklogCard extends StatelessWidget {
         Row(
           spacing: AppSpace.s16,
           children: [
-            Mascot(size: AppSize.mascotGuide, fill: colors.brandTint),
+            const Mascot(size: AppSize.mascotGuide),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -437,10 +437,7 @@ class _DoneCard extends StatelessWidget {
         child: Column(
           spacing: AppSpace.s8,
           children: [
-            Mascot(
-              size: AppSize.mascotMedium + AppSpace.s12,
-              fill: colors.surface,
-            ),
+            const Mascot(size: AppSize.mascotMedium + AppSpace.s12),
             const SizedBox(height: AppSpace.s4),
             Semantics(
               header: true,

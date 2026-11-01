@@ -17,8 +17,8 @@ describe("the login page", () => {
     // is matched as a substring; e2e/sign-in.spec.ts asserts the whole name in a browser.
     const heading = screen.getByRole("heading", { level: 1, name: /알아몰라/ });
     expect(Array.from(heading.querySelectorAll("img"), (img) => img.getAttribute("src"))).toEqual([
-      "/brand/smartman-stacked-light.svg",
-      "/brand/smartman-stacked-dark.svg",
+      "/brand/knowno-stacked-light.svg",
+      "/brand/knowno-stacked-dark.svg",
     ]);
     // The phone's welcomeBody, its line break kept.
     expect(screen.getByText(/^밀어서 응답하고,/).textContent).toBe(

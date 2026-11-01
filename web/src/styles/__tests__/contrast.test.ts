@@ -27,11 +27,11 @@ const pairs: [string, string, string][] = [
   ["the tab bar's other pages on the surface", "muted", "surface"],
   ["the today, backlog and deck page cards' figures and pills on the surface", "ink", "surface"],
   ["the today, backlog and deck page cards' quiet text on the surface", "muted", "surface"],
-  ["the today, backlog and deck page cards' buttons on the navy fill", "on-primary", "ink"],
+  ["the today, backlog and deck page cards' buttons on the ink fill", "on-primary", "ink"],
   ["the done card's heading on its tint", "ink", "brand-tint"],
   ["the done card's next review on its tint", "ink-2", "brand-tint"],
   ["the done card's pills on the surface", "ink", "surface"],
-  ["the done card's 학습하기 on the navy fill", "on-primary", "ink"],
+  ["the done card's 학습하기 on the ink fill", "on-primary", "ink"],
   ["the catch-up's line and labels on the surface", "muted", "surface"],
   ["the last seven days' labels and a deck's progress on the surface", "muted", "surface"],
   ["the date and the breadcrumb on the ground", "muted", "ground"],
@@ -109,8 +109,8 @@ const stateShare =
  * where they appear.
  */
 const statePairs: [string, string, string, string][] = [
-  ["a navy button's label", "on-primary", "ink", "on-primary"],
-  ["an admin navy button's label", "surface", "ink", "surface"],
+  ["an ink button's label", "on-primary", "ink", "on-primary"],
+  ["an admin ink button's label", "surface", "ink", "surface"],
   ["an outlined button's label on the surface", "ink", "surface", "ink"],
   ["an outlined admin button's label on the ground", "ink", "ground", "ink"],
   ["the side menu's other pages", "ink-2", "surface", "ink-2"],
@@ -127,8 +127,8 @@ const statePairs: [string, string, string, string][] = [
   ["a 안다 card's back", "ink-2", "know-card", "ink"],
   ["a 모른다 card's front", "ink", "dont-know-card", "ink"],
   ["a 모른다 card's back", "ink-2", "dont-know-card", "ink"],
-  ["the coach's 건너뛰기 on the navy", "on-hero", "hero", "on-hero"],
-  ["the coach's 다음 on white", "hero", "on-hero", "hero"],
+  ["the coach's 건너뛰기 on the hero", "on-hero", "hero", "on-hero"],
+  ["the coach's 다음 on the coral", "hero", "on-hero", "hero"],
   ["Google's label on its fill", "google-label", "google-fill", "google-label"],
 ];
 

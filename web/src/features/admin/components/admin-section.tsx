@@ -10,7 +10,7 @@ const buttonBase =
   "pressable flex min-h-button items-center justify-center self-start rounded-button px-5 text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-50";
 
 /**
- * The admin area's buttons by role: the screen's one primary in the navy fill, a secondary
+ * The admin area's buttons by role: the screen's one primary in the ink fill, a secondary
  * outlined, a destructive one as red text, and the red fill only as the last step of an action
  * that cannot be undone (`design.md` §Details).
  */

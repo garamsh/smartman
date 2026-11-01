@@ -97,7 +97,7 @@ describe("the consent page", () => {
     expect(read).toEqual([pending]);
   });
 
-  it("draws the request as one group, 취소 outlined and 연결 the one navy fill last, in three type sizes", async () => {
+  it("draws the request as one group, 취소 outlined and 연결 the one ink fill last, in three type sizes", async () => {
     const { container } = await open(pending);
 
     const buttons = screen.getAllByRole("button");

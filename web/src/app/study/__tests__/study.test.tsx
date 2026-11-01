@@ -461,7 +461,7 @@ describe("the study page", () => {
       // up; yesterday and today in a row.
       expect(completionLine()).toBe("3 안다1 모른다2분연속 2일");
       // No mascot, and the flame its one icon (ADR 0116).
-      expect(completion.querySelector('img[src*="smartman-symbol"]')).toBeNull();
+      expect(completion.querySelector('img[src*="knowno-circle"]')).toBeNull();
       expect(
         [...completion.querySelectorAll("svg")].map((icon) => icon.getAttribute("class")),
       ).toEqual([expect.stringContaining("lucide-flame")]);

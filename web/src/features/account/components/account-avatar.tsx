@@ -1,5 +1,5 @@
 /**
- * The account's initial in a circle: the primary fill with its text colour, navy in the light
+ * The account's initial in a circle: the primary fill with its text colour, cocoa in the light
  * theme and inverted in the dark one. Decorative; the control around it carries the name.
  */
 export function AccountAvatar({ email, size }: { email: string | null; size: "small" | "large" }) {

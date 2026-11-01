@@ -1,6 +1,6 @@
 # ADR 0134: Name the app knowno, 알아몰라 in Korean, serve it at knowno.app, identify it as app.knowno, and reach the backend at api.knowno.app
 
-> Status: accepted
+> Status: accepted; its unchanged marks superseded by ADR-0139
 > Date: 2026-11-01
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.

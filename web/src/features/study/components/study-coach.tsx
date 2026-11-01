@@ -34,7 +34,7 @@ const button =
   "pressable inline-flex min-h-tap-target items-center justify-center rounded-button px-5 text-secondary font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-hero";
 
 /**
- * The coach's caption on the navy surface in the answer buttons' place: the step's line, a dot
+ * The coach's caption on the hero surface in the answer buttons' place: the step's line, a dot
  * for each step with this one drawn long, "건너뛰기" and "다음", the last step's "시작하기". What
  * a screen reader hears as the step changes is [coachAnnouncement], in a live region the screen
  * keeps mounted.
