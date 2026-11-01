@@ -6,8 +6,10 @@ import { type MouseEvent, useEffect, useRef } from "react";
 
 import type { Completion } from "../session";
 
+import { Mascot } from "@/design/brand";
+
 /**
- * The completion card in the current card's place once no card is left today: the heading, today's answers, time and streak, and the choice to go on with the new cards past
+ * The completion card in the current card's place once no card is left today: the happy mascot, the heading, today's answers, time and streak, and the choice to go on with the new cards past
  * today's, through [onStudyOn], or to stop, through [onStop] before the link is followed; with
  * none left, a line saying so in place of going on. It takes the focus to its first choice when it appears, so a keyboard reaches it at once.
  */
@@ -36,6 +38,7 @@ export function CompletionCard({
       aria-labelledby="completion-title"
       className="flex flex-col items-center gap-3 rounded-card bg-surface px-5 pt-7 pb-5 text-center shadow-raised"
     >
+      <Mascot expression="happy" className="size-mascot-medium" />
       <h2 id="completion-title" className="text-title">
         오늘 학습 완료
       </h2>
@@ -59,7 +62,7 @@ export function CompletionCard({
             ref={studyOn}
             type="button"
             onClick={onStudyOn}
-            className="pressable flex min-h-cta items-center justify-center rounded-button bg-ink px-6 text-label text-on-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+            className="pressable flex min-h-cta items-center justify-center rounded-button bg-primary px-6 text-label text-on-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
           >
             학습하기
           </button>

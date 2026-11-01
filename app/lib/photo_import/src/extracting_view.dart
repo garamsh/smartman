@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 
 import '../../design/app_button.dart';
 import '../../design/app_list_row.dart';
+import '../../design/mascot.dart';
 import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
 import 'import_job.dart';
 
-/// The photo, "카드를 찾고 있어요", an indeterminate bar and skeleton rows
-/// while the cards are extracted, with the privacy note and a cancel.
+/// The photo, "카드를 찾고 있어요" beside the thinking mascot, an indeterminate
+/// bar and skeleton rows while the cards are extracted, with the privacy note
+/// and a cancel.
 class ExtractingView extends StatelessWidget {
   const ExtractingView({
     super.key,
@@ -61,6 +63,10 @@ class ExtractingView extends StatelessWidget {
                     liveRegion: true,
                     child: Text(l10n.extractingTitle, style: AppType.title),
                   ),
+                ),
+                const Mascot(
+                  expression: MascotExpression.thinking,
+                  size: AppSize.mascotGuide,
                 ),
               ],
             ),

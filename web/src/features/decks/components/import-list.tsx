@@ -199,7 +199,7 @@ function CandidateRow({
       >
         <span
           aria-hidden
-          className={`flex size-6 items-center justify-center rounded-full border ${included ? "border-ink bg-ink text-on-primary" : "border-outline"}`}
+          className={`flex size-6 items-center justify-center rounded-full border ${included ? "border-ink bg-ink text-on-ink" : "border-outline"}`}
         >
           {included && <Check className="size-4" />}
         </span>

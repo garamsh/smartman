@@ -161,7 +161,7 @@ export async function Today() {
             aria-labelledby="today-title"
             className="flex flex-col items-center gap-2 rounded-card bg-brand-tint p-6 text-center text-ink lg:col-span-2"
           >
-            <Mascot className="size-mascot-medium" />
+            <Mascot expression="happy" className="size-mascot-medium" />
             <h2 id="today-title" className="mt-1 text-body-strong">
               오늘 할 카드를 다 했어요
             </h2>
@@ -195,7 +195,7 @@ export async function Today() {
             className="flex flex-col gap-4 rounded-card bg-surface p-6 text-ink shadow-card lg:col-span-2 lg:p-7"
           >
             <div className="flex items-center gap-4">
-              <Mascot className="size-16 shrink-0" />
+              <Mascot expression="thinking" className="size-mascot-guide shrink-0" />
               <div className="flex min-w-0 flex-col gap-1">
                 <h2 id="today-title" className="text-body-strong">
                   다시 시작하면 돼요

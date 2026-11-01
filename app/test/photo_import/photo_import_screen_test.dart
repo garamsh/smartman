@@ -9,6 +9,7 @@ import 'package:smartman/database/database.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/design/app_list_row.dart';
 import 'package:smartman/design/app_sheet.dart';
+import 'package:smartman/design/mascot.dart';
 import 'package:smartman/design/theme.dart';
 import 'package:smartman/l10n/app_localizations.dart';
 import 'package:smartman/photo_import/photo_import.dart';
@@ -788,10 +789,17 @@ void main() {
             )
             .value;
 
+        // The thinking mascot reads along until a row shows a failure's red.
+        expect(
+          tester.widget<Mascot>(find.byType(Mascot)).expression,
+          MascotExpression.thinking,
+        );
+
         import.calls(0).answer.completeError(const ModelFailed());
         await import.frames();
         expect(find.bySemanticsLabel('Read 0 of 3 photos'), findsOneWidget);
         expect(bar(), 0);
+        expect(find.byType(Mascot), findsNothing);
 
         await import.answerCall(1, {'chien': 'dog'});
         expect(find.bySemanticsLabel('Read 1 of 3 photos'), findsOneWidget);
@@ -1386,6 +1394,10 @@ void main() {
         await import.shoot();
 
         expect(_shown('Finding cards'), findsOneWidget);
+        expect(
+          tester.widget<Mascot>(find.byType(Mascot)).expression,
+          MascotExpression.thinking,
+        );
         expect(find.bySemanticsLabel('Your photo'), findsOneWidget);
         expect(find.byType(LinearProgressIndicator), findsOneWidget);
         expect(

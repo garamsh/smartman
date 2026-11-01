@@ -250,7 +250,9 @@ describe("the reports page", () => {
         .getAllByRole("button")
         .map((button) => button.textContent),
     ).toEqual(["취소", "숨기기"]);
-    expect(within(question).getByRole("button", { name: "숨기기" }).className).toContain("bg-ink");
+    expect(within(question).getByRole("button", { name: "숨기기" }).className).toContain(
+      "bg-primary",
+    );
     await user.click(within(question).getByRole("button", { name: "취소" }));
     expect(admin.decks[0]?.hidden).toBe(false);
     expect(admin.calls.some((call) => call.startsWith("admin_set_deck_hidden"))).toBe(false);
@@ -394,7 +396,7 @@ describe("a deck's page", () => {
     expect(confirm.className.split(" ")).toEqual(
       expect.arrayContaining(["bg-dont-know-text", "text-on-dont-know-text"]),
     );
-    expect(confirm.className).not.toContain("bg-ink");
+    expect(confirm.className).not.toContain("bg-primary");
     await user.click(screen.getByRole("button", { name: "취소" }));
     expect(admin.removals.size).toBe(0);
 

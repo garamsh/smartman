@@ -164,10 +164,13 @@ describe("the 오늘 and 덱 pages", () => {
     const card = within(backlog);
     // White with ink accents, as the phone's (ADR 0098).
     expect(backlog).toHaveClass("bg-surface", "shadow-card");
-    expect(card.getByRole("link", { name: "모두 학습" })).toHaveClass("bg-ink", "text-on-primary");
+    expect(card.getByRole("link", { name: "모두 학습" })).toHaveClass(
+      "bg-primary",
+      "text-on-primary",
+    );
     expectTextReadable(backlog);
     // The mascot with no badge: the card's one icon is play, on its button (ADR 0116).
-    expect(backlog.querySelector('img[src*="knowno-circle"]')).not.toBeNull();
+    expect(backlog.querySelector('img[src*="knowno-thinking"]')).not.toBeNull();
     expect([...backlog.querySelectorAll("svg")].map((icon) => icon.closest("a") !== null)).toEqual([
       true,
     ]);
@@ -566,9 +569,9 @@ describe("the 오늘 and 덱 pages", () => {
     expect(card()).toHaveClass("bg-brand-tint");
     expect(within(card()).getByText("목표 1장 달성")).toBeInTheDocument();
     expect(within(card()).getAllByText("1일 연속")).toHaveLength(1);
-    // The mascot with no z's beside it, the goal's chip its words, and the streak's chip its
-    // flame, the one icon a chip keeps (ADR 0116).
-    expect(card().querySelector('img[src*="knowno-circle"]')).not.toBeNull();
+    // The happy mascot with no z's beside it, the goal's chip its words, and the streak's chip
+    // its flame, the one icon a chip keeps (ADR 0116, ADR 0141).
+    expect(card().querySelector('img[src*="knowno-happy"]')).not.toBeNull();
     expect(card().textContent).not.toMatch(/z/);
     expect(within(card()).getByText("목표 1장 달성").querySelector("svg")).toBeNull();
     expect(within(card()).getByText("1일 연속").querySelector("svg")).not.toBeNull();
@@ -576,7 +579,7 @@ describe("the 오늘 and 덱 pages", () => {
     expect(chipTone(within(card()).getByText("목표 1장 달성"))).toBe("surface");
     expect(chipTone(within(card()).getByText("1일 연속"))).toBe("surface");
     const study = screen.getByRole("link", { name: "학습하기" });
-    expect(study).toHaveClass("bg-ink");
+    expect(study).toHaveClass("bg-primary");
     expect(study).toHaveAttribute("aria-keyshortcuts", "Enter");
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /하루 학습 시간/ })).not.toBeInTheDocument();
@@ -639,7 +642,7 @@ describe("the 오늘 and 덱 pages", () => {
     expect(bar).toHaveClass("bg-hairline");
     expect(bar.firstElementChild).toHaveClass("bg-ink");
     expect(within(card).getByRole("link", { name: "모두 학습" })).toHaveClass(
-      "bg-ink",
+      "bg-primary",
       "text-on-primary",
     );
     expectTextReadable(card);
@@ -846,8 +849,8 @@ describe("the 오늘 and 덱 pages", () => {
 
       expect(screen.getByRole("heading", { name: title })).toBeInTheDocument();
       expect(screen.getByText(pointer)).toBeInTheDocument();
-      // The first-run home is the one empty state the mascot heads (ADR 0116).
-      expect(document.querySelector('img[src*="knowno-circle"]')).not.toBeNull();
+      // The first-run home is headed by the mark, the thinking mascot.
+      expect(document.querySelector('img[src*="knowno-thinking"]')).not.toBeNull();
       expect(screen.queryByRole("heading", { name: /^오늘 할 카드/ })).not.toBeInTheDocument();
       expect(screen.queryByRole("region", { name: "덱 목록" })).not.toBeInTheDocument();
       // First-run creation is available on the web.
@@ -867,8 +870,8 @@ describe("the 오늘 and 덱 pages", () => {
     expect(
       screen.queryByRole("heading", { name: "오늘 할 카드를 다 했어요" }),
     ).not.toBeInTheDocument();
-    // No mascot: it heads the first-run home alone (ADR 0116).
-    expect(document.querySelector('img[src*="knowno-circle"]')).toBeNull();
+    // The happy mascot, glad of the deck just made (ADR 0141).
+    expect(document.querySelector('img[src*="knowno-happy"]')).not.toBeNull();
     // The web adds no card, so it offers no action.
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
     cleanup();

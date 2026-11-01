@@ -7,6 +7,7 @@ import 'package:smartman/deck/deck.dart';
 import 'package:smartman/design/app_button.dart';
 import 'package:smartman/design/app_list_row.dart';
 import 'package:smartman/design/app_text_field.dart';
+import 'package:smartman/design/mascot.dart';
 import 'package:smartman/design/theme.dart';
 import 'package:smartman/home/src/deck_screen.dart';
 import 'package:smartman/home/src/progress_bar.dart';
@@ -931,6 +932,16 @@ void main() {
         expectBreaksBetweenWords(tester, line);
         // A screen reader reads it as written, without the joiners.
         expect(find.bySemanticsLabel(line), findsOneWidget);
+        // The mascot dozes over it, above the words.
+        final mascot = find.byType(Mascot);
+        expect(
+          tester.widget<Mascot>(mascot).expression,
+          MascotExpression.sleepy,
+        );
+        expect(
+          tester.getBottomLeft(mascot).dy,
+          lessThanOrEqualTo(tester.getTopLeft(shownText(line)).dy),
+        );
         await screens.close();
       },
     );

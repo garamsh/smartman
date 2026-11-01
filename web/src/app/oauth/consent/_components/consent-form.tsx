@@ -93,7 +93,7 @@ export function ConsentForm({
           onClick={() => {
             answer(true);
           }}
-          className="pressable flex min-h-cta items-center justify-center rounded-button bg-ink px-6 text-label text-on-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-50"
+          className="pressable flex min-h-cta items-center justify-center rounded-button bg-primary px-6 text-label text-on-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-50"
         >
           연결
         </button>

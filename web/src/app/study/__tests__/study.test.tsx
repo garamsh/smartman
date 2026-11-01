@@ -450,6 +450,8 @@ describe("the study page", () => {
       await user.keyboard("{ArrowRight}");
       await user.keyboard("{ArrowRight}");
       expect(screen.getByRole("group", { name: "앞면" })).toBeInTheDocument();
+      // Never on a study card: the mascot comes with the completion card alone.
+      expect(document.querySelector('img[src*="/brand/knowno-"]')).toBeNull();
       await user.keyboard("{ArrowRight}");
 
       expect(screen.queryByRole("group", { name: "앞면" })).not.toBeInTheDocument();
@@ -460,8 +462,8 @@ describe("the study page", () => {
       // This morning's 모른다 and the session's three 안다; 90 s and the session's time, rounded
       // up; yesterday and today in a row.
       expect(completionLine()).toBe("3 안다1 모른다2분연속 2일");
-      // No mascot, and the flame its one icon (ADR 0116).
-      expect(completion.querySelector('img[src*="knowno-circle"]')).toBeNull();
+      // The happy mascot (ADR 0141), and the flame its one icon (ADR 0116).
+      expect(completion.querySelector('img[src*="knowno-happy"]')).not.toBeNull();
       expect(
         [...completion.querySelectorAll("svg")].map((icon) => icon.getAttribute("class")),
       ).toEqual([expect.stringContaining("lucide-flame")]);
@@ -540,6 +542,7 @@ describe("the study page", () => {
       await open("d1");
 
       expect(screen.getByText("오늘은 학습할 카드가 없어요")).toBeInTheDocument();
+      expect(document.querySelector('img[src*="knowno-sleepy"]')).not.toBeNull();
       expect(screen.queryByRole("progressbar", { name: "진행" })).not.toBeInTheDocument();
       expect(screen.queryByRole("region", { name: "오늘 학습 완료" })).not.toBeInTheDocument();
       expect(screen.queryByRole("group", { name: "앞면" })).not.toBeInTheDocument();
@@ -550,6 +553,7 @@ describe("the study page", () => {
       await open("d1");
       expect(screen.getByRole("region", { name: "오늘 학습 완료" })).toBeInTheDocument();
       expect(screen.queryByText("오늘은 학습할 카드가 없어요")).not.toBeInTheDocument();
+      expect(document.querySelector('img[src*="knowno-sleepy"]')).toBeNull();
     });
   });
 

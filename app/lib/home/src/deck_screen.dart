@@ -10,6 +10,7 @@ import '../../design/app_list_row.dart';
 import '../../design/app_sheet.dart';
 import '../../design/app_text_field.dart';
 import '../../design/bottom_actions.dart';
+import '../../design/mascot.dart';
 import '../../design/theme.dart';
 import 'hero.dart';
 import 'option_sheet.dart';
@@ -204,11 +205,20 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
                     vertical: AppSpace.s40,
                   ),
                   sliver: SliverToBoxAdapter(
-                    child: Text(
-                      keepWords(l10n.noCards),
-                      semanticsLabel: l10n.noCards,
-                      textAlign: TextAlign.center,
-                      style: AppType.body.copyWith(color: colors.muted),
+                    child: Column(
+                      spacing: AppSpace.s16,
+                      children: [
+                        const Mascot(
+                          expression: MascotExpression.sleepy,
+                          size: AppSize.mascotMedium,
+                        ),
+                        Text(
+                          keepWords(l10n.noCards),
+                          semanticsLabel: l10n.noCards,
+                          textAlign: TextAlign.center,
+                          style: AppType.body.copyWith(color: colors.muted),
+                        ),
+                      ],
                     ),
                   ),
                 )

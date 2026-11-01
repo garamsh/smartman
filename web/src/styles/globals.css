@@ -6,7 +6,9 @@
   --color-surface: #fffcf7;
   --color-raised: #ffffff;
   --color-ink: #3b2118;
-  --color-on-primary: #ffffff;
+  --color-primary: #fb7262;
+  --color-on-primary: #3b2118;
+  --color-on-ink: #ffffff;
   --color-ink-2: #64483d;
   --color-muted: #80695e;
   --color-hairline: #f2e6d6;
@@ -126,8 +128,8 @@
   --spacing-deck-tile: 44px;
   --spacing-small-icon: 18px;
   --spacing-lockup-height: 30px;
-  --spacing-mascot-medium: 84px;
-  --spacing-mascot-small: 28px;
+  --spacing-mascot-medium: 96px;
+  --spacing-mascot-guide: 64px;
   --spacing-hero-symbol: 120px;
   --spacing-progress: 8px;
   --spacing-stacked-lockup-width: 200px;
@@ -289,7 +291,9 @@
     --color-surface: #2b1e1a;
     --color-raised: #382823;
     --color-ink: #fff1e3;
+    --color-primary: #fb7262;
     --color-on-primary: #3b2118;
+    --color-on-ink: #3b2118;
     --color-ink-2: #dccabb;
     --color-muted: #bda89a;
     --color-hairline: #3d2c26;
@@ -331,7 +335,9 @@
   --color-surface: #2b1e1a;
   --color-raised: #382823;
   --color-ink: #fff1e3;
+  --color-primary: #fb7262;
   --color-on-primary: #3b2118;
+  --color-on-ink: #3b2118;
   --color-ink-2: #dccabb;
   --color-muted: #bda89a;
   --color-hairline: #3d2c26;

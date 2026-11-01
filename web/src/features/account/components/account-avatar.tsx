@@ -7,7 +7,7 @@ export function AccountAvatar({ email, size }: { email: string | null; size: "sm
   return (
     <span
       aria-hidden
-      className={`flex shrink-0 items-center justify-center rounded-full bg-ink text-on-primary ${
+      className={`flex shrink-0 items-center justify-center rounded-full bg-ink text-on-ink ${
         size === "small" ? "size-small-avatar text-label" : "size-avatar text-title"
       }`}
     >
