@@ -14,7 +14,7 @@ select each.number::int as n, each.fixture->>'name' as name, each.fixture->'fron
 from jsonb_array_elements(current_setting('smartman.card_frame_fixtures')::jsonb)
   with ordinality as each (fixture, number);
 
-select plan(53 + (select count(*)::int from fixtures));
+select plan(54 + (select count(*)::int from fixtures));
 
 insert into auth.users (id, email) values
   ('00000000-0000-4000-8000-00000000000a', 'a@example.com'),
@@ -220,6 +220,8 @@ select throws_ok('select * from private.card_frame_backup', '42501', null,
 reset role;
 select is(has_table_privilege('authenticated', 'private.card_frame_backup', 'select'), false,
   'authenticated holds no select on the backup');
+select is(has_function_privilege('authenticated', 'private.revert_card_frame()', 'execute'), false,
+  'authenticated holds no execute on the revert');
 select is(has_table_privilege('anon', 'private.card_frame_backup', 'select'), false,
   'anon holds no select on the backup');
 

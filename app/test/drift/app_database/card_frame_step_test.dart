@@ -7,8 +7,8 @@ import 'package:drift_dev/api/migrations_native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/account/account.dart';
 import 'package:smartman/database/database.dart';
-import 'package:smartman/deck/src/card_frame.dart';
-import 'package:smartman/deck/src/content.dart' show decodeContent;
+import 'package:smartman/deck/deck.dart'
+    show cellsFromSides, decodeCells, decodeContent;
 import 'package:smartman/study/study.dart';
 import 'package:smartman/sync/sync.dart';
 
@@ -239,7 +239,11 @@ void main() {
           for (final row in await db.select(db.cards).get()) row.id: row,
         };
         for (final (id, front, back) in kept) {
-          expect((rows[id]!.front, rows[id]!.back), (front, back), reason: id);
+          expect(
+            (rows[id]!.front, rows[id]!.back, rows[id]!.templateVersion),
+            (front, back, id == 'framed' || id == 'newer' ? 2 : 1),
+            reason: id,
+          );
         }
         expect(rows['mindmap']!.template, 'mindmap');
         expect(rows['newer']!.templateVersion, 2);
@@ -291,7 +295,7 @@ void main() {
         'id': 's',
         'payload': {
           'senses': [
-            {'labels': [], 'meaning': '사과', 'examples': []},
+            {'labels': <Object?>[], 'meaning': '사과', 'examples': <Object?>[]},
           ],
         },
       },
@@ -314,14 +318,19 @@ void main() {
           'blanks': [
             {'row': 0, 'column': 0},
           ],
-          'spans': [],
+          'spans': <Object?>[],
         },
       },
       {
         'type': 'image',
         'v': 1,
         'id': 'i',
-        'payload': {'media': 'm', 'width': 1, 'height': 1, 'boxes': []},
+        'payload': {
+          'media': 'm',
+          'width': 1,
+          'height': 1,
+          'boxes': <Object?>[],
+        },
       },
       {
         'type': 'image',
