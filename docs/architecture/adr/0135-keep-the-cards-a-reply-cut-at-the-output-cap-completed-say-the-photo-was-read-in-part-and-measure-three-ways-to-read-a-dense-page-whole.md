@@ -1,6 +1,6 @@
 # ADR 0135: Keep the cards a reply cut at the output cap completed, say the photo was read in part, and measure three ways to read a dense page whole
 
-> Status: accepted
+> Status: accepted; its answer read in part when a reply is cut, its `truncated` as the last reply's cut and its eval's `continue` way superseded by ADR-0138
 > Date: 2026-11-01
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.
