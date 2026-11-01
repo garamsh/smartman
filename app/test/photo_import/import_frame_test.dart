@@ -61,8 +61,8 @@ Map<String, Object?> _rowCard({
   'type': type,
   if (kind == 'vocabulary')
     'senses': [
-      {'labels': [], 'meaning': '얼굴', 'examples': []},
-      {'labels': [], 'meaning': '직면하다', 'examples': []},
+      {'labels': <Object?>[], 'meaning': '얼굴', 'examples': <Object?>[]},
+      {'labels': <Object?>[], 'meaning': '직면하다', 'examples': <Object?>[]},
     ],
   if (type == 'cloze')
     'cloze': {
