@@ -15,6 +15,10 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
   - sample 90 read 100 of 100;
   - the owner's photo of 100 entries read 100 of 100 at $0.0125;
   - sample 91 read 85 of 200 in one call that ended with `finish_reason` `stop` at 11,053 completion tokens, under the cap. The model ended the page early by its own choice, so no reply was cut and nothing read on.
+- **The PM's eval of 2026-11-01 at `ab84c4b157faaa93f847d2e90b0ada142e83651f`**, with the confirming call asking for the entries after the last read:
+  - samples 01 and 13 read 12 and 7 cards in one call each;
+  - sample 90 and the owner's photo each read 100 of 100;
+  - sample 91 read 198 of 200 over 4 calls. Entries 21 "bois" and 188 "prendre" were in no reply: the model skipped them mid-page, and a request for the entries after the last read never asks for them again.
 - **The eval's ordinary pages** hold at most 21 entries each (`tools/eval/samples/`): only the dense pages, 90 and 91, hold more.
 - **What the record may hold:** no image, card or prompt text ([`ai-extraction.md`](../ai-extraction.md) §Privacy).
 - **Alternatives for going on past one request:**
@@ -24,7 +28,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 
 ## Decision
 
-- **Read on in the request.** When a reply is cut and keeps cards, the function asks again with the same photo, model and prompt, and a text naming the cards read so far and the last fronts read and asking for an empty list when no entry comes after them.
+- **Read on in the request.** When a reply is cut and keeps cards, the function asks again with the same photo, model and prompt, and a text naming the fronts read so far. It asks for every entry of the page not in that list, wherever it is, or an empty list when none is missing, so an entry the model skipped mid-page is asked for again.
   - A whole reply of 40 cards or more is read on the same way, to confirm the page ends there: a model may stop a dense page early. 40 is twice the largest ordinary page in the eval, so an ordinary page makes no such call.
   - The function goes on after each reply that was cut or added 40 cards or more, until a reply adds fewer and was not cut, or adds none.
   - A call starts only before 75 s of the request, as ADR 0130's retry does.
