@@ -36,7 +36,7 @@ export async function saveCards(
 
 /**
  * Saves a photo's reviewed cards as the phone's `addCards` does: a card whose key the deck, or an
- * earlier card of [input], holds merges its back into that card. A retry skips what is stored.
+ * earlier card of [input], holds merges its back into that card. A retry appends nothing a back holds.
  */
 export async function savePhotoCards(deckId: string, input: unknown): Promise<SaveCardsResult> {
   return writeCards(deckId, input, "import", "merge");
@@ -103,7 +103,6 @@ async function writeCards(
     if (!front) return malformed;
     const key = cardKey(front);
     const duplicate = keys.get(key);
-    if (onDuplicate === "merge" && storedIds.has(card.id)) continue;
     if (onDuplicate === "merge" && duplicate) {
       merges.push({ into: duplicate, back: plainText(parseContent(card.back) ?? []) });
       continue;
