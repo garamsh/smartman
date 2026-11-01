@@ -16,6 +16,23 @@ export 'src/add_cards.dart'
         mergeBack;
 export 'src/audio_block.dart' show playAudio;
 export 'src/card_editor_screen.dart' show CardEditorScreen;
+export 'src/card_frame.dart'
+    show
+        BlankCell,
+        Cell,
+        CellSide,
+        FrameProblem,
+        PlacedCell,
+        TextCell,
+        UnknownCell,
+        WordAsk,
+        WordCell,
+        cellsFromSides,
+        cellsOf,
+        decodeCells,
+        frameKey,
+        frameProblem,
+        sidesOf;
 export 'src/card_key.dart' show CardKey;
 export 'src/card_list.dart'
     show CardBackRow, CardSplitRow, describeContent, spokenContent;

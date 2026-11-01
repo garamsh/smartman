@@ -6,6 +6,7 @@ import '../../database/database.dart';
 import '../../media/media.dart';
 import 'add_cards.dart';
 import 'card_key.dart';
+import 'card_frame.dart';
 import 'card_template.dart';
 import 'content.dart';
 import 'failure.dart';
@@ -643,11 +644,15 @@ class DeckRepository {
   Card _toCard(CardRow row) {
     final id = CardId(row.id);
     try {
+      final cells = isFramed(row.template, row.templateVersion)
+          ? decodeCells(row.front)
+          : null;
+      final sides = cells == null ? null : sidesOf(cells);
       return Card(
         id: id,
         deckId: DeckId(row.deckId),
-        front: decodeContent(row.front),
-        back: decodeContent(row.back),
+        front: sides?.front ?? decodeContent(row.front),
+        back: sides?.back ?? decodeContent(row.back),
         cardKey: CardKey.stored(row.cardKey),
         source: CardSource.values.byName(row.source),
         createdAt: row.createdAt,
@@ -658,6 +663,7 @@ class DeckRepository {
         },
         template: row.template,
         templateVersion: row.templateVersion,
+        cells: cells,
       );
     } on FormatException catch (cause) {
       throw UnreadableCard(id, cause);
