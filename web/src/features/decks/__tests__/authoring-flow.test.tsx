@@ -612,10 +612,10 @@ describe("photo import", () => {
       await userEvent.click(screen.getByRole("button", { name: `${topic} 카드 모양, ${form}` }));
       return screen.getByRole("menu", { name: `${topic} 카드 모양` });
     }
-    /** The type and text of a stored side's first block. */
+    /** The type and payload of a stored card's first 칸. */
     function firstBlock(side: unknown) {
       const first: unknown = Array.isArray(side) ? side[0] : undefined;
-      return { type: field(first, "type"), text: field(field(first, "payload"), "text") };
+      return { type: field(first, "type"), payload: field(first, "payload") };
     }
     /** A menu's items of every role, in their order. */
     function items(menu: HTMLElement) {
@@ -660,11 +660,14 @@ describe("photo import", () => {
       });
       // One card word to meaning, the other meaning to word.
       expect(
-        db.rows.cards.map((row) => [firstBlock(row.front).type, firstBlock(row.back).type]).sort(),
+        db.rows.cards.map((row) => [row.card_key, firstBlock(row.front).type, row.back]).sort(),
       ).toEqual([
-        ["senses", "text"],
-        ["text", "senses"],
+        ["[명] 사과 사과나무", "senses", []],
+        ["apple", "senses", []],
       ]);
+      expect(
+        db.rows.cards.map((row) => field(firstBlock(row.front).payload, "ask")).sort(),
+      ).toEqual(["meaning", "term"]);
     });
     it("shows the first sense alone without its part of speech, with the pronunciation and extras, as the menu sets", async () => {
       answer(words);
@@ -677,7 +680,8 @@ describe("photo import", () => {
           }),
         );
       const row = screen.getByRole("button", { name: /편집$/u });
-      expect(row).toHaveAccessibleName("apple\nˈæpəl 편집");
+      expect(row).toHaveAccessibleName("apple 편집");
+      expect(row).toHaveTextContent("ˈæpəl");
       expect(row).not.toHaveTextContent("사과나무");
       expect(row).not.toHaveTextContent("[명]");
       expect(row).toHaveTextContent("유의어 pome");
@@ -685,15 +689,20 @@ describe("photo import", () => {
       await waitFor(() => {
         expect(db.rows.cards).toHaveLength(1);
       });
+      expect(db.rows.cards[0]).toMatchObject({ template_version: 2, back: [] });
       expect(db.rows.cards[0]?.front).toEqual([
-        expect.objectContaining({ type: "text", payload: { text: "apple\nˈæpəl" } }),
-      ]);
-      expect(db.rows.cards[0]?.back).toEqual([
         expect.objectContaining({
           type: "senses",
-          payload: { senses: [{ labels: [], meaning: "사과", examples: [] }] },
+          payload: {
+            term: "apple",
+            ask: "term",
+            senses: [{ labels: [], meaning: "사과", examples: [] }],
+          },
         }),
-        expect.objectContaining({ type: "text", payload: { text: "유의어 pome" } }),
+        expect.objectContaining({
+          type: "text",
+          payload: { front: "", back: "ˈæpəl\n유의어 pome" },
+        }),
       ]);
     });
     it("swaps a note section's sides, and leaves a section out and puts it back from its menu", async () => {
@@ -722,10 +731,9 @@ describe("photo import", () => {
       await waitFor(() => {
         expect(db.rows.cards).toHaveLength(2);
       });
-      expect(db.rows.cards.map((row) => firstBlock(row.front).text).sort()).toEqual([
-        "많음",
-        "서울",
-      ]);
+      expect(
+        db.rows.cards.map((row) => field(firstBlock(row.front).payload, "front")).sort(),
+      ).toEqual(["많음", "서울"]);
     });
     it("closes the menu on Escape alone, returning focus to its button, and keeps the sheet open", async () => {
       answer(words);
@@ -809,7 +817,9 @@ describe("photo import", () => {
       expect(
         await screen.findByRole("heading", { name: "카드 2장을 만들었어요" }),
       ).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "수도 편집" })).toHaveTextContent("서울서울특별시");
+      expect(screen.getByRole("button", { name: "수도 편집" })).toHaveTextContent(
+        "서울 서울특별시",
+      );
       expect(screen.getByRole("button", { name: "apple 편집" })).toHaveTextContent(
         "apple[명]사과사과나무배나무",
       );

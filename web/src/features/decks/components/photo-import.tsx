@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { Check, CircleAlert, Clock, ImagePlus, LoaderCircle } from "lucide-react";
 import { v7 } from "uuid";
 import { createDeck, readAllowance, readCardKeys, savePhotoCards } from "../actions";
-import { cardKey } from "../authoring";
-import { parseContent } from "../card-content";
+import { frameKey } from "../authoring";
+import { parseCells } from "../card-content";
 import { preparePhoto, sendPhoto } from "../extract-photo";
 import { describeFailure, isRetakeable, isRetryable, type PhotoFailure } from "../photo-failure";
 import { appendCandidates, type Candidate } from "../photo-candidates";
@@ -248,7 +248,7 @@ export function PhotoImport({
   /** Whether the chosen deck holds [card]'s first card in its form, as the phone's `isDuplicate`. */
   function inDeck(card: Candidate, section: Section): boolean {
     const [first] = cardsOf(card, formOf(section));
-    return !!first && !!held[target]?.has(cardKey(parseContent(first.front) ?? []));
+    return !!first && !!held[target]?.has(frameKey(parseCells(first.blocks) ?? []));
   }
   /** Whether [card] is saved: as the user set it, else unless it is an identify card or in the deck. */
   function included(card: Candidate, section: Section): boolean {
@@ -261,7 +261,7 @@ export function PhotoImport({
       .flatMap((card) => cardsOf(card, formOf(section))),
   );
   // One per card key, as the phone's `cardCount`: cards of one key merge into one.
-  const cardCount = new Set(toSave.map((card) => cardKey(parseContent(card.front) ?? []))).size;
+  const cardCount = new Set(toSave.map((card) => frameKey(parseCells(card.blocks) ?? []))).size;
   /** Chooses the deck the cards go into, taking that deck's remembered forms where it has them. */
   function chooseTarget(next: string) {
     setForms(

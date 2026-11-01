@@ -135,13 +135,21 @@ test("adds a deck's cards from a small .xlsx after review, and the server holds 
   expect(read.error).toBeNull();
   expect(read.data?.map((card): unknown => card.card_key)).toEqual(["apple", "date", "run"]);
   for (const card of read.data ?? []) {
-    expect(card).toMatchObject({ source: "import", template: "free", template_version: 1 });
+    expect(card).toMatchObject({
+      source: "import",
+      template: "free",
+      template_version: 2,
+      back: [],
+    });
     expect(Number(card.revision)).toBeGreaterThan(0);
   }
-  expect(read.data?.[0]?.back).toEqual([
+  expect(read.data?.[0]?.front).toEqual([
     expect.objectContaining({
       type: "senses",
+      v: 2,
       payload: {
+        term: "apple",
+        ask: "term",
         senses: [
           {
             labels: [{ kind: "part_of_speech", category: "noun", text: "명" }],
@@ -152,10 +160,15 @@ test("adds a deck's cards from a small .xlsx after review, and the server holds 
       },
     }),
   ]);
-  expect(read.data?.[1]?.back).toEqual([
+  expect(read.data?.[1]?.front).toEqual([
     expect.objectContaining({
       type: "senses",
-      payload: { senses: [{ labels: [], meaning: "2026-10-29", examples: [] }] },
+      v: 2,
+      payload: {
+        term: "date",
+        ask: "term",
+        senses: [{ labels: [], meaning: "2026-10-29", examples: [] }],
+      },
     }),
   ]);
 });

@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, ChevronDown, ChevronUp } from "lucide-react";
-import { describeContent, parseContent } from "../card-content";
+import { describeContent, parseCells, sidesOf } from "../card-content";
 import type { Candidate } from "../photo-candidates";
 import { cardsOf, isWhole, type Section, type SectionForm } from "../section-form";
 import { SectionMenu } from "./section-menu";
@@ -182,8 +182,7 @@ function CandidateRow({
   edit: () => void;
 }) {
   const [shown] = cardsOf(card, form);
-  const front = parseContent(shown?.front ?? card.front) ?? [];
-  const back = parseContent(shown?.back ?? card.back) ?? [];
+  const { front, back } = sidesOf(parseCells(shown?.blocks) ?? []);
   const note = inDeck && (
     <span className="mt-1 block text-caption text-muted">이미 덱에 있어요</span>
   );

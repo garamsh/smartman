@@ -171,7 +171,7 @@ void main() {
           ]),
         ]);
         expect(card.source, CardSource.import);
-        expect(card.templateVersion, 1);
+        expect(card.templateVersion, 2);
         expect(result.single?.id, deck.id);
       },
     );

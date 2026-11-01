@@ -1,5 +1,6 @@
 import 'package:unorm_dart/unorm_dart.dart' as unorm;
 
+import 'card_frame.dart';
 import 'card_key.dart';
 import 'content.dart';
 import 'label_presets.dart';
@@ -47,11 +48,12 @@ final class SheetColumns {
 
 /// A sheet row's card, named by the [row] it came from.
 final class RowCard {
-  const RowCard({required this.row, required this.front, required this.back});
+  const RowCard({required this.row, required this.cells});
 
   final int row;
-  final List<Content> front;
-  final List<Content> back;
+
+  /// The card's 칸.
+  final List<Cell> cells;
 }
 
 /// The cards a sheet's rows make, and the rows that make none: [skipped] as
@@ -144,8 +146,7 @@ SheetCards cardsOfRows(
       cards.add(
         RowCard(
           row: row.number,
-          front: [TextContent(front)],
-          back: _backOf(columns, back, label, example),
+          cells: [_cellOf(columns, front, back, label, example)],
         ),
       );
     }
@@ -153,18 +154,21 @@ SheetCards cardsOfRows(
   return SheetCards(cards: cards, skipped: skipped, tooLong: tooLong);
 }
 
-/// A row's back: the [back] cell as text, or, with a label or an example
-/// column mapped, one meaning, the [label]'s words its labels and the
-/// [example]'s lines its examples, as direct entry writes them.
-List<Content> _backOf(
+/// A row's 칸: a 글 of its [front] and [back] cells, or, with a label or an
+/// example column mapped, a 단어 of [front] and one meaning, the [label]'s words
+/// its labels and the [example]'s lines its examples, as direct entry writes
+/// them.
+Cell _cellOf(
   SheetColumns columns,
+  String front,
   String back,
   String label,
   String example,
 ) => columns.label == null && columns.example == null
-    ? [TextContent(back)]
-    : [
-        SensesContent([
+    ? TextCell(front: front, back: back)
+    : WordCell(
+        term: front,
+        senses: [
           CardSense(
             labels: labelsOf(label),
             meaning: back,
@@ -173,8 +177,9 @@ List<Content> _backOf(
                 if (line.trim().isNotEmpty) line.trim(),
             ],
           ),
-        ]),
-      ];
+        ],
+        ask: WordAsk.term,
+      );
 
 /// The first of a list of cards whose front repeats a card already stored or
 /// an earlier one of the list.
@@ -201,7 +206,7 @@ final class DuplicateOfRow extends RowDuplicate {
 RowDuplicate? firstDuplicate(List<RowCard> cards, Set<CardKey> stored) {
   final earlier = <CardKey, int>{};
   for (final card in cards) {
-    final key = CardKey.fromFront(plainText(card.front));
+    final key = frameKey(card.cells);
     if (stored.contains(key)) return DuplicateOfStored(card.row);
     if (earlier[key] case final row?) return DuplicateOfRow(card.row, row);
     earlier[key] = card.row;

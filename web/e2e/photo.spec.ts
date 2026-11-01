@@ -301,7 +301,7 @@ test("normalises each photo, shows a 502 on its row, retries it in place, and sa
   expect(read.error).toBeNull();
   // "양쪽 방향" saved the entry both ways: its word, and its meanings as a front of their own.
   expect(read.data?.map((card) => String(card.card_key)).sort()).toEqual(
-    ["[명] 사과 사과나무", "apple ˈæpəl", "도쿄", "서울", "파리"].sort(),
+    ["[명] 사과 사과나무", "apple", "도쿄", "서울", "파리"].sort(),
   );
   for (const card of read.data ?? []) {
     expect(card).toMatchObject({ source: "import" });

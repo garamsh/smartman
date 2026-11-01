@@ -4,7 +4,7 @@ import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { v5, v7 } from "uuid";
 import { createDeck, saveCards } from "../actions";
-import { describeContent, parseContent } from "../card-content";
+import { describeContent, parseCells, sidesOf } from "../card-content";
 import type { Deck } from "../library";
 import type { SheetRow, Spreadsheet } from "../spreadsheet";
 import {
@@ -150,7 +150,7 @@ export function SpreadsheetImport({
           const part = pendingCards.slice(offset, offset + batch);
           const written = await saveCards(
             deckId,
-            part.map(({ id, front, back }) => ({ id, front, back })),
+            part.map(({ id, blocks }) => ({ id, blocks })),
             "import",
             allowDuplicate,
           );
@@ -521,8 +521,7 @@ function CardRow({
   disabled: boolean;
   toggle: () => void;
 }) {
-  const front = parseContent(card.front) ?? [];
-  const back = parseContent(card.back) ?? [];
+  const { front, back } = sidesOf(parseCells(card.blocks) ?? []);
   return (
     <li>
       <button
