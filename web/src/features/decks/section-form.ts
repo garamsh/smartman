@@ -104,7 +104,7 @@ function blocksOf(front: Block[], back: Block[], added = ""): Block[] {
  */
 export function cardsOf(card: Candidate, form: SectionForm): CellsDraft[] {
   const { id, reverseId, front, back } = card;
-  if (isWhole(card)) return [{ id, blocks: blocksOf(front, []) }];
+  if (isWhole(card)) return [{ id, blocks: blocksOf(front, back) }];
   if (form.kind === "vocabulary" && card.kind === "vocabulary") {
     const senses = meaning(card, form);
     const added = addedLines(card, form);
