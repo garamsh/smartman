@@ -165,6 +165,16 @@
       "date": "2026-11-01",
       "spentUsd": 0.4129,
       "note": "prompt v9 and v11"
+    },
+    {
+      "date": "2026-11-01",
+      "spentUsd": 0.033349,
+      "note": "prompt v9"
+    },
+    {
+      "date": "2026-11-01",
+      "spentUsd": 0.013158,
+      "note": "prompt v9"
     }
   ]
 }
