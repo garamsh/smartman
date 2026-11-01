@@ -303,6 +303,7 @@ async function send(
     fake?: Fake;
     ids?: IdSource;
     supabaseUrl?: string;
+    publicUrl?: string;
   } = {},
 ): Promise<Run> {
   const fake = options.fake ?? seed();
@@ -312,6 +313,7 @@ async function send(
       ({
         SUPABASE_URL: options.supabaseUrl ?? SUPABASE_URL,
         SUPABASE_ANON_KEY: ANON_KEY,
+        MCP_PUBLIC_URL: options.publicUrl,
       })[name]
     ),
     fetch: fakeFetch(fake),
@@ -437,11 +439,12 @@ Deno.test("a local stack's metadata names its own SUPABASE_URL as the resource's
   });
 });
 
-Deno.test("on the custom domain the 401 and the metadata name its URL as the resource, the authorization server staying Auth's issuer", async () => {
-  const headers = { "X-Forwarded-Host": "api.knowno.app" };
+const PUBLIC_URL = "https://api.knowno.app/functions/v1/mcp";
+
+Deno.test("with MCP_PUBLIC_URL set the 401 and the metadata name it as the resource, the authorization server staying Auth's issuer", async () => {
   const challenge = await send({
     token: null,
-    headers,
+    publicUrl: PUBLIC_URL,
     supabaseUrl: PROJECT,
     body: { jsonrpc: "2.0", id: 1, method: "ping" },
   });
@@ -452,26 +455,22 @@ Deno.test("on the custom domain the 401 and the metadata name its URL as the res
   );
   const metadata = await send({
     token: null,
-    headers,
+    publicUrl: PUBLIC_URL,
     supabaseUrl: PROJECT,
     method: "GET",
     path: "/mcp/oauth-protected-resource",
   });
   assert.deepEqual(metadata.json, {
-    resource: "https://api.knowno.app/functions/v1/mcp",
+    resource: PUBLIC_URL,
     authorization_servers: [`${PROJECT}/auth/v1`],
     bearer_methods_supported: ["header"],
     resource_name: "smartman",
   });
 });
 
-Deno.test("a forwarded host outside CUSTOM_DOMAINS is never named and falls back to SUPABASE_URL's host, as the custom domain is named", async () => {
+Deno.test("without MCP_PUBLIC_URL the resource is SUPABASE_URL's origin whatever host the request names", async () => {
   for (
-    const host of [
-      "evil.example",
-      "api.knowno.app.evil.example",
-      "abcdefghijklmnopqrst.supabase.co",
-    ]
+    const host of ["api.knowno.app", "evil.example", "127.0.0.1:54321"]
   ) {
     const metadata = await send({
       token: null,
@@ -496,18 +495,35 @@ Deno.test("a forwarded host outside CUSTOM_DOMAINS is never named and falls back
       host,
     );
   }
-  // The control: the same request from the custom domain is named on it.
-  const listed = await send({
+});
+
+Deno.test("an MCP_PUBLIC_URL that is not an https URL ending in /functions/v1/mcp leaves the function unconfigured, as a valid one configures it", async () => {
+  for (
+    const publicUrl of [
+      "not a url",
+      "http://api.knowno.app/functions/v1/mcp",
+      "https://api.knowno.app",
+      "https://api.knowno.app/functions/v1/mcp/",
+      "https://api.knowno.app/functions/v1/mcp?x=1",
+    ]
+  ) {
+    const run = await send({
+      token: null,
+      publicUrl,
+      supabaseUrl: PROJECT,
+      method: "GET",
+      path: "/mcp/oauth-protected-resource",
+    });
+    assert.equal(run.status, 503, publicUrl);
+  }
+  const configured = await send({
     token: null,
-    headers: { "X-Forwarded-Host": "api.knowno.app" },
+    publicUrl: PUBLIC_URL,
     supabaseUrl: PROJECT,
     method: "GET",
     path: "/mcp/oauth-protected-resource",
   });
-  assert.equal(
-    (listed.json as Row).resource,
-    "https://api.knowno.app/functions/v1/mcp",
-  );
+  assert.equal(configured.status, 200);
 });
 
 Deno.test("a SUPABASE_URL that is not an http(s) URL leaves the function unconfigured, as a valid one configures it", async () => {
