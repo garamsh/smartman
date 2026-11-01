@@ -65,7 +65,8 @@ describe("the shared fixtures", () => {
   it.each(conversions)("converts: $name", ({ front, back, cells }) => {
     const expected = cells === null ? null : parseCells(cells);
     if (cells !== null) expect(expected).not.toBeNull();
-    expect(cellsFromSides(blocks(front), blocks(back))).toEqual(expected);
+    const read = parseCardContent({ front, back, template: "free", templateVersion: 1 });
+    expect(read?.readOnly ? null : read?.cells).toEqual(expected);
   });
 
   it.each(validity)("validity: $name", ({ blocks: stored, problem }) => {
@@ -100,7 +101,9 @@ describe("parseCells", () => {
     expect(parseCells({})).toBeNull();
     expect(parseCells([{ ...glue, id: 1 }])).toBeNull();
     // Control: the same block with a text id.
-    expect(parseCells([{ ...glue, id: "b1" }])).toEqual([{ kind: "text", front: "a", back: "b" }]);
+    expect(parseCells([{ ...glue, id: "b1" }])).toEqual([
+      { kind: "text", front: "a", back: "b", id: "b1" },
+    ]);
   });
 
   it("keeps a 칸 of a later version, which counts as a question", () => {

@@ -98,6 +98,7 @@ describe("the controls' pointer, hover and pressed states", () => {
           ]}
         />
         <CardGrid
+          deck={{ id: idOf(parseDeckId, "d-fr"), name: "French", public: false }}
           cards={[
             {
               id: idOf(parseCardId, "c-chat"),

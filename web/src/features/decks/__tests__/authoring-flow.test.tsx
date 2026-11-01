@@ -51,11 +51,11 @@ describe("authoring from the page", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "카드 추가" }));
     await userEvent.click(screen.getByRole("button", { name: "직접 입력" }));
-    await userEvent.type(screen.getByRole("textbox", { name: "앞면 글 1" }), "draft");
+    await userEvent.type(screen.getByRole("textbox", { name: "앞면" }), "draft");
     fireEvent(screen.getByRole("dialog"), new Event("cancel", { cancelable: true }));
     expect(screen.getByRole("heading", { name: "작성 중인 카드를 버릴까요?" })).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "계속 쓰기" }));
-    expect(screen.getByRole("textbox", { name: "앞면 글 1" })).toHaveValue("draft");
+    expect(screen.getByRole("textbox", { name: "앞면" })).toHaveValue("draft");
     await userEvent.click(screen.getByRole("button", { name: "닫기" }));
     await userEvent.click(screen.getByRole("button", { name: "버리기" }));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
@@ -66,31 +66,31 @@ describe("authoring from the page", () => {
     await render(() => <AuthoringButton deck={deck} />, {});
     await userEvent.click(screen.getByRole("button", { name: "카드 추가" }));
     await userEvent.click(screen.getByRole("button", { name: "직접 입력" }));
-    await userEvent.type(screen.getByRole("textbox", { name: "앞면 글 1" }), "apple");
-    const groups = screen.getAllByText("+ 추가");
-    const back = groups[1];
-    if (!back) throw new Error("back add control");
-    await userEvent.click(back);
-    const options = screen.getAllByRole("button", { name: "뜻 목록" });
-    const option = options[1];
-    if (!option) throw new Error("back senses option");
-    await userEvent.click(option);
-    await userEvent.type(screen.getByRole("textbox", { name: "뜻 1" }), "사과");
-    await userEvent.type(screen.getByRole("textbox", { name: "뜻 1 라벨" }), "명");
+    await userEvent.click(screen.getByRole("button", { name: "1번째 칸 메뉴" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "삭제" }));
+    await userEvent.click(screen.getByRole("button", { name: "+ 칸 추가" }));
+    await userEvent.click(screen.getByRole("button", { name: "단어" }));
+    await userEvent.type(screen.getByRole("textbox", { name: "단어" }), "apple");
+    await userEvent.type(screen.getByRole("textbox", { name: "뜻" }), "사과");
+    await userEvent.type(screen.getByRole("textbox", { name: "라벨" }), "명");
     const release = db.fail("cards", 400);
     await userEvent.click(screen.getByRole("button", { name: "저장" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("카드를 저장하지 못했어요");
-    expect(screen.getByRole("textbox", { name: "앞면 글 1" })).toHaveValue("apple");
+    expect(screen.getByRole("textbox", { name: "단어" })).toHaveValue("apple");
     release();
     await userEvent.dblClick(screen.getByRole("button", { name: "저장" }));
     await waitFor(() => {
       expect(db.rows.cards).toHaveLength(1);
     });
-    expect(db.rows.cards[0]?.back).toEqual(
+    expect(db.rows.cards[0]).toMatchObject({ template: "free", template_version: 2, back: [] });
+    expect(db.rows.cards[0]?.front).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           type: "senses",
+          v: 2,
           payload: {
+            term: "apple",
+            ask: "term",
             senses: [
               {
                 labels: [{ kind: "part_of_speech", category: "noun", text: "명" }],
