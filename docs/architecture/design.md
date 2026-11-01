@@ -98,7 +98,7 @@ One term per concept and one sentence form per role, in every string on the phon
   | Discarding an unsaved draft | 버리기 | |
   | Studying | 학습 | 공부 |
   | A card's two sides | 앞면 and 뒷면; in English Front and Back | 단어 and 뜻, 앞 and 뒤, 문제 and 답, for a side |
-  | What a card is made of | 칸, in the app's card editor: "+ 칸 추가", "칸 추가"; a 사진's "빈칸 추가" stays, told apart by 빈 | 블록 |
+  | What a card is made of | 칸: "+ 칸 추가", "칸 추가"; a 사진's "빈칸 추가" stays, told apart by 빈 | 블록 |
   | A card's grade, 안다 or 모른다 | 응답, answering it 응답하다; in English Response | |
   | The mark before a meaning | 라벨 (#447) | 품사, 품사 표시 |
   | The sound block | 소리 | 음성 |
@@ -250,7 +250,7 @@ What keeps a screen calm rather than decorated ([ADR 0118](adr/0118-name-each-co
 
 ### Checks
 
-- Web authoring follows the phone's creation choices, front/back groups and photo review checks in `decks`, with native modal sheets, scrolling fields and focus return; its browser-specific file and lifetime limits are [`web-decks.md`](web-decks.md)'s ([ADR 0122](adr/0122-create-decks-and-reviewed-cards-on-the-web.md)).
+- Web authoring follows the phone's creation choices, one group per 칸 and photo review checks in `decks`, with native modal sheets, scrolling fields and focus return; its browser-specific file and lifetime limits are [`web-decks.md`](web-decks.md)'s ([ADR 0122](adr/0122-create-decks-and-reviewed-cards-on-the-web.md)).
 
 - Each screen and each sheet is checked against Flutter's `labeledTapTargetGuideline`, `androidTapTargetGuideline` and `textContrastGuideline` in both themes, in `app/test/widget_test.dart`, `app/test/account/account_screen_test.dart`, `app/test/account/sign_in_screen_test.dart`, `app/test/study/study_screen_test.dart`, `app/test/study/stats_view_test.dart`, `app/test/home/home_screen_test.dart` for the daily study minutes' control and sheet, `app/test/photo_import/photo_import_screen_test.dart`, the sharing screens' tests under `app/test/sharing/` and, for each component, `app/test/design/`.
 - `app/test/widget_test.dart` composes the app, opens a new card's editor and fails when a tap on the deck's name over the form, or a drag that scrolls the form, leaves the keyboard up, with controls that a tap on another field moves the focus to it, a tap on "뜻 추가" adds a meaning and a drag across the label strip keeps the keyboard; and when "앞면" loses its newline key or a label field's action key does not close the keyboard.
@@ -302,9 +302,3 @@ What keeps a screen calm rather than decorated ([ADR 0118](adr/0118-name-each-co
 ## Open questions
 
 - Whether deleting a card should become undoable, so it needs no confirmation. Its study history is deleted with it today, which an undo would have to restore.
-
-### Planned: the 칸 frame
-
-Accepted in [ADR 0137](adr/0137-frame-a-card-by-its-blocks-each-block-type-deciding-whether-it-has-a-front-and-a-back.md) (#488). The app's card editor holds it (§Checks and the card editor's lines above); the web's authoring does not yet (#548), and the implementation moves what is below into the current decisions it names.
-
-- **Web.** 칸 as the term on the web's authoring, one group per 칸, and a side chosen by two chips.
