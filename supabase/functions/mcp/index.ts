@@ -1,4 +1,4 @@
-/** The mcp Edge Function: Smartman's remote MCP server for Claude and ChatGPT (ADR 0126). */
+/** The mcp Edge Function: knowno's remote MCP server for Claude and ChatGPT (ADR 0126). */
 
 import { readConfig } from "./config.ts";
 import { createHandler } from "./handler.ts";

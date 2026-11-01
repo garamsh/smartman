@@ -7,7 +7,7 @@ import { SignInButton } from "@/features/account";
 
 import { CallbackError } from "./_components/callback-error";
 
-export const metadata: Metadata = { title: "로그인 · smartman" };
+export const metadata: Metadata = { title: "로그인 · 알아몰라" };
 
 /**
  * The sign-in page, the only page a signed-out visitor can open, as the phone's welcome draws
@@ -19,7 +19,7 @@ export default function LoginPage({ searchParams }: PageProps<"/login">) {
     <main className="flex min-h-dvh flex-col bg-surface">
       <div className="flex flex-1 flex-col items-center justify-center gap-6 rounded-b-panel bg-ground px-gutter py-10 text-center">
         <h1>
-          <BrandMark mark="stacked" alt="smartman" className="h-auto w-stacked-lockup-width" />
+          <BrandMark mark="stacked" alt="알아몰라" className="h-auto w-stacked-lockup-width" />
         </h1>
         <p className="text-body whitespace-pre-line text-ink-2">
           {"밀어서 응답하고,\n잊을 때쯤 다시 만나는 암기 카드"}

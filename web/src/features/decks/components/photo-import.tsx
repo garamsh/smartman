@@ -9,7 +9,7 @@ import { cardKey } from "../authoring";
 import { parseContent } from "../card-content";
 import { preparePhoto, sendPhoto } from "../extract-photo";
 import { describeFailure, isRetakeable, isRetryable, type PhotoFailure } from "../photo-failure";
-import { type Candidate } from "../photo-candidates";
+import { appendCandidates, type Candidate } from "../photo-candidates";
 import type { Deck } from "../library";
 import {
   cardsOf,
@@ -31,7 +31,15 @@ type PhotoState =
   | { kind: "reading" }
   | { kind: "read"; cards: Candidate[] }
   | { kind: "failed"; failure: PhotoFailure };
-type Photo = { id: string; file: File; url: string; upload?: File; state: PhotoState };
+/** A photo, with the cards read off its page so far when a failure stopped it before the end. */
+type Photo = {
+  id: string;
+  file: File;
+  url: string;
+  upload?: File;
+  readSoFar?: Candidate[];
+  state: PhotoState;
+};
 
 /** The most photos one import holds, as the phone's `maxPhotosPerImport`. */
 const maxPhotos = 50;
@@ -118,10 +126,25 @@ export function PhotoImport({
       upload = prepared;
       update(photo.id, { upload });
     }
-    const result = await sendPhoto(upload);
-    return "cards" in result
-      ? { kind: "read", cards: result.cards }
-      : { kind: "failed", failure: result.failure };
+    // A page the function leaves unread past a request's cards is read on with its cursor, with the
+    // same photo, until it is read to its end (ADR 0138).
+    let cards = photo.readSoFar ?? [];
+    let cursor: string | null = null;
+    do {
+      const result = await sendPhoto(upload, cursor);
+      if ("failure" in result) {
+        // The cursor is spent; reading the photo again starts over and adds to these cards.
+        update(photo.id, { readSoFar: cards });
+        return { kind: "failed", failure: result.failure };
+      }
+      cards = appendCandidates(cards, result.cards);
+      cursor = result.cursor;
+    } while (
+      cursor &&
+      !closed.current &&
+      photosRef.current.some((current) => current.id === photo.id)
+    );
+    return { kind: "read", cards };
   }
   // Reads the waiting photos in order, one call at a time, as Server Actions run one at a time.
   async function pump() {
@@ -278,7 +301,7 @@ export function PhotoImport({
           ? {
               ...photo,
               state: {
-                kind: "read",
+                ...photo.state,
                 cards: photo.state.cards.map((item) => (item.id === card.id ? card : item)),
               },
             }

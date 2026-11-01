@@ -45,10 +45,14 @@ export async function preparePhoto(file: Blob): Promise<File | PhotoFailure> {
   }
 }
 
-/** Sends one prepared photo; a call that never reaches the Server Action is `offline`. */
-export async function sendPhoto(upload: File): Promise<Extraction> {
+/**
+ * Sends one prepared photo, reading its page on from [cursor] when given; a call that never
+ * reaches the Server Action is `offline`.
+ */
+export async function sendPhoto(upload: File, cursor: string | null = null): Promise<Extraction> {
   const form = new FormData();
   form.set("photo", upload);
+  if (cursor) form.set("cursor", cursor);
   try {
     return await readPhoto(form);
   } catch {

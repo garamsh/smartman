@@ -7,11 +7,17 @@ import { field } from "@/supabase/row";
 import { parseCandidates, type Candidate } from "./photo-candidates";
 import type { PhotoFailure } from "./photo-failure";
 
-/** A per-photo result, without exposing service errors or credentials. */
-export type Extraction = { cards: Candidate[] } | { failure: PhotoFailure };
+/**
+ * A per-request result, without exposing service errors or credentials; `cursor` when the function
+ * left the page unread past the cards, to send back with the same photo to read on (ADR 0138).
+ */
+export type Extraction = { cards: Candidate[]; cursor: string | null } | { failure: PhotoFailure };
 
 /** The upload bound: the browser prepares every photo under it, inside the 4 MiB action limit. */
 const maxUploadBytes = 3 * 1024 * 1024;
+
+/** The longest cursor the function takes, as its `MAX_CURSOR_LENGTH`. */
+const maxCursorLength = 24 * 1024;
 
 /**
  * How long a request waits for the function: past its worst case, a retry started by 75 s that
@@ -21,12 +27,16 @@ const extractionTimeoutMs = 145_000;
 
 /**
  * Calls the existing extraction function as the verified user, without a browser CORS request,
- * and logs one line per photo with the function's status and latency, never the image or token.
+ * reading the page on from the form's `cursor` when it holds one, and logs one line per request
+ * with the function's status and latency, never the image, cursor or token.
  */
 export async function readPhoto(form: FormData): Promise<Extraction> {
   if (!(form instanceof FormData)) return { failure: { kind: "refused" } };
   const file = form.get("photo");
   if (!(file instanceof File) || file.size === 0 || file.size > maxUploadBytes)
+    return { failure: { kind: "refused" } };
+  const cursor = form.get("cursor");
+  if (cursor !== null && (typeof cursor !== "string" || !cursor || cursor.length > maxCursorLength))
     return { failure: { kind: "refused" } };
   const client = await createClient();
   const user = await readUserId(client);
@@ -42,7 +52,10 @@ export async function readPhoto(form: FormData): Promise<Extraction> {
     String.fromCharCode(...bytes.slice(0, 4)) === "RIFF" &&
     String.fromCharCode(...bytes.slice(8, 12)) === "WEBP";
   if (!jpeg && !png && !webp) return { failure: { kind: "refused" } };
-  const body = JSON.stringify({ image: Buffer.from(bytes).toString("base64") });
+  const body = JSON.stringify({
+    image: Buffer.from(bytes).toString("base64"),
+    ...(cursor === null ? {} : { cursor }),
+  });
   const started = Date.now();
   let attempts = 0;
   let status: number | "timeout" | "unreachable" = "unreachable";
@@ -66,7 +79,11 @@ export async function readPhoto(form: FormData): Promise<Extraction> {
         },
       );
       status = response.status;
-      result = parseExtraction(response.status, await response.json().catch(() => null));
+      result = parseExtraction(
+        response.status,
+        await response.json().catch(() => null),
+        cursor !== null,
+      );
     } catch (cause) {
       status =
         cause instanceof DOMException && cause.name === "TimeoutError" ? "timeout" : "unreachable";
@@ -78,6 +95,7 @@ export async function readPhoto(form: FormData): Promise<Extraction> {
       status,
       ms: Date.now() - started,
       attempts,
+      resumed: cursor !== null,
       bytes: bytes.length,
       outcome: "cards" in result ? "cards" : result.failure.kind,
       cards: "cards" in result ? result.cards.length : 0,
@@ -86,11 +104,22 @@ export async function readPhoto(form: FormData): Promise<Extraction> {
   return result;
 }
 
-/** The cards a 200 holds, or the failure a status means, as the phone's `parseExtraction`. */
-function parseExtraction(status: number, body: unknown): Extraction {
+/**
+ * The cards a 200 holds with its cursor, or the failure a status means, as the phone's
+ * `parseExtraction`; a [resumed] request may answer no card, the page ending where it left off.
+ * A 410, a cursor the function no longer takes, is `service`.
+ */
+function parseExtraction(status: number, body: unknown, resumed: boolean): Extraction {
   if (status === 200) {
-    const cards = parseCandidates(body);
-    return cards ? { cards } : { failure: { kind: "service" } };
+    const cards = parseCandidates(body, resumed);
+    const cursor = field(body, "cursor");
+    return cards
+      ? {
+          cards,
+          cursor:
+            field(body, "partial") === true && typeof cursor === "string" && cursor ? cursor : null,
+        }
+      : { failure: { kind: "service" } };
   }
   if (status === 401) return { failure: { kind: "signIn" } };
   if (status === 403 && field(body, "error") === "suspended")

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 import { LegalDocument, type LegalSection } from "@/features/legal";
 
-export const metadata: Metadata = { title: "개인정보 처리방침 · smartman" };
+export const metadata: Metadata = { title: "개인정보 처리방침 · 알아몰라" };
 
 const contact = "sauce@garam.sh";
 
@@ -12,7 +12,7 @@ const sections: readonly LegalSection[] = [
     heading: "수집하는 개인정보 항목과 수집 방법",
     body: (
       <>
-        <p>smartman은 서비스에 꼭 필요한 정보만 받아요.</p>
+        <p>알아몰라는 서비스에 꼭 필요한 정보만 받아요.</p>
         <ul>
           <li>
             로그인: Google 로그인을 하면 Google이 전달하는 이메일 주소와 Google 계정 식별자, 그리고
@@ -93,7 +93,7 @@ const sections: readonly LegalSection[] = [
     heading: "개인정보의 제3자 제공",
     body: (
       <>
-        <p>smartman은 개인정보를 제3자에게 제공하지 않아요.</p>
+        <p>알아몰라는 개인정보를 제3자에게 제공하지 않아요.</p>
         <p>
           덱을 공개하면 그 덱의 이름, 설명, 카드와 내 표시 이름이 로그인한 모든 이용자에게 보여요.
           이것은 이용자가 직접 고른 공개이고, 언제든 &ldquo;비공개로 전환&rdquo;할 수 있어요.
@@ -139,7 +139,7 @@ const sections: readonly LegalSection[] = [
           </li>
           <li>
             OpenRouter(openrouter.ai)와 AI 모델 제공자: 사진으로 카드를 만들 때 그 사진을 카드
-            추출을 위해 보내요. smartman은 보관을 요청하지 않아요. 모델 제공자와 그 국가는 운영자가
+            추출을 위해 보내요. 알아몰라는 보관을 요청하지 않아요. 모델 제공자와 그 국가는 운영자가
             쓰는 모델에 따라 정해지고, 바뀌면 이 방침에서 알려 드려요.
           </li>
           <li>
@@ -180,7 +180,7 @@ const sections: readonly LegalSection[] = [
     heading: "자동으로 수집되는 정보와 쿠키",
     body: (
       <>
-        <p>smartman은 광고나 분석을 위한 쿠키와 추적 도구를 쓰지 않아요.</p>
+        <p>알아몰라는 광고나 분석을 위한 쿠키와 추적 도구를 쓰지 않아요.</p>
         <ul>
           <li>
             웹: 로그인을 유지하려고 Supabase의 세션 쿠키(이름이 &ldquo;sb-&rdquo;로 시작해요)를
@@ -219,7 +219,7 @@ const sections: readonly LegalSection[] = [
     heading: "개인정보 보호 문의처",
     body: (
       <p>
-        개인정보에 관한 문의, 불만과 피해 구제 요청은 smartman 운영자에게{" "}
+        개인정보에 관한 문의, 불만과 피해 구제 요청은 알아몰라 운영자에게{" "}
         <a href={`mailto:${contact}`}>{contact}</a>로 보내 주세요.
       </p>
     ),
@@ -236,7 +236,7 @@ const sections: readonly LegalSection[] = [
   },
 ];
 
-/** The privacy policy: what smartman collects, why, where it goes, and the user's rights. */
+/** The privacy policy: what knowno collects, why, where it goes, and the user's rights. */
 export default function PrivacyPage() {
   return (
     <LegalDocument
@@ -244,7 +244,7 @@ export default function PrivacyPage() {
       effectiveDate="2026년 10월 16일"
       intro={
         <p>
-          smartman 운영자(이하 &ldquo;운영자&rdquo;)는 「개인정보 보호법」에 따라 이용자의
+          알아몰라 운영자(이하 &ldquo;운영자&rdquo;)는 「개인정보 보호법」에 따라 이용자의
           개인정보를 보호하고, 그 처리에 관한 사항을 이렇게 알려 드려요.
         </p>
       }

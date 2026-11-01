@@ -62,9 +62,12 @@ export function cost(
     pricing.completion * completionTokens;
 }
 
-/** What one call to a model costs at most, the reply running to the output cap. */
-export function worstCallUsd(pricing: Pricing): number {
-  return cost(pricing, WORST_PROMPT_TOKENS, MAX_OUTPUT_TOKENS);
+/** What one call to a model costs at most, the reply running to [maxTokens], the output cap. */
+export function worstCallUsd(
+  pricing: Pricing,
+  maxTokens: number = MAX_OUTPUT_TOKENS,
+): number {
+  return cost(pricing, WORST_PROMPT_TOKENS, maxTokens);
 }
 
 /** How large one sample's reply is taken to be: its cards, and the typical tokens of each. */

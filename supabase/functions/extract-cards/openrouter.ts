@@ -4,14 +4,17 @@ import {
   type Card,
   type CardRule,
   cardsSchema,
+  closeCutReply,
   composeInstructions,
+  OUTPUT_CONTRACT,
+  type ParsedReply,
   parseReply,
 } from "./cards.ts";
 import { userPrompt } from "./prompt_v8.ts";
 import type { Image, LanguageHints } from "./request.ts";
 
 export const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
-// Bounds one call's cost; a reply cut off at it fails the schema.
+// Bounds one call's cost; a reply cut off at it keeps the cards it completed (ADR 0135).
 export const MAX_OUTPUT_TOKENS = 16384;
 /**
  * How long one model call may take, its reply's body included, before it is abandoned as a model
@@ -51,21 +54,53 @@ export type Attempt = {
 /**
  * How a call ended. `dropped` names the rule each dropped card broke: on `cards`, the cards the
  * reply returned beside those kept; on `invalid_output`, every card of a reply that kept none.
+ * `cut` is whether the reply was cut off at the output cap, so only the cards it completed were read.
  */
 export type Extraction =
   | {
     readonly kind: "cards";
     readonly cards: readonly Card[];
     readonly dropped: readonly CardRule[];
+    readonly cut: boolean;
     readonly attempts: readonly Attempt[];
   }
   | { readonly kind: "no_cards"; readonly attempts: readonly Attempt[] }
   | {
     readonly kind: "invalid_output";
     readonly dropped: readonly CardRule[];
+    readonly cut: boolean;
     readonly attempts: readonly Attempt[];
   }
   | { readonly kind: "model_error"; readonly attempts: readonly Attempt[] };
+
+/**
+ * What a call asks the model for and how its reply is read: the reply's JSON schema, the output
+ * contract sent after the prompt, the parser of a whole reply, and the most tokens the reply may
+ * take. The function sends `CARD_LIST`; the eval measures other forms through it (ADR 0135).
+ */
+export type ReplyForm = {
+  readonly schema: unknown;
+  readonly contract: string;
+  readonly parse: (reply: string) => ParsedReply | null;
+  readonly maxTokens: number;
+};
+
+/** The card list of `cardsSchema`, read by `parseReply`, up to `MAX_OUTPUT_TOKENS`. */
+export const CARD_LIST: ReplyForm = {
+  schema: cardsSchema,
+  contract: OUTPUT_CONTRACT,
+  parse: parseReply,
+  maxTokens: MAX_OUTPUT_TOKENS,
+};
+
+/**
+ * How a call departs from the function's own: its reply's form, and a text sent after the photo,
+ * such as a request to go on after the entry an earlier reply was cut at.
+ */
+export type CallOptions = {
+  readonly form?: ReplyForm;
+  readonly followUp?: string;
+};
 
 export type ExtractDeps = {
   readonly apiKey: string;
@@ -79,7 +114,8 @@ export type ExtractDeps = {
 /**
  * One call to [model] with [prompt] and then the output contract as the system prompt. A card that
  * breaks a rule is dropped; output that is not the schema's, or whose every card is dropped, is
- * `invalid_output`, with no second call.
+ * `invalid_output`, with no second call. A reply cut off at the output cap keeps the cards its JSON
+ * completed before the cut.
  */
 export async function extractCards(
   image: Image,
@@ -87,28 +123,42 @@ export async function extractCards(
   model: ModelId,
   prompt: string,
   deps: ExtractDeps,
+  options: CallOptions = {},
 ): Promise<Extraction> {
+  const form = options.form ?? CARD_LIST;
   const call = await callModel(
     model,
-    composeInstructions(prompt),
+    composeInstructions(prompt, form.contract),
     image,
     languages,
+    { form, followUp: options.followUp },
     deps,
   );
   const attempts = [call.attempt];
   if (call.reply === null) return { kind: "model_error", attempts };
-  const parsed = parseReply(call.reply);
+  const whole = form.parse(call.reply);
+  // A reply that reached the cap with its JSON whole was not cut short.
+  const cut = whole === null && call.cut;
+  const closed = cut ? closeCutReply(call.reply) : null;
+  const parsed = whole ?? (closed === null ? null : form.parse(closed));
   if (parsed === null) {
-    return { kind: "invalid_output", dropped: [], attempts };
+    return { kind: "invalid_output", dropped: [], cut, attempts };
   }
   const { cards, dropped } = parsed;
-  if (cards.length > 0) return { kind: "cards", cards, dropped, attempts };
-  return dropped.length === 0
+  if (cards.length > 0) {
+    return { kind: "cards", cards, dropped, cut, attempts };
+  }
+  return dropped.length === 0 && !cut
     ? { kind: "no_cards", attempts }
-    : { kind: "invalid_output", dropped, attempts };
+    : { kind: "invalid_output", dropped, cut, attempts };
 }
 
-type Call = { readonly attempt: Attempt; readonly reply: string | null };
+/** One call's attempt, its message text or null when the call failed, and whether it hit the cap. */
+type Call = {
+  readonly attempt: Attempt;
+  readonly reply: string | null;
+  readonly cut: boolean;
+};
 
 /** Sends one request; `reply` is the message text, or null when the call itself failed. */
 async function callModel(
@@ -116,6 +166,7 @@ async function callModel(
   instructions: string,
   image: Image,
   languages: LanguageHints,
+  request: { readonly form: ReplyForm; readonly followUp?: string },
   deps: ExtractDeps,
 ): Promise<Call> {
   const started = deps.now();
@@ -149,16 +200,23 @@ async function callModel(
                 type: "image_url",
                 image_url: { url: `data:${image.type};base64,${image.base64}` },
               },
+              ...(request.followUp === undefined
+                ? []
+                : [{ type: "text", text: request.followUp }]),
             ],
           },
         ],
         response_format: {
           type: "json_schema",
-          json_schema: { name: "cards", strict: true, schema: cardsSchema },
+          json_schema: {
+            name: "cards",
+            strict: true,
+            schema: request.form.schema,
+          },
         },
         // Route only to providers that honour the schema rather than ignore it.
         provider: { require_parameters: true },
-        max_tokens: MAX_OUTPUT_TOKENS,
+        max_tokens: request.form.maxTokens,
       }),
     });
     const body: unknown = await response.json().catch(() => null);
@@ -182,6 +240,7 @@ async function callModel(
         timedOut: result === "timed_out",
       },
       reply: null,
+      cut: false,
     };
   }
   const attempt = {
@@ -190,20 +249,28 @@ async function callModel(
     usage: readUsage(result.body),
     timedOut: false,
   };
-  if (!result.ok) return { attempt, reply: null };
+  if (!result.ok) return { attempt, reply: null, cut: false };
+  const message = readReply(result.body);
   // A 200 whose body carries no message text is treated as invalid output.
-  return { attempt, reply: readReply(result.body) ?? "" };
+  return {
+    attempt,
+    reply: message?.text ?? "",
+    cut: message?.finishReason === "length",
+  };
 }
 
 /** A call's answer: whether its status was a success, and its body, null when not JSON. */
 type Read = { readonly ok: boolean; readonly body: unknown };
 
-function readReply(body: unknown): string | null {
+/** The first choice's message text and why it finished, or null when it carries no text. */
+function readReply(
+  body: unknown,
+): { readonly text: string; readonly finishReason: unknown } | null {
   if (!isRecord(body) || !Array.isArray(body.choices)) return null;
   const choice: unknown = body.choices[0];
   if (!isRecord(choice) || !isRecord(choice.message)) return null;
   return typeof choice.message.content === "string"
-    ? choice.message.content
+    ? { text: choice.message.content, finishReason: choice.finish_reason }
     : null;
 }
 

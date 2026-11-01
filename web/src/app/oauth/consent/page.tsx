@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { Consent } from "./_components/consent";
 import { ConsentSkeleton } from "./_components/consent-skeleton";
 
-export const metadata: Metadata = { title: "AI 연결 · smartman" };
+export const metadata: Metadata = { title: "AI 연결 · 알아몰라" };
 
 /**
  * The consent page Supabase Auth's OAuth server opens for an AI app connecting to the user's

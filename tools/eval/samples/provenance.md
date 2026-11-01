@@ -1,55 +1,214 @@
 # Sample provenance
 
-Where each file of the extract-cards eval's sample set comes from, and under what licence.
+Where each file of the extract-cards eval's sample set comes from, and under
+what licence.
 
 ## Generated samples
 
-- `NN-<layout>-<pair>-<style>.jpg` and the `.json` beside it, 24 pairs numbered 01 to 24, `NN-notes-<language>-<hand>-<distortion>.jpg` with its `.json`, 8 pairs numbered 25 to 32, `NN-notes-ko-grammar-<hand>-<distortion>.jpg` with its `.json`, 4 pairs numbered 33 to 36, `NN-notes-ko-auxiliary-<hand>-<distortion>.jpg` with its `.json`, 4 pairs numbered 37 to 40, `NN-notes-ko-numerals-<hand>-<distortion>.jpg` with its `.json`, 4 pairs numbered 41 to 44, `NN-word-book-en-ko-<style>.jpg` with its `.json`, 3 pairs numbered 45 to 47, `NN-notes-ko-honorifics-<hand>-<distortion>.jpg` with its `.json`, 4 pairs numbered 48 to 51, `NN-notes-ko-components-<hand>-<distortion>.jpg` with its `.json`, 4 pairs numbered 52 to 55, `NN-<page>-<style>.jpg` with its `.json` for the pages for prompt v8, 12 pairs numbered 56 to 67, and `NN-structure-<document>-<hand>-<distortion>.jpg` with its `.json` for the two-stage eval, 20 pairs numbered 68 to 87, and `NN-numbered-list-en-ko-<style>.jpg` with its `.json`, 2 pairs numbered 88 and 89, are written by `tools/eval/generate.py` with seed `20261015`: `uv run --locked --script tools/eval/generate.py` from the repository root.
-- Each `.json` is the ground truth of its image: the cards the page shows, its layout, languages, hand, distortion and fonts. A card holds its `front` and its `senses`, each `{labels, meaning, examples}`: the labels the page prints for that sense, each with its `kind`, its `category` and its `text` without brackets, and the examples printed under it. In the dictionary layout, which prints them, each sense has its part of speech (`n.` or `v.` for English, a bracket notation such as `[동]` for Japanese) and the card the `examples` the page shows. A printed label's category comes from the generator's table of the forms the pages print; a label it does not hold, such as `[사물]`, is another label with none.
-- They are synthetic. Each is a page rendered in one of four layouts (two-column list, bilingual table, dictionary entries, textbook glossary), for English to Korean or Japanese to Korean, then distorted by perspective, rotation, uneven light, blur and JPEG noise. None is a photo taken with a phone.
-- The notes pages are synthetic too: each of the two documents in `tools/eval/notes.json`, a Korean page of logic lecture notes and an English page of economics notes, is set in Nanum Gothic (print) and Nanum Pen Script (handwriting) and photographed with the mild and the harsh distortion. Their `.json` holds `kind` "notes", the rules and exceptions the page teaches as facts, each with its `step` from 1 to 4, the `terms` a card must hold to cover it and the worked `examples` the page prints for it, without their "예)" or "e.g." label, and `lines`, every line the page prints.
-- The dense page, `ko-grammar` in `tools/eval/notes.json`, is a Korean grammar page in the style of the owner's described in issue #176: rules of 모음조화, the choice of 어미 '-아/-어', contraction, deletion and the ㅂ irregular, worked examples, and exceptions marked with a red star or circle the generator draws. It is set at four-fifths of the usual size in the same two faces and photographed with both distortions. Its arrows are written "->", since Nanum Pen Script has no "→".
-- The page with the writer's additions, `ko-auxiliary` in `tools/eval/notes.json`, follows the structure of the owner's textbook page described in issue #189, not its content: a ruled table classifying 용언, the definition of 보조 용언 with printed examples, and additions in blue pen in the handwriting face on every page, a starred list to memorise, two numbered judgment methods, and a spacing rule written beside its heading. It is set at 0.85 of the usual size. Its numbered methods are written "1)" and "2)", since Nanum Pen Script has no "①".
-- The page for prompt v6, `ko-numerals` in `tools/eval/notes.json`, models the structure issue #200 describes, written for this project and not copied from the owner's page: a ruled table classifying 수사 into 양수사 and 서수사, each in 고유어 and 한자어; definitions of 수사 and 수 관형사 with printed examples; a judgment rule telling the two apart, with its examples; a framed side box; and the writer's additions in blue pen, two tips marked with a star and a trap. It is set at 0.85 of the usual size. Its truth is atomic: each table cell is a fact, as are each definition, the judgment rule, the side box, each tip and the trap, 11 facts.
-- The word-book pages, from `word-book` in `tools/eval/vocabulary.json`, are five English headwords written for this project, each with a pronunciation, one per part of speech on four of them, two or three Korean senses with a bracketed part-of-speech label each, and an extra such as 유의어 on four. They are set in the vocabulary faces: print and handwriting under the mild distortion, and handwriting under the harsh one. Their `.json` holds each card's `front`, its `senses` in page order, its `pronunciation` and its `extras`. Stress is marked with an apostrophe, such as `['kantent]`, since Nanum Gothic has no accented vowels.
-- The pages for prompt v7 were written for this project. Their `.json` also names, as `tableBlanks` or `clozeBlanks`, the cells or words a card should ask as blanks, each with the `terms` one blank must hold. Both are set at 0.9 of the usual size in the notes faces, and photographed with both distortions.
-  - `ko-honorifics` in `tools/eval/notes.json` is a Korean grammar page on 높임법. It has a ruled classification table of 주체, 객체 and 상대 높임 by how each is made and whom it raises, two lines on honorific words and particles, and the writer's additions in blue pen: a starred exception and a trap. Its truth makes each table cell a fact and names every body cell outside the row names as a table blank, six in all.
-  - `ko-components` in `tools/eval/notes.json` is a Korean grammar page on 문장 성분. It has three list lines naming the components of each kind, two lines on their use with printed examples, and a starred exception in blue pen. Its truth names each of the seven listed components as a cloze blank.
-- The pages for prompt v8 were written for this project and are drawn as the word-book pages are, each in print and handwriting under the mild distortion and in the harsh style:
-  - `word-book-unlabelled-en-ko`, samples 56 to 58, is the word book of `word-book` with no label printed; samples 45 to 47 are its labelled control.
-  - `word-book-examples-en-ko`, samples 59 to 61, is `word-book-examples` in `tools/eval/vocabulary.json`: four English headwords, each sense with its label and one example sentence printed under it.
-  - `dictionary-ko`, samples 62 to 64, is `dictionary-ko`: seven Korean headwords, each sense a definition in Korean after a semantic class such as `[사물]`, alone or after a part of speech such as `「명사」`, one of them with two senses.
-  - `word-book-de-ko`, samples 65 to 67, is `word-book-de`: six German nouns and verbs, each with a Korean meaning and its gender and plural, or its past and past participle, printed as extras under 성, 복수, 과거 and 과거분사. Its words have no umlaut, since neither Nanum face has one.
-- The pages for the two-stage eval (#414), samples 68 to 87, are the five documents of `tools/eval/structure.json`, each in the notes faces, print and handwriting, under the mild and the harsh distortion: `ko-states`, a comparison table of three early Korean states over four aspects and a list; `ko-respiration`, photosynthesis against cellular respiration and a process; `en-markets`, three market structures and two lines of prose; `ko-sentences`, a table of sentence endings with examples and worked examples; and `en-organelles`, a table of organelles and a list.
-  - A comparison table's cells hold bullet lines, several in some cells, and the writer's marks are drawn on spans of the lines in red pen: underlines, circles and a star beside a list line, and highlights in yellow. Middle dots are written as commas and arrows as "->", since Nanum Pen Script has neither "·" nor "→".
-  - Their `.json` holds `kind` "notes" with `layout` "structure", every printed line as a fact whose `terms` are the spans the line should blank, `lines`, and `sections`: each section's title, language and content type, its table's columns and rows of cells of lines or its lines, each line with its `id`, its marks' spans, kinds and ink, and its `blanks`, every span a mark covers and every further one the document names, counted in characters.
-  - Written for this project from general knowledge of their subjects, none copied from a textbook; the owner's example page of #412 was described in words and not used.
-- The numbered word list, samples 88 and 89, is `numbered-list` in `tools/eval/vocabulary.json`: twenty English words, each printed on one line after its number and before its Korean meaning, as "1. abandon 버리다", in Nanum Gothic under the mild distortion and under the harsh one (ADR 0128). Its `.json` holds each word as its `front` and its meaning as one sense with no label, and no number: a front holding the list's number is the error it is scored on.
-- No real photo is among them: the owner's photo of their own logic notes, which issue #148 describes, was not used, and the Korean document was written for this project on the topics it names.
-- Two runs of the generator on macOS 26 (arm64) with the locked dependencies wrote byte-identical files; adding the notes pages left the 24 vocabulary samples byte-identical, adding the dense page left samples 01 to 32 byte-identical, adding the page with the writer's additions left samples 01 to 36 byte-identical, adding the page for prompt v6 left samples 01 to 40 byte-identical, adding the word-book pages left samples 01 to 44 byte-identical, adding the pages for prompt v7 left samples 01 to 47 byte-identical, and adding the pages for prompt v8 left the images of samples 01 to 55 and the notes truths byte-identical, while it rewrote the 27 vocabulary truths in the shape of senses, adding the pages for the two-stage eval left samples 01 to 67 byte-identical, and adding the numbered word list left samples 01 to 87 byte-identical.
-- The generator's dependencies are pinned in its header and locked in `tools/eval/generate.py.lock`. No bot proposes their bump; whoever regenerates the samples moves them, with `uv lock --script tools/eval/generate.py --upgrade`, and commits the new samples in the same change.
+- `NN-<layout>-<pair>-<style>.jpg` and the `.json` beside it, 24 pairs numbered
+  01 to 24, `NN-notes-<language>-<hand>-<distortion>.jpg` with its `.json`, 8
+  pairs numbered 25 to 32, `NN-notes-ko-grammar-<hand>-<distortion>.jpg` with
+  its `.json`, 4 pairs numbered 33 to 36,
+  `NN-notes-ko-auxiliary-<hand>-<distortion>.jpg` with its `.json`, 4 pairs
+  numbered 37 to 40, `NN-notes-ko-numerals-<hand>-<distortion>.jpg` with its
+  `.json`, 4 pairs numbered 41 to 44, `NN-word-book-en-ko-<style>.jpg` with its
+  `.json`, 3 pairs numbered 45 to 47,
+  `NN-notes-ko-honorifics-<hand>-<distortion>.jpg` with its `.json`, 4 pairs
+  numbered 48 to 51, `NN-notes-ko-components-<hand>-<distortion>.jpg` with its
+  `.json`, 4 pairs numbered 52 to 55, `NN-<page>-<style>.jpg` with its `.json`
+  for the pages for prompt v8, 12 pairs numbered 56 to 67, and
+  `NN-structure-<document>-<hand>-<distortion>.jpg` with its `.json` for the
+  two-stage eval, 20 pairs numbered 68 to 87, and
+  `NN-numbered-list-en-ko-<style>.jpg` with its `.json`, 2 pairs numbered 88 and
+  89, `90-dense-list-fr-ko-print.jpg` and `91-dense-list-200-fr-ko-print.jpg`
+  with their `.json`, are written by `tools/eval/generate.py` with seed `20261015`:
+  `uv run --locked --script tools/eval/generate.py` from the repository root.
+- Each `.json` is the ground truth of its image: the cards the page shows, its
+  layout, languages, hand, distortion and fonts. A card holds its `front` and
+  its `senses`, each `{labels, meaning, examples}`: the labels the page prints
+  for that sense, each with its `kind`, its `category` and its `text` without
+  brackets, and the examples printed under it. In the dictionary layout, which
+  prints them, each sense has its part of speech (`n.` or `v.` for English, a
+  bracket notation such as `[동]` for Japanese) and the card the `examples` the
+  page shows. A printed label's category comes from the generator's table of the
+  forms the pages print; a label it does not hold, such as `[사물]`, is another
+  label with none.
+- They are synthetic. Each is a page rendered in one of four layouts (two-column
+  list, bilingual table, dictionary entries, textbook glossary), for English to
+  Korean or Japanese to Korean, then distorted by perspective, rotation, uneven
+  light, blur and JPEG noise. None is a photo taken with a phone.
+- The notes pages are synthetic too: each of the two documents in
+  `tools/eval/notes.json`, a Korean page of logic lecture notes and an English
+  page of economics notes, is set in Nanum Gothic (print) and Nanum Pen Script
+  (handwriting) and photographed with the mild and the harsh distortion. Their
+  `.json` holds `kind` "notes", the rules and exceptions the page teaches as
+  facts, each with its `step` from 1 to 4, the `terms` a card must hold to cover
+  it and the worked `examples` the page prints for it, without their "예)" or
+  "e.g." label, and `lines`, every line the page prints.
+- The dense page, `ko-grammar` in `tools/eval/notes.json`, is a Korean grammar
+  page in the style of the owner's described in issue #176: rules of 모음조화,
+  the choice of 어미 '-아/-어', contraction, deletion and the ㅂ irregular,
+  worked examples, and exceptions marked with a red star or circle the generator
+  draws. It is set at four-fifths of the usual size in the same two faces and
+  photographed with both distortions. Its arrows are written "->", since Nanum
+  Pen Script has no "→".
+- The page with the writer's additions, `ko-auxiliary` in
+  `tools/eval/notes.json`, follows the structure of the owner's textbook page
+  described in issue #189, not its content: a ruled table classifying 용언, the
+  definition of 보조 용언 with printed examples, and additions in blue pen in
+  the handwriting face on every page, a starred list to memorise, two numbered
+  judgment methods, and a spacing rule written beside its heading. It is set at
+  0.85 of the usual size. Its numbered methods are written "1)" and "2)", since
+  Nanum Pen Script has no "①".
+- The page for prompt v6, `ko-numerals` in `tools/eval/notes.json`, models the
+  structure issue #200 describes, written for this project and not copied from
+  the owner's page: a ruled table classifying 수사 into 양수사 and 서수사, each
+  in 고유어 and 한자어; definitions of 수사 and 수 관형사 with printed examples;
+  a judgment rule telling the two apart, with its examples; a framed side box;
+  and the writer's additions in blue pen, two tips marked with a star and a
+  trap. It is set at 0.85 of the usual size. Its truth is atomic: each table
+  cell is a fact, as are each definition, the judgment rule, the side box, each
+  tip and the trap, 11 facts.
+- The word-book pages, from `word-book` in `tools/eval/vocabulary.json`, are
+  five English headwords written for this project, each with a pronunciation,
+  one per part of speech on four of them, two or three Korean senses with a
+  bracketed part-of-speech label each, and an extra such as 유의어 on four. They
+  are set in the vocabulary faces: print and handwriting under the mild
+  distortion, and handwriting under the harsh one. Their `.json` holds each
+  card's `front`, its `senses` in page order, its `pronunciation` and its
+  `extras`. Stress is marked with an apostrophe, such as `['kantent]`, since
+  Nanum Gothic has no accented vowels.
+- The pages for prompt v7 were written for this project. Their `.json` also
+  names, as `tableBlanks` or `clozeBlanks`, the cells or words a card should ask
+  as blanks, each with the `terms` one blank must hold. Both are set at 0.9 of
+  the usual size in the notes faces, and photographed with both distortions.
+  - `ko-honorifics` in `tools/eval/notes.json` is a Korean grammar page on
+    높임법. It has a ruled classification table of 주체, 객체 and 상대 높임 by
+    how each is made and whom it raises, two lines on honorific words and
+    particles, and the writer's additions in blue pen: a starred exception and a
+    trap. Its truth makes each table cell a fact and names every body cell
+    outside the row names as a table blank, six in all.
+  - `ko-components` in `tools/eval/notes.json` is a Korean grammar page on 문장
+    성분. It has three list lines naming the components of each kind, two lines
+    on their use with printed examples, and a starred exception in blue pen. Its
+    truth names each of the seven listed components as a cloze blank.
+- The pages for prompt v8 were written for this project and are drawn as the
+  word-book pages are, each in print and handwriting under the mild distortion
+  and in the harsh style:
+  - `word-book-unlabelled-en-ko`, samples 56 to 58, is the word book of
+    `word-book` with no label printed; samples 45 to 47 are its labelled
+    control.
+  - `word-book-examples-en-ko`, samples 59 to 61, is `word-book-examples` in
+    `tools/eval/vocabulary.json`: four English headwords, each sense with its
+    label and one example sentence printed under it.
+  - `dictionary-ko`, samples 62 to 64, is `dictionary-ko`: seven Korean
+    headwords, each sense a definition in Korean after a semantic class such as
+    `[사물]`, alone or after a part of speech such as `「명사」`, one of them
+    with two senses.
+  - `word-book-de-ko`, samples 65 to 67, is `word-book-de`: six German nouns and
+    verbs, each with a Korean meaning and its gender and plural, or its past and
+    past participle, printed as extras under 성, 복수, 과거 and 과거분사. Its
+    words have no umlaut, since neither Nanum face has one.
+- The pages for the two-stage eval (#414), samples 68 to 87, are the five
+  documents of `tools/eval/structure.json`, each in the notes faces, print and
+  handwriting, under the mild and the harsh distortion: `ko-states`, a
+  comparison table of three early Korean states over four aspects and a list;
+  `ko-respiration`, photosynthesis against cellular respiration and a process;
+  `en-markets`, three market structures and two lines of prose; `ko-sentences`,
+  a table of sentence endings with examples and worked examples; and
+  `en-organelles`, a table of organelles and a list.
+  - A comparison table's cells hold bullet lines, several in some cells, and the
+    writer's marks are drawn on spans of the lines in red pen: underlines,
+    circles and a star beside a list line, and highlights in yellow. Middle dots
+    are written as commas and arrows as "->", since Nanum Pen Script has neither
+    "·" nor "→".
+  - Their `.json` holds `kind` "notes" with `layout` "structure", every printed
+    line as a fact whose `terms` are the spans the line should blank, `lines`,
+    and `sections`: each section's title, language and content type, its table's
+    columns and rows of cells of lines or its lines, each line with its `id`,
+    its marks' spans, kinds and ink, and its `blanks`, every span a mark covers
+    and every further one the document names, counted in characters.
+  - Written for this project from general knowledge of their subjects, none
+    copied from a textbook; the owner's example page of #412 was described in
+    words and not used.
+- The numbered word list, samples 88 and 89, is `numbered-list` in
+  `tools/eval/vocabulary.json`: twenty English words, each printed on one line
+  after its number and before its Korean meaning, as "1. abandon 버리다", in
+  Nanum Gothic under the mild distortion and under the harsh one (ADR 0128). Its
+  `.json` holds each word as its `front` and its meaning as one sense with no
+  label, and no number: a front holding the list's number is the error it is
+  scored on.
+- The dense word list, sample 90, is `dense-list-fr` in
+  `tools/eval/vocabulary.json`: a hundred French words numbered 101 to 200 in
+  two ruled tables of three columns, 번호, 앞면 (프랑스어) and 뒷면 (한국어 뜻),
+  15 of them with two senses printed "1. 땅  2. 지구", in Nanum Gothic under
+  the mild distortion (#519, ADR 0135). It follows the structure of the owner's
+  word list, not its content, and its words have no accent, which Nanum Gothic
+  lacks. Its `.json` holds each word as its `front` and each printed meaning as
+  a sense with no label, and no number.
+- The two-hundred-word list, sample 91, is `dense-list-fr-first` and then
+  `dense-list-fr` in `tools/eval/vocabulary.json`: two hundred French words
+  numbered 1 to 200 in the same two tables, a hundred rows each in a smaller
+  size, 30 of them with two senses (#535, ADR 0138). Its `.json` is written as
+  sample 90's.
+- No real photo is among them: the owner's photo of their own logic notes, which
+  issue #148 describes, was not used, and the Korean document was written for
+  this project on the topics it names.
+- Two runs of the generator on macOS 26 (arm64) with the locked dependencies
+  wrote byte-identical files; adding the notes pages left the 24 vocabulary
+  samples byte-identical, adding the dense page left samples 01 to 32
+  byte-identical, adding the page with the writer's additions left samples 01 to
+  36 byte-identical, adding the page for prompt v6 left samples 01 to 40
+  byte-identical, adding the word-book pages left samples 01 to 44
+  byte-identical, adding the pages for prompt v7 left samples 01 to 47
+  byte-identical, and adding the pages for prompt v8 left the images of samples
+  01 to 55 and the notes truths byte-identical, while it rewrote the 27
+  vocabulary truths in the shape of senses, adding the pages for the two-stage
+  eval left samples 01 to 67 byte-identical, and adding the numbered word list
+  left samples 01 to 87 byte-identical, adding the dense word list left
+  samples 01 to 89 byte-identical, and adding the two-hundred-word list left
+  samples 01 to 90 byte-identical.
+- The generator's dependencies are pinned in its header and locked in
+  `tools/eval/generate.py.lock`. No bot proposes their bump; whoever regenerates
+  the samples moves them, with
+  `uv lock --script tools/eval/generate.py --upgrade`, and commits the new
+  samples in the same change.
 
 ## Vocabulary and notes
 
-- `tools/eval/vocabulary.json` was written for this project: 90 English and 90 Japanese entries with their Korean meanings, parts of speech, and English example sentences, and the entries of the word-book, examples, Korean dictionary, German and numbered word list pages. It is licensed with the repository.
-- `tools/eval/notes.json` was written for this project: the lines of every notes page, their facts with steps and terms, their examples, and the table and cloze blanks of the pages for prompt v7. It is licensed with the repository.
-- `tools/eval/structure.json` was written for this project: the sections of the pages for the two-stage eval, their lines, marks and blanks. It is licensed with the repository.
+- `tools/eval/vocabulary.json` was written for this project: 90 English and 90
+  Japanese entries with their Korean meanings, parts of speech, and English
+  example sentences, and the entries of the word-book, examples, Korean
+  dictionary, German, numbered, dense and two-hundred-word list pages. It is licensed with the
+  repository.
+- `tools/eval/notes.json` was written for this project: the lines of every notes
+  page, their facts with steps and terms, their examples, and the table and
+  cloze blanks of the pages for prompt v7. It is licensed with the repository.
+- `tools/eval/structure.json` was written for this project: the sections of the
+  pages for the two-stage eval, their lines, marks and blanks. It is licensed
+  with the repository.
 
 ## Fonts
 
-From `google/fonts` at commit `67bc647ce1910e92f461bcc82aae30f21d21a9cc`, each under the SIL Open Font License 1.1, whose text sits beside it in `tools/eval/fonts/`:
+From `google/fonts` at commit `67bc647ce1910e92f461bcc82aae30f21d21a9cc`, each
+under the SIL Open Font License 1.1, whose text sits beside it in
+`tools/eval/fonts/`:
 
-| File | Source path | Licence file | SHA-256 |
-|---|---|---|---|
-| `NanumGothic-Regular.ttf` | `ofl/nanumgothic/` | `NanumGothic-Regular-OFL.txt` | `76f45ef4a6bcff344c837c95a7dcc26e017e38b5846d5ae0cdcb5b86be2e2d31` |
+| File                         | Source path           | Licence file                     | SHA-256                                                            |
+| ---------------------------- | --------------------- | -------------------------------- | ------------------------------------------------------------------ |
+| `NanumGothic-Regular.ttf`    | `ofl/nanumgothic/`    | `NanumGothic-Regular-OFL.txt`    | `76f45ef4a6bcff344c837c95a7dcc26e017e38b5846d5ae0cdcb5b86be2e2d31` |
 | `NanumPenScript-Regular.ttf` | `ofl/nanumpenscript/` | `NanumPenScript-Regular-OFL.txt` | `6f0d1ab29c7894010dc88831fb7a0a51edb79136e450344183de5b1a8b52bd43` |
 | `SawarabiGothic-Regular.ttf` | `ofl/sawarabigothic/` | `SawarabiGothic-Regular-OFL.txt` | `04f2f9111bb69cb8d3706c27b44879c2c0fac593a11edf5cfe8cec1efc92c789` |
-| `Yomogi-Regular.ttf` | `ofl/yomogi/` | `Yomogi-Regular-OFL.txt` | `ec280f473a03187292905618f24fdb08a6dcbf8620b52637e3b589fe745259b9` |
+| `Yomogi-Regular.ttf`         | `ofl/yomogi/`         | `Yomogi-Regular-OFL.txt`         | `ec280f473a03187292905618f24fdb08a6dcbf8620b52637e3b589fe745259b9` |
 
 - Nanum Pen Script and Yomogi are handwriting faces; the others are print faces.
 
 ## Adding real photos
 
-- A real photo goes in this folder as `NN-<description>.jpg` with a `.json` ground truth of the same shape, at least `image` and `cards`, and a line in this file naming who took it and under what licence.
-- A real photo of notes takes a `.json` of the notes shape: `image`, `kind` "notes", `facts` and `lines`.
-- `generate.py` overwrites only the 89 names it writes, so a real photo keeps any other name; numbering it from 90 keeps the folder in order.
+- A real photo goes in this folder as `NN-<description>.jpg` with a `.json`
+  ground truth of the same shape, at least `image` and `cards`, and a line in
+  this file naming who took it and under what licence.
+- A real photo of notes takes a `.json` of the notes shape: `image`, `kind`
+  "notes", `facts` and `lines`.
+- `generate.py` overwrites only the 91 names it writes, so a real photo keeps
+  any other name; numbering it from 92 keeps the folder in order.

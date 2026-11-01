@@ -14,7 +14,8 @@ export async function AdminGate({ children }: { children: ReactNode }) {
   return (
     <>
       <AdminNav />
-      {children}
+      {/* Korean breaks only between words on every admin page (design.md §Details). */}
+      <div className="contents break-keep">{children}</div>
     </>
   );
 }

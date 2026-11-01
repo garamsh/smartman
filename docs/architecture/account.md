@@ -52,10 +52,11 @@ The `account` domain: signing in with Google through Supabase Auth, the session 
 
 ### Configuration
 
-- `app/config/dev.json` holds the Supabase URL, the Supabase publishable key, the Google web client ID (passed as the server client ID) and the iOS client ID. The values are public. The Android client is matched by package name and signing certificate, so no Android client ID is configured.
+- `app/config/dev.json` holds the Supabase URL, `https://api.knowno.app`, the project's custom domain, the Supabase publishable key, the Google web client ID (passed as the server client ID) and the iOS client ID. The values are public. The Android client is matched by package name, `app.knowno`, and signing certificate, so no Android client ID is configured ([ADR 0134](adr/0134-name-the-app-knowno-serve-it-at-knowno-app-identify-it-as-app-knowno-and-reach-the-backend-at-api-knowno-app.md)).
+- The iOS client is the one created for `sh.garam.smartman`, its bundle ID changed by the owner to `app.knowno`, so the old app's install can no longer sign in with Google.
 - `make test`, `make build` and the README's `flutter run` pass the file with `--dart-define-from-file`; no Dart source holds a value.
 - The values are parsed once at start. A missing or malformed value, or a key that is not a publishable key, makes the state `AccountUnavailable`, with the reasons in its `AccountMisconfigured`; the gate then shows the message and no app.
-- The terms of service and the privacy policy are the web's pages, `https://smartman.garam.sh/terms` and `https://smartman.garam.sh/privacy` ([`web-legal.md`](web-legal.md)), constants in `app/lib/account/src/legal.dart` that no configuration changes. Each link opens its page in the platform's browser through `url_launcher`, with a snack bar when it does not open ([ADR 0032](adr/0032-publish-the-legal-documents-on-the-web-and-link-both-clients-to-them.md)).
+- The terms of service and the privacy policy are the web's pages, `https://knowno.app/terms` and `https://knowno.app/privacy` ([`web-legal.md`](web-legal.md)), constants in `app/lib/account/src/legal.dart` that no configuration changes. Each link opens its page in the platform's browser through `url_launcher`, with a snack bar when it does not open ([ADR 0032](adr/0032-publish-the-legal-documents-on-the-web-and-link-both-clients-to-them.md)).
 - The app's version comes from the platform through `package_info_plus`, read once before the first frame.
 - `app/ios/Runner/Info.plist` holds the reversed iOS client ID as a URL scheme. `check-ios-client-id.sh`, run by `make lint`, fails when it differs from `app/config/dev.json`.
 - `check-secrets.sh`, run by `make lint`, fails when any file the repository tracks or would track holds a Supabase secret key or service-role key.
@@ -101,6 +102,7 @@ The `account` domain: signing in with Google through Supabase Auth, the session 
 - [ADR 0026](adr/0026-delete-the-account-through-an-edge-function.md) records why deletion goes through an Edge Function that deletes only the token's user, and why it clears the device without pushing.
 - [ADR 0027](adr/0027-draw-both-clients-in-the-smartman-brand-and-the-v2-screens.md) records the sign-in and account screens' v2 design.
 - [ADR 0032](adr/0032-publish-the-legal-documents-on-the-web-and-link-both-clients-to-them.md) records why the legal links are the web's pages and not configuration.
+- [ADR 0134](adr/0134-name-the-app-knowno-serve-it-at-knowno-app-identify-it-as-app-knowno-and-reach-the-backend-at-api-knowno-app.md) records the name, the bundle and package ID `app.knowno`, the legal pages' host, the Supabase URL and the iOS client re-pointed to `app.knowno`.
 - [ADR 0072](adr/0072-suspend-a-user-through-supabase-auth-s-ban-and-restrictive-write-policies-remove-a-public-deck-from-sharing-for-good-and-read-any-deck-in-the-admin-area.md) records why a suspension is Supabase Auth's ban, which refuses the sign-in and refresh.
 - Issue #15 records the decisions made by the PM, issue #20 the nonce, issue #28 the gate, issue #26 deletion, and issue #72 the v2 screens, and issue #86 the legal documents.
 

@@ -38,7 +38,7 @@ describe("the shell's menus", () => {
     );
 
     expect(links(side ?? document.body)).toEqual([
-      "smartman, 오늘 → /",
+      "알아몰라, 오늘 → /",
       ...pages,
       "설정 → /account",
     ]);

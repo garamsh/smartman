@@ -3,6 +3,7 @@ import {
   CARD_RULES,
   type CardRule,
   cardsSchema,
+  closeCutReply,
   CLOZE_BLANK,
   composeAnswer,
   composeClozeAnswer,
@@ -1048,4 +1049,24 @@ Deno.test("parseReply refuses a reply that is not the schema's envelope whatever
       .length,
     MAX_CARDS,
   );
+});
+
+Deno.test("closeCutReply closes a cut reply after its last whole card, braces inside text left alone", () => {
+  const braced = item({ front: 'a "{[" b' });
+  const whole = reply([item(), braced, note()]);
+  // Cut inside the note, after the card holding braces and a quote in its text.
+  const cut = whole.slice(0, whole.length - 20);
+  const closed = closeCutReply(cut);
+  assert.deepEqual(
+    parseReply(closed ?? "")?.cards.map((card) => card.front),
+    ["apple", 'a "{[" b'],
+  );
+  // The cards it keeps are read by the same rules: a broken one is dropped.
+  const broken = reply([BREAKING.vocabulary_answer, item(), note()]);
+  assert.deepEqual(
+    parseReply(closeCutReply(broken.slice(0, -20)) ?? "")?.dropped,
+    ["vocabulary_answer"],
+  );
+  // Control: a cut before any card is whole closes nothing.
+  assert.equal(closeCutReply(reply([item()]).slice(0, -20)), null);
 });
