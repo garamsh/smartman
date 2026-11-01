@@ -341,7 +341,7 @@ void main() {
   );
 
   testWidgets(
-    'the preview draws a back under the 글 that holds it and keeps a back equal to the filled text, where the two side lists would not',
+    'the preview draws a back under the 글 that holds it, where the two side lists would pair it with the first',
     (tester) async {
       final screens = await openNew(tester);
       await typeBlock(tester, 'first');
