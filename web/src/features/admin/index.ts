@@ -5,7 +5,9 @@ export { AdminNav } from "./components/admin-nav";
 export { AuditLog } from "./components/audit-log";
 export { DeckView } from "./components/deck-view";
 export { GrantAdminForm } from "./components/grant-admin-form";
+export { OutcomesView } from "./components/outcomes-view";
 export { OverviewView } from "./components/overview-view";
+export { summarizeOutcomes } from "./outcomes";
 export { summarizeUsage } from "./usage";
 export { PlansView } from "./components/plans-view";
 export { PromptForm } from "./components/prompt-form";
@@ -18,6 +20,9 @@ export { UserSearch } from "./components/user-search";
 export { UserView } from "./components/user-view";
 export {
   adminTimeZone,
+  extractionPageSize,
+  readExtractionCalls,
+  readExtractionOutcomes,
   readAdmins,
   readAuditLog,
   readDeck,

@@ -1,5 +1,6 @@
 import type { Overview } from "../read-admin";
 import type { Usage } from "../usage";
+import { AdminSection, group } from "./admin-section";
 import { UsageView } from "./usage-view";
 
 /** The overview: users and study, then the last 30 days of photo extractions and their cost. */
@@ -23,23 +24,18 @@ export function OverviewView({ overview, usage }: { overview: Overview; usage: U
   ] as const;
   return (
     <div className="flex flex-col gap-section-gap">
-      <div className="grid gap-row-gap lg:grid-cols-2">
+      <div className="grid items-start gap-section-gap lg:grid-cols-2 lg:gap-4">
         {figures.map(({ heading, items }) => (
-          <section
-            key={heading}
-            aria-label={heading}
-            className="flex flex-col gap-3 rounded-card bg-surface p-5"
-          >
-            <h2 className="text-section">{heading}</h2>
-            <dl className="flex flex-col gap-2">
+          <AdminSection key={heading} label={heading}>
+            <dl className={group}>
               {items.map(([term, value]) => (
-                <div key={term} className="flex items-baseline justify-between gap-3">
-                  <dt className="text-secondary text-muted">{term}</dt>
-                  <dd className="text-body-strong">{value}</dd>
+                <div key={term} className="flex items-baseline justify-between gap-3 px-4 py-3">
+                  <dt className="text-body text-ink-2">{term}</dt>
+                  <dd className="text-body-strong tabular-nums">{value}</dd>
                 </div>
               ))}
             </dl>
-          </section>
+          </AdminSection>
         ))}
       </div>
       <UsageView usage={usage} />
