@@ -1,6 +1,6 @@
 # Deck
 
-The `deck` domain: decks, the cards inside them, card content, the card key, and the duplicate rule.
+The `deck` domain: decks, the cards inside them, card content, the card key, the duplicate rule, and spreadsheet import.
 
 ## Current decisions
 
@@ -15,7 +15,8 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
   - `DeckRow`, a deck on a row, `DeckTile`, its image or else its icon on its colour, `showDeckAppearanceSheet`, the 덱 꾸미기 sheet, and `CardEditorScreen`, the card editor, with `deckStorageProvider` and `deckStorageKeys`, the device storage in which it keeps the label presets; and `PartOfSpeechPresetsRow`, the settings row that opens the "라벨" screen, which `home/` gives the account screen ([ADR 0100](adr/0100-merge-the-word-kind-into-basic-type-each-sense-s-label-and-offer-the-user-s-labels-above-the-keyboard.md));
   - the split card, drawn one way for every screen: `SplitCard`, given each side as a `SideBuilder` of the width its text is laid out in, which lays out a card's two halves divided by a line, side by side or, when a half would be too narrow at the text scale, stacked, each side centred or at the top left and, on the study card, scrolling inside its half once capped; and `ContentView`, which renders a side's content blocks, with an unsupported block as a labelled placeholder, fitting text through `CardText` in `app/lib/deck/src/card_text.dart`, or, given a height too, running the blocks together as one paragraph scaled down as far as the floor until it fits that height and cut there with an ellipsis. The study screen's cards, the card preview and `CardSplitRow` draw through them ([ADR 0035](adr/0035-show-the-previous-and-current-study-card-reach-earlier-cards-three-at-a-time-re-decide-the-centred-card-and-grade-each-card-by-its-colour-and-a-chip.md), [ADR 0042](adr/0042-show-only-the-previous-and-the-current-study-card-at-one-size-re-decide-the-previous-card-by-a-swipe-and-open-it-on-a-tap.md));
   - `DeckRepository` and its save results;
-  - the batch save of incoming cards, from a photo or a copy: `AddTarget`, `AddToDeck`, `AddToNewDeck`, `IncomingCard`, `DuplicateChoice`, `CardsAdded`, `mergeBack`, and `AddSource` with `FromPhoto` and `FromCopy`;
+  - the batch save of incoming cards, from a photo or a copy: `AddTarget`, `AddToDeck`, `AddToNewDeck`, `IncomingCard`, `DuplicateChoice`, `CardsAdded`, `mergeBack`, and `AddSource` with `FromPhoto`, `FromFile` and `FromCopy`;
+  - spreadsheet import: `importFromSpreadsheet`, `SpreadsheetPick` and `spreadsheetPickProvider`, the device's picker a test replaces, and `parseSpreadsheet` with `OpenedFile`, `Spreadsheet`, `RefusedFile` and `SpreadsheetRefusal`;
   - `showNameSheet`, the sheet that asks for a deck's name, which `home/` and photo import use to name a deck;
   - the failures: `DeckFailure`, `StorageFailure`, `UnreadableCard`, `DeckDeleted`, `describeFailure`, the message a user reads for one, `describeProviderError`, the same for an error a provider holds, and `reportingFailure`, which shows an action's failure in a snack bar;
   - `deckRepositoryProvider`, and the reads kept current over it: `decksProvider`, `cardCountsProvider`, `deckProvider` and `cardsProvider`.
@@ -101,6 +102,17 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
   - **merge back** (뒷면 합치기) appends the card's back to the existing card's back as a new text block, keeping its id, front and reviews; when a line of that back already equals it under the card key normalization, nothing changes;
   - **add as new** (새 카드로 추가) adds the card beside the existing one.
 - No card is overwritten or deleted. The choice is per card; photo import gives every card it writes merge back, so a card whose key the deck holds, or one written earlier in the same import, is merged rather than doubled. It imports only the cards of the rows its list includes, each in its section's form, so a row left out is neither written nor merged ([`ai-extraction.md`](ai-extraction.md)).
+
+### Spreadsheet import
+
+Cards from an `.xlsx` or a UTF-8 `.csv`, read on the device with no AI call ([ADR 0125](adr/0125-add-cards-from-an-xlsx-or-csv-file-by-choosing-columns-and-reviewing-before-save.md), [ADR 0142](adr/0142-read-a-spreadsheet-s-number-formats-in-dart-and-save-its-cards-in-one-transaction-on-the-phone.md)).
+
+- `importFromSpreadsheet` opens the sheet "파일에서 카드 추가", which states the limits and picks the file through `SpreadsheetPick`; a refused file stays on the sheet with why. `home/` offers it as "파일에서 고르기" on the sheet "카드 추가", for that deck, and on the new-deck sheet, for a deck chosen on the review ([`home.md`](home.md)).
+- `spreadsheet.dart` reads a file on an isolate through `archive` and `xml`, every visible sheet at once and each sheet a row at a time, and holds the limits: 5 MB refused before a byte is read, 1,000 rows holding text, 50 MB unpacked.
+- `spreadsheet_format.dart` draws a number through its format as SSF 0.11.2 reads one, and General where SSF refuses the format.
+- `spreadsheet_cards.dart` holds the header default, the first duplicate, and `cardsOfRows`, the one mapping from a row to a card: a text front, and a text back or, with a label or example column, one meaning. Cards stay `free` version 1.
+- `SpreadsheetImportScreen`, "카드 확인", chooses the sheet, the columns and the header row, lists each card with its sheet row and a round check, and says which rows it skips or refuses. Closing with a card selected asks "읽은 카드를 버릴까요?".
+- "카드 n장 추가" checks the selected cards against `DeckRepository.listKeys` and each other: the first repeat stops the save, naming its row, with "n행 빼기" and "그래도 추가". Otherwise `addCards` writes them from `FromFile` in one transaction, stored as `CardSource.import`, so nothing is saved part-way and sync carries them as any card. No card is overwritten.
 
 ### Failures
 
@@ -205,6 +217,7 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
 - [ADR 0009](adr/0009-multi-deck-session-and-random-queue-order.md): why a study session takes a `DeckSelection`.
 - [ADR 0039](adr/0039-name-every-top-level-folder-by-its-responsibility-compose-across-domains-in-a-home-shell-and-keep-seams-off-screens.md): why the screens that show other domains beside the decks are `home/`'s, and why this domain declares no provider for another domain's screen.
 - [ADR 0020](adr/0020-public-decks-in-a-sharing-domain.md): why a copy of a public deck is an import.
+- [ADR 0125](adr/0125-add-cards-from-an-xlsx-or-csv-file-by-choosing-columns-and-reviewing-before-save.md): spreadsheet import's behaviour and limits on both clients; [ADR 0142](adr/0142-read-a-spreadsheet-s-number-formats-in-dart-and-save-its-cards-in-one-transaction-on-the-phone.md): what differs on the phone, and why.
 - [ADR 0068](adr/0068-store-a-table-or-cloze-card-as-typed-content-blocks-and-draw-it-whole-its-blanks-filled-in-place-once-answered.md): why a table or cloze card is typed content blocks rather than markup in the text or a new column, why no migration is needed, how it is drawn whole, and what happens to v6's cloze cards; issue #212 records the owner's request and the PM's direction.
 - [ADR 0075](adr/0075-store-a-vocabulary-card-s-senses-as-a-typed-block-and-show-each-label-in-brackets-before-its-meaning.md): why a vocabulary card's senses are a typed block, the parts of speech and their short forms, how a label is drawn and read, and what the editor and a merged back do with it; issue #228 records the owner's decisions.
 - [ADR 0027](adr/0027-draw-both-clients-in-the-smartman-brand-and-the-v2-screens.md): the v2 deck row, the card editor, and the deck tile's tint, whose initial and four tints [ADR 0103](adr/0103-give-each-deck-an-icon-and-a-colour-stored-as-two-unchecked-keys-and-drawn-on-its-tile-in-place-of-the-initial.md) replaced.

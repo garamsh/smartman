@@ -7,7 +7,8 @@ import '../../photo_import/photo_import.dart';
 import 'deck_screen.dart';
 import 'option_sheet.dart';
 
-/// A way to start a new deck: by hand, or from a photo taken or picked.
+/// A way to start a new deck: by hand, from a photo taken or picked, or from
+/// a spreadsheet.
 sealed class _NewDeck {
   const _NewDeck();
 }
@@ -22,9 +23,13 @@ final class _FromPhoto extends _NewDeck {
   final PhotoOrigin origin;
 }
 
-/// Offers the ways to start a deck the app has: by hand, and, with photo
-/// import, from a photo taken with the camera or picked from the album; then
-/// starts the one chosen.
+final class _FromFile extends _NewDeck {
+  const _FromFile();
+}
+
+/// Offers the ways to start a deck the app has: by hand, with photo import
+/// from a photo taken with the camera or picked from the album, and from a
+/// spreadsheet; then starts the one chosen.
 Future<void> showNewDeckSheet(BuildContext context, WidgetRef ref) async {
   final l10n = AppLocalizations.of(context);
   final photoImport = ref.read(photoImportProvider);
@@ -45,6 +50,11 @@ Future<void> showNewDeckSheet(BuildContext context, WidgetRef ref) async {
           value: const _FromPhoto(PhotoOrigin.album),
         ),
       ],
+      (
+        title: l10n.spreadsheetPick,
+        body: l10n.spreadsheetPickBody,
+        value: const _FromFile(),
+      ),
     ],
   );
   if (!context.mounted) return;
@@ -53,6 +63,8 @@ Future<void> showNewDeckSheet(BuildContext context, WidgetRef ref) async {
       await createDeckByHand(context, ref);
     case _FromPhoto(:final origin) when photoImport != null:
       await importDeckFromPhoto(context, photoImport, origin);
+    case _FromFile():
+      await _importDeckFromFile(context);
     case _FromPhoto() || null:
       return;
   }
@@ -101,6 +113,16 @@ Future<void> importDeckFromPhoto(
 ) async {
   final navigator = Navigator.of(context);
   final deck = await photoImport(context, null, origin);
+  if (deck == null || !context.mounted) return;
+  await navigator.push(
+    MaterialPageRoute<void>(builder: (_) => DeckScreen(deck: deck)),
+  );
+}
+
+/// Adds cards from a spreadsheet to a deck chosen on the way, then opens it.
+Future<void> _importDeckFromFile(BuildContext context) async {
+  final navigator = Navigator.of(context);
+  final deck = await importFromSpreadsheet(context, null);
   if (deck == null || !context.mounted) return;
   await navigator.push(
     MaterialPageRoute<void>(builder: (_) => DeckScreen(deck: deck)),

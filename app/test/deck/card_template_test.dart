@@ -313,10 +313,11 @@ void main() {
     expect((after.template, after.templateVersion), ('free', 1));
   });
 
-  test('a photo-imported card and a copied one are stored with v1 on every '
+  test('a photo-imported card, one from a file and a copied one are stored with v1 on every '
       'block and the free template', () async {
     for (final source in [
       const FromPhoto(),
+      const FromFile(),
       FromCopy(deck.id, owner: 'owner'),
     ]) {
       await repository.addCards(AddToDeck(deck.id), source: source, [
@@ -330,7 +331,7 @@ void main() {
       ]);
     }
     final rows = await db.select(db.cards).get();
-    expect([for (final row in rows) row.source], ['import', 'copy']);
+    expect([for (final row in rows) row.source], ['import', 'import', 'copy']);
     for (final row in rows) {
       expect((row.template, row.templateVersion), ('free', 1));
       for (final side in [row.front, row.back]) {

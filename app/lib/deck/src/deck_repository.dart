@@ -247,6 +247,19 @@ class DeckRepository {
     return (await query.get()).map(_toCard).toList();
   });
 
+  /// The card key of every card in [deckId].
+  Future<Set<CardKey>> listKeys(DeckId deckId) => _guard(() async {
+    final query = _db.selectOnly(_db.cards)
+      ..addColumns([_db.cards.cardKey])
+      ..where(
+        _db.cards.deckId.equals(deckId.value) & _db.cards.deletedAt.isNull(),
+      );
+    return {
+      for (final row in await query.get())
+        CardKey.stored(row.read(_db.cards.cardKey)!),
+    };
+  });
+
   /// Adds a manual card, of the template every card is written in. A card in
   /// the same deck with an equal key blocks the save unless [allowDuplicate]
   /// is set.
@@ -378,7 +391,7 @@ class DeckRepository {
           _ => MediaId(_newId()),
         };
     Future<List<Content>> own(List<Content> side) async => switch (source) {
-      FromPhoto() => side,
+      FromPhoto() || FromFile() => side,
       FromCopy() => [
         for (final block in side)
           switch (block) {
@@ -456,11 +469,11 @@ class DeckRepository {
                           ? cardTemplateVersion
                           : cardFrameVersion,
                       source: switch (source) {
-                        FromPhoto() => CardSource.import.name,
+                        FromPhoto() || FromFile() => CardSource.import.name,
                         FromCopy() => CardSource.copy.name,
                       },
                       originDeckId: switch (source) {
-                        FromPhoto() => null,
+                        FromPhoto() || FromFile() => null,
                         FromCopy(:final origin) => origin.value,
                       },
                       createdAt: now,

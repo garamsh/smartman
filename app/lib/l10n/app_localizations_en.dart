@@ -1918,4 +1918,129 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get keepWriting => 'Keep writing';
+
+  @override
+  String get spreadsheetPick => 'Choose a file';
+
+  @override
+  String get spreadsheetPickBody =>
+      'Turn the rows of an Excel or CSV file into cards';
+
+  @override
+  String get spreadsheetStartTitle => 'Add cards from a file';
+
+  @override
+  String get spreadsheetStartBody =>
+      'Each row of an Excel (.xlsx) or CSV file becomes a card. Files up to 5 MB and 1,000 rows are read.';
+
+  @override
+  String get spreadsheetChoose => 'Choose file';
+
+  @override
+  String get spreadsheetReading => 'Reading';
+
+  @override
+  String get spreadsheetAnother => 'Another file';
+
+  @override
+  String get spreadsheetReviewTitle => 'Review cards';
+
+  @override
+  String get spreadsheetColumns => 'Columns';
+
+  @override
+  String get spreadsheetSheet => 'Sheet';
+
+  @override
+  String get spreadsheetLabelColumn => 'Label';
+
+  @override
+  String get spreadsheetExampleColumn => 'Example';
+
+  @override
+  String get spreadsheetNoColumn => 'None';
+
+  @override
+  String get spreadsheetHeaderRow => 'First row is a header';
+
+  @override
+  String get spreadsheetDistinct => 'Choose a different column for each field';
+
+  @override
+  String get spreadsheetExcludeAll => 'Leave all out';
+
+  @override
+  String get spreadsheetSelectAll => 'Select all';
+
+  @override
+  String spreadsheetRow(int row) {
+    return 'Row $row';
+  }
+
+  @override
+  String spreadsheetRowCard(int row, String front) {
+    return 'Row $row $front';
+  }
+
+  @override
+  String spreadsheetSkipped(int count) {
+    return '$count rows with an empty front or back are skipped';
+  }
+
+  @override
+  String spreadsheetTooLong(String rows, int limit) {
+    return '$rows left out: a cell is over $limit characters';
+  }
+
+  @override
+  String spreadsheetRowsMore(String rows, int count) {
+    return '$rows and $count more';
+  }
+
+  @override
+  String spreadsheetDuplicateStored(int row) {
+    return 'Row $row is already in this deck';
+  }
+
+  @override
+  String spreadsheetDuplicateRow(int row, int earlier) {
+    return 'Row $row has the same front as row $earlier';
+  }
+
+  @override
+  String spreadsheetLeaveOut(int row) {
+    return 'Leave out row $row';
+  }
+
+  @override
+  String get spreadsheetAddAnyway => 'Add anyway';
+
+  @override
+  String get spreadsheetDiscardTitle => 'Discard the cards read?';
+
+  @override
+  String get spreadsheetDiscardBody => 'Unsaved cards will be lost.';
+
+  @override
+  String get spreadsheetWrongType => 'Choose an .xlsx or .csv file';
+
+  @override
+  String get spreadsheetTooLarge =>
+      'The file is over 5 MB. Split it and choose it again.';
+
+  @override
+  String get spreadsheetNotUtf8 =>
+      'The CSV could not be read. Save it as UTF-8 CSV and choose it again.';
+
+  @override
+  String get spreadsheetUnreadable =>
+      'The file could not be read. Save it again in Excel and choose it.';
+
+  @override
+  String get spreadsheetTooManyRows =>
+      'The file has over 1,000 rows. Split it and choose it again.';
+
+  @override
+  String get spreadsheetNotRead =>
+      'The file could not be read. Choose it again.';
 }

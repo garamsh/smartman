@@ -6,6 +6,7 @@ export 'src/add_cards.dart'
     show
         CardsAdded,
         DuplicateChoice,
+        FromFile,
         FromPhoto,
         FromCopy,
         IncomingCard,
@@ -95,6 +96,15 @@ export 'src/providers.dart'
         deckRepositoryProvider,
         decksProvider;
 export 'src/split_card.dart' show SideBuilder, SplitCard;
+export 'src/spreadsheet.dart'
+    show
+        OpenedFile,
+        RefusedFile,
+        Spreadsheet,
+        SpreadsheetRefusal,
+        parseSpreadsheet;
+export 'src/spreadsheet_import.dart'
+    show SpreadsheetPick, importFromSpreadsheet, spreadsheetPickProvider;
 export 'src/whole_card_view.dart'
     show
         SteppedWholeCardView,
