@@ -2,7 +2,7 @@ import "server-only";
 
 import { cookies } from "next/headers";
 
-import { describeContent, parseContent } from "@/features/decks";
+import { describeContent, parseCells, parseContent, sidesOf } from "@/features/decks";
 import { parseTimeZone, studyDayStart, timeZoneCookie } from "@/features/study";
 import { classifyFailure, requestTimeoutMs, type ServerFailure } from "@/supabase/failure";
 import { field, parseTime } from "@/supabase/row";
@@ -280,11 +280,17 @@ export async function readDeck(id: string): Promise<AdminRead<AdminDeck | null>>
   if (removalReason !== null && removal === null) return { failure: "unreadable" };
   const cards = rows(cardsRead.data, (cardRow) => {
     const cardId = text(field(cardRow, "card_id"));
-    const front = parseContent(field(cardRow, "front"));
+    // The call returns no template: a 칸 list reads an earlier front as it was drawn, and a 칸
+    // card's stored back is empty.
+    const cells = parseCells(field(cardRow, "front"));
     const back = parseContent(field(cardRow, "back"));
-    return cardId !== null && front && back
-      ? { id: cardId, front: describeContent(front), back: describeContent(back) }
-      : null;
+    if (cardId === null || !cells || !back) return null;
+    const sides = sidesOf(cells);
+    return {
+      id: cardId,
+      front: describeContent(sides.front),
+      back: describeContent([...sides.back, ...back]),
+    };
   });
   if (name === null || (description !== null && typeof description !== "string")) {
     return { failure: "unreadable" };

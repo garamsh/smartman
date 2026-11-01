@@ -4,8 +4,10 @@ import {
   audioLength,
   audioOf,
   blockVersion,
+  cellsFromSides,
+  type Content,
   describeContent,
-  isWholeCard,
+  holdsBlank,
   parseContent,
   spokenContent,
   upcastPayload,
@@ -18,6 +20,8 @@ const table = (rows: unknown, blanks: unknown) => ({
   payload: { columns: ["Capital", "Country"], rows, blanks },
 });
 const rows = [["Paris", "France"]];
+/** Whether a card with [front] alone is drawn whole. */
+const isWhole = (front: Content[]) => holdsBlank(cellsFromSides(front, []) ?? []);
 const cell = [{ row: 0, column: 0 }];
 
 describe("a card side's blocks", () => {
@@ -58,9 +62,9 @@ describe("a card side's blocks", () => {
     expect(spokenContent(sentence, false)).toBe("빈칸 is in 빈칸");
     expect(spokenContent(blocks, false)).toBe("Capitals. Capital, Country. 빈칸, France");
     expect(spokenContent(blocks, true)).toBe("Capitals. Capital, Country. Paris, France");
-    expect(isWholeCard(sentence)).toBe(true);
+    expect(isWhole(sentence)).toBe(true);
     // Control: text alone, a v6 cloze's "___" included, is split.
-    expect(isWholeCard([{ kind: "text", text: "___ is in France" }])).toBe(false);
+    expect(isWhole([{ kind: "text", text: "___ is in France" }])).toBe(false);
   });
 });
 
@@ -315,9 +319,9 @@ describe("an image block", () => {
     expect(describeContent(boxed)).toBe("사진");
     expect(spokenContent(boxed, false)).toBe("사진, 빈칸");
     expect(spokenContent(boxed, true)).toBe("사진, Paris");
-    expect(isWholeCard(boxed)).toBe(true);
+    expect(isWhole(boxed)).toBe(true);
     // Control: the same photo without a box is split.
-    expect(isWholeCard(bare)).toBe(false);
+    expect(isWhole(bare)).toBe(false);
   });
 });
 
@@ -357,7 +361,7 @@ describe("an audio block", () => {
 
     expect(describeContent(side)).toBe("cat 소리");
     expect(spokenContent(side, false)).toBe("cat. 소리");
-    expect(isWholeCard(side)).toBe(false);
+    expect(isWhole(side)).toBe(false);
     expect(audioOf(side)).toEqual([{ kind: "audio", media: "m1", durationMs: 1250 }]);
     expect(audioLength(1250)).toBe("0:02");
     expect(audioLength(60000)).toBe("1:00");

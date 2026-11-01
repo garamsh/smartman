@@ -15,7 +15,7 @@ export type FakeDeck = {
   description: string | null;
   copies: number;
   publishedAt: string | null;
-  cards: { id: string; front: string; back: string }[];
+  cards: { id: string; front: string | unknown[]; back: string | unknown[] }[];
   reports: { reason: string; at: string }[];
 };
 
@@ -30,7 +30,8 @@ export type FakeUser = {
   extractionsToday: number;
 };
 
-const text = (value: string) => [{ type: "text", payload: { text: value } }];
+const text = (value: string | unknown[]) =>
+  typeof value === "string" ? [{ type: "text", payload: { text: value } }] : value;
 
 /**
  * The server's admin functions (ADR 0070), in memory: each answers for a signed-in admin and

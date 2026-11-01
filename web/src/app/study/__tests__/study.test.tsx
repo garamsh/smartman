@@ -1,4 +1,6 @@
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
@@ -48,6 +50,129 @@ async function open(decks: string, at = start) {
     expect(screen.queryByText("카드를 불러오는 중이에요.")).not.toBeInTheDocument();
   });
 }
+
+/** The shared cases the phone's `framed_card_test.dart` reads, those with a list of 칸. */
+const placements = (
+  JSON.parse(
+    readFileSync(
+      path.join(import.meta.dirname, "../../../../../supabase/fixtures/card-frame/conversion.json"),
+      "utf8",
+    ),
+  ) as { name: string; front: unknown[]; back: unknown[]; cells: unknown[] | null }[]
+).flatMap(({ cells, ...placement }) => (cells ? [{ ...placement, cells }] : []));
+
+/**
+ * What study draws for each placement, by ADR 0137's and ADR 0140's tables: before the reveal, a
+ * whole card as a screen reader reads it, its blanks being in the page and hidden, and a split
+ * card's text; and the previous card's text, a split card's front and back run together.
+ */
+const drawn: Record<string, { whole: boolean; before: string; after: string }> = {
+  "placement 1: an import's cloze, its back the filled text, drops the back": {
+    whole: true,
+    before: "The capital is 빈칸.",
+    after: "The capital is Paris.",
+  },
+  "placement 1: a copy's cloze, its back edited, keeps the back": {
+    whole: true,
+    before: "The capital is 빈칸.",
+    after: "The capital is Paris.Paris, on the Seine.",
+  },
+  "placement 2: an import's named table, its back the filled text, drops the back": {
+    whole: true,
+    before: "Capitals. Country, Capital. France, 빈칸",
+    after: "CapitalsCountryCapitalFranceParis",
+  },
+  "placement 3: a former 빈칸 card with no back": {
+    whole: true,
+    before: "빈칸 is red.",
+    after: "Rose is red.",
+  },
+  "placement 3 and O2: a written back beside a front blank shows after the answer": {
+    whole: true,
+    before: "빈칸 is red.",
+    after: "Rose is red.A flower.",
+  },
+  "placement 4: a manual back equal to the filled text drops, whatever the source": {
+    whole: true,
+    before: "Colour. 빈칸 is red.",
+    after: "ColourRose is red.",
+  },
+  "placement 4: a back text beside a front text is that text's back": {
+    whole: true,
+    before: "Colour. 빈칸 is red.",
+    after: "ColourMine, edited.Rose is red.",
+  },
+  "placement 4: a front holding senses compares with no back, so an equal back is kept": {
+    whole: true,
+    before: "apple. 빈칸 is red.",
+    after: "appleapple\nRose is red.Rose is red.",
+  },
+  "back blank beside a front blank: a cloze shows after the answer as filled text": {
+    whole: true,
+    before: "빈칸 is red.",
+    after: "Rose is red.Sky is blue.",
+  },
+  "back blank beside a front blank: a table shows after the answer as filled text": {
+    whole: true,
+    before: "빈칸 is red.",
+    after: "Rose is red.A\na",
+  },
+  "back blank beside a front blank: a boxed photo is placed on the back, its answers a 글": {
+    whole: true,
+    before: "빈칸 is red.",
+    after: "Rose is red.Heart",
+  },
+  "placement 5: a back blank alone is a question": {
+    whole: true,
+    before: "Fill it. 빈칸 is red.",
+    after: "Fill itRose is red.",
+  },
+  "placement 5 and O3: a back text beside a back blank shows after the answer": {
+    whole: true,
+    before: "Fill it. 빈칸 is red.",
+    after: "Fill itA flower.Rose is red.",
+  },
+  "placement 6: a boxed photo on a front moves unchanged": {
+    whole: true,
+    before: "사진, 빈칸",
+    after: "",
+  },
+  "placement 6: a boxed photo on a back alone is a question": {
+    whole: true,
+    before: "Name it. 사진, 빈칸",
+    after: "Name it",
+  },
+  "placement 7: a literal ___ in text is a 글, no blank": {
+    whole: false,
+    before: "The ___ sat.",
+    after: "The ___ sat.cat",
+  },
+  "no blank: a word with its senses is one 단어 asking the word": {
+    whole: false,
+    before: "apple",
+    after: "apple사과fruit",
+  },
+  "no blank: front senses with a back word is one 단어 asking the meaning": {
+    whole: false,
+    before: "사과",
+    after: "사과apple",
+  },
+  "no blank: front senses alone keep their meanings first": {
+    whole: false,
+    before: "사과",
+    after: "사과",
+  },
+  "no blank: back senses that join no word show after the reveal": {
+    whole: false,
+    before: "onetwo",
+    after: "onetwo사과",
+  },
+  "no blank: photo and sound keep their sides": {
+    whole: false,
+    before: "",
+    after: "사진소리",
+  },
+};
 
 /** The front of the card on screen. */
 const currentFront = () => screen.getByRole("group", { name: "앞면" }).textContent;
@@ -1606,6 +1731,92 @@ describe("the study page", () => {
       await within(cards()).findByRole("button", { name: "카드 전체 보기" });
 
       expect(paused).toEqual([`${signPath}/${testUser.id}/m1?token=t`]);
+    });
+  });
+
+  describe("a card of 칸", () => {
+    /** Answers the card on screen "안다" and waits for its write, which no later test may meet. */
+    async function answerKnow() {
+      await userEvent.setup().keyboard("{ArrowRight}");
+      await waitFor(() => {
+        expect(postgrest.rows.card_states).toHaveLength(1);
+      });
+    }
+
+    it("has a drawing for every fixture placement", () => {
+      expect(Object.keys(drawn).sort()).toEqual(placements.map(({ name }) => name).sort());
+    });
+
+    describe.each([
+      {
+        form: "stored as two sides",
+        row: ({ front, back }: (typeof placements)[number]) => ({ front, back }),
+      },
+      {
+        form: "stored as a free v2 list",
+        row: ({ cells }: (typeof placements)[number]) => ({
+          front: cells,
+          back: [],
+          template: "free",
+          template_version: 2,
+        }),
+      },
+    ])("$form", ({ row }) => {
+      it.each(placements)("draws before and after the answer: $name", async (placement) => {
+        const expected = drawn[placement.name];
+        if (!expected) throw new Error("no drawing for this placement");
+        postgrest.seed("decks", deckRow("d1", "d1"));
+        postgrest.seed("cards", { ...cardRow("d1-0", "d1", "card"), ...row(placement) });
+        await open("d1");
+
+        const front = screen.getByRole("group", { name: "앞면" });
+        const whole = within(front).queryByRole("group");
+        expect(whole !== null).toBe(expected.whole);
+        expect(whole?.getAttribute("aria-label") ?? front.textContent).toBe(expected.before);
+        if (whole) expect(Object.values(blanksUnder(whole))).not.toContain(true);
+
+        await answerKnow();
+
+        const previous = within(cards()).getByRole("article");
+        expect(within(previous).getByRole("button").textContent).toBe(expected.after);
+        expect(Object.values(blanksUnder(previous))).not.toContain(false);
+      });
+    });
+
+    it("studies a card whose blank sat on its back alone on one card, its answer hidden until answered (#482)", async () => {
+      postgrest.seed("decks", deckRow("d1", "d1"));
+      postgrest.seed("cards", {
+        ...cardRow("d1-0", "d1", "card"),
+        front: side("Fill it"),
+        back: [{ type: "cloze", payload: { text: "___ is red.", answers: ["Rose"] } }],
+      });
+      await open("d1");
+
+      const current = screen.getByRole("group", { name: "Fill it. 빈칸 is red." });
+      expect(blanksUnder(current)).toEqual({ Rose: false });
+
+      await answerKnow();
+
+      expect(shown()).toEqual([
+        "앞면: Fill it. 빈칸 is red.. 뒷면: Fill it. Rose is red.. 응답: 안다",
+      ]);
+      expect(blanksUnder(within(cards()).getByRole("article"))).toEqual({ Rose: true });
+    });
+
+    it("keeps a card holding a block this build does not know, its sides as stored", async () => {
+      postgrest.seed("decks", deckRow("d1", "d1"));
+      postgrest.seed("cards", {
+        ...cardRow("d1-0", "d1", "card"),
+        front: side("before"),
+        back: [{ type: "chart", payload: {} }],
+      });
+      await open("d1");
+      expect(currentFront()).toBe("before");
+
+      await answerKnow();
+      expect(within(within(cards()).getByRole("article")).getByRole("button").textContent).toBe(
+        "before[이 버전에서 표시할 수 없는 내용: chart]",
+      );
     });
   });
 

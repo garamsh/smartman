@@ -6,7 +6,7 @@ import { field, parseTime } from "@/supabase/row";
 import { createClient } from "@/supabase/server";
 import { readUserId } from "@/supabase/session";
 
-import { parseContent } from "./card-content";
+import { parseCardContent } from "./card-content";
 import type { Card, CardEntry, CardId, Deck, DeckId, Library } from "./library";
 
 /** Why the library could not be read: a server failure, or a row this version cannot read. */
@@ -19,7 +19,7 @@ export type LibraryFailure = ServerFailure | "unreadable";
 export function readLibrary(
   decks?: readonly DeckId[],
 ): Promise<{ library: Library } | { failure: LibraryFailure }> {
-  return read("id, deck_id, front, back, created_at", parseCard, decks);
+  return read("id, deck_id, front, back, template, template_version, created_at", parseCard, decks);
 }
 
 /**
@@ -121,8 +121,12 @@ function parseCardEntry(row: unknown): CardEntry | null {
 
 function parseCard(row: unknown): Card | null {
   const entry = parseCardEntry(row);
-  const front = parseContent(field(row, "front"));
-  const back = parseContent(field(row, "back"));
-  if (!entry || !front || !back) return null;
-  return { ...entry, front, back };
+  const content = parseCardContent({
+    front: field(row, "front"),
+    back: field(row, "back"),
+    template: field(row, "template"),
+    templateVersion: field(row, "template_version"),
+  });
+  if (!entry || !content) return null;
+  return { ...entry, ...content };
 }
