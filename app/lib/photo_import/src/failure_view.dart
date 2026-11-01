@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../design/app_button.dart';
+import '../../design/mascot.dart';
 import '../../design/theme.dart';
 import '../../design/word_break.dart';
 import '../../l10n/app_localizations.dart';
 import 'failure.dart';
 import 'failure_message.dart';
 
-/// What went wrong, in plain words, with a retry where sending the same photo
+/// The sad mascot over what went wrong, in plain words, with a retry where sending the same photo
 /// again can succeed, a retake where a new photo can, and the way to Settings
 /// where access was refused. The top bar's close is the one way out.
 class FailureView extends StatelessWidget {
@@ -53,15 +54,25 @@ class FailureView extends StatelessWidget {
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(AppSpace.s24),
-          child: Semantics(
-            liveRegion: true,
-            // Korean breaks only between words (#454).
-            child: Text(
-              keepWords(describePhotoImportFailure(l10n, failure)),
-              semanticsLabel: describePhotoImportFailure(l10n, failure),
-              textAlign: TextAlign.center,
-              style: AppType.bodyStrong,
-            ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            spacing: AppSpace.s16,
+            children: [
+              const Mascot(
+                expression: MascotExpression.sad,
+                size: AppSize.mascotMedium,
+              ),
+              Semantics(
+                liveRegion: true,
+                // Korean breaks only between words (#454).
+                child: Text(
+                  keepWords(describePhotoImportFailure(l10n, failure)),
+                  semanticsLabel: describePhotoImportFailure(l10n, failure),
+                  textAlign: TextAlign.center,
+                  style: AppType.bodyStrong,
+                ),
+              ),
+            ],
           ),
         ),
       ),

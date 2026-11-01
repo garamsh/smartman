@@ -1,6 +1,6 @@
 import { v7 } from "uuid";
 import { field } from "@/supabase/row";
-import { block, type Block, type CardDraft, cardKey, textBlocks } from "./authoring";
+import { block, type Block, type CardDraft, cardKey, holdsBack, textBlocks } from "./authoring";
 import { describeContent, parseContent } from "./card-content";
 
 /**
@@ -20,10 +20,16 @@ export type Candidate = CardDraft & {
 };
 /** A note the page prints for a whole entry, such as a synonym, as the phone's `Extra`. */
 export type Extra = { label: string; text: string };
-/** Parses the function's current response and maps its fields as the phone does. */
-export function parseCandidates(body: unknown): Candidate[] | null {
+/** The most cards the function answers a photo, over all its requests (ADR 0138). */
+const maxPhotoCards = 500;
+/**
+ * Parses the function's current response and maps its fields as the phone does; a [resumed]
+ * request's, one that sent a cursor, may hold no card.
+ */
+export function parseCandidates(body: unknown, resumed = false): Candidate[] | null {
   const cards = field(body, "cards");
-  if (!Array.isArray(cards) || cards.length < 1 || cards.length > 100) return null;
+  if (!Array.isArray(cards) || cards.length < (resumed ? 0 : 1) || cards.length > maxPhotoCards)
+    return null;
   const result: Candidate[] = [];
   for (const raw of cards) {
     const card: unknown = raw;
@@ -102,6 +108,15 @@ function parseExtras(value: unknown): Extra[] | null {
   return extras;
 }
 
+/**
+ * [read] followed by those of [more] whose front none of [read] has, as the function compares the
+ * fronts a request reads on past, and as the phone's job appends them.
+ */
+export function appendCandidates(read: Candidate[], more: Candidate[]): Candidate[] {
+  const fronts = new Set(read.map((card) => keyOf(card.front)));
+  return [...read, ...more.filter((card) => !fronts.has(keyOf(card.front)))];
+}
+
 /** [blocks]' key under the phone's card key normalization. */
 function keyOf(blocks: Block[]): string {
   return cardKey(parseContent(blocks) ?? []);
@@ -135,10 +150,7 @@ function mergeCandidates(cards: Candidate[]): Candidate[] {
       );
     } else if (!first.front.some((item) => item.type === "cloze" || item.type === "table")) {
       const back = describeContent(parseContent(card.back) ?? []);
-      const lines = describeContent(parseContent(first.back) ?? [])
-        .split("\n")
-        .map((line) => keyOf(textBlocks(line)));
-      if (back.trim() && !lines.includes(keyOf(textBlocks(back))))
+      if (back.trim() && !holdsBack(parseContent(first.back) ?? [], back))
         first.back = [...first.back, ...textBlocks(back)];
     }
   }

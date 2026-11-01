@@ -6,7 +6,7 @@ import { LegalLinks } from "@/features/legal";
 import { Profile } from "./_components/profile";
 import { ProfileSkeleton } from "./_components/profile-skeleton";
 
-export const metadata: Metadata = { title: "설정 · smartman" };
+export const metadata: Metadata = { title: "설정 · 알아몰라" };
 
 /**
  * 설정, as the phone's settings screen: the account with sign-out, the study settings and the

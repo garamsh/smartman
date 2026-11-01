@@ -4,9 +4,12 @@ import {
   audioLength,
   audioOf,
   blockVersion,
+  cellsFromSides,
+  type Content,
   describeContent,
-  isWholeCard,
+  holdsBlank,
   parseContent,
+  plainText,
   spokenContent,
   upcastPayload,
 } from "../card-content";
@@ -18,6 +21,8 @@ const table = (rows: unknown, blanks: unknown) => ({
   payload: { columns: ["Capital", "Country"], rows, blanks },
 });
 const rows = [["Paris", "France"]];
+/** Whether a card with [front] alone is drawn whole. */
+const isWhole = (front: Content[]) => holdsBlank(cellsFromSides(front, []) ?? []);
 const cell = [{ row: 0, column: 0 }];
 
 describe("a card side's blocks", () => {
@@ -58,13 +63,49 @@ describe("a card side's blocks", () => {
     expect(spokenContent(sentence, false)).toBe("빈칸 is in 빈칸");
     expect(spokenContent(blocks, false)).toBe("Capitals. Capital, Country. 빈칸, France");
     expect(spokenContent(blocks, true)).toBe("Capitals. Capital, Country. Paris, France");
-    expect(isWholeCard(sentence)).toBe(true);
+    expect(isWhole(sentence)).toBe(true);
     // Control: text alone, a v6 cloze's "___" included, is split.
-    expect(isWholeCard([{ kind: "text", text: "___ is in France" }])).toBe(false);
+    expect(isWhole([{ kind: "text", text: "___ is in France" }])).toBe(false);
   });
 });
 
 // The cases of the app's senses tests in `content_test.dart`.
+describe("a card side's plain text", () => {
+  it("gives each block's text on lines of its own, as the phone's plainText, leaving out an unknown block", () => {
+    const side = parseContent([
+      { type: "text", payload: { text: "first" } },
+      cloze,
+      table(rows, cell),
+      { type: "senses", payload: { senses: [{ labels: [], meaning: "뜻", examples: [] }] } },
+      { type: "later", payload: {} },
+      {
+        type: "image",
+        payload: {
+          media: "photo",
+          width: 1,
+          height: 1,
+          boxes: [
+            { id: "a", x: 0, y: 0, w: 1, h: 1, answer: "답" },
+            { id: "b", x: 0, y: 0, w: 1, h: 1 },
+          ],
+        },
+      },
+      { type: "audio", payload: { media: "sound", duration_ms: 1 } },
+    ]);
+    if (!side) throw new Error("expected the side to parse");
+    expect(plainText(side).split("\n")).toEqual([
+      "first",
+      "Paris is in France",
+      "Capital | Country",
+      "Paris | France",
+      "뜻",
+      "photo",
+      "답",
+      "sound",
+    ]);
+  });
+});
+
 describe("a senses block", () => {
   const sense = (fields: Record<string, unknown> = {}) => ({
     labels: [],
@@ -258,7 +299,7 @@ describe("an image block", () => {
     image({ media: "m1", width: 4, height: 3, boxes: [fields] });
   const whole = { id: "1", x: 0.1, y: 0.2, w: 0.3, h: 0.4 };
 
-  it("reads its photo, size and boxes in fractions of the image, past fields it does not know", () => {
+  it("reads its photo, size and boxes in fractions of the image, keeping fields it does not know", () => {
     expect(
       parseContent([
         image({
@@ -279,9 +320,10 @@ describe("an image block", () => {
         width: 1200,
         height: 800,
         boxes: [
-          { ...whole, answer: "Paris" },
+          { ...whole, answer: "Paris", rest: { shape: "oval" } },
           { id: "2", x: 0.5, y: 0.5, w: 0.5, h: 0.5, answer: null },
         ],
+        rest: { crop: { x: 0 } },
       },
     ]);
   });
@@ -315,9 +357,9 @@ describe("an image block", () => {
     expect(describeContent(boxed)).toBe("사진");
     expect(spokenContent(boxed, false)).toBe("사진, 빈칸");
     expect(spokenContent(boxed, true)).toBe("사진, Paris");
-    expect(isWholeCard(boxed)).toBe(true);
+    expect(isWhole(boxed)).toBe(true);
     // Control: the same photo without a box is split.
-    expect(isWholeCard(bare)).toBe(false);
+    expect(isWhole(bare)).toBe(false);
   });
 });
 
@@ -325,9 +367,9 @@ describe("an image block", () => {
 describe("an audio block", () => {
   const audio = (payload: Record<string, unknown>) => ({ type: "audio", payload });
 
-  it("reads its media id and length in milliseconds, past fields it does not know", () => {
+  it("reads its media id and length in milliseconds, keeping fields it does not know", () => {
     expect(parseContent([audio({ media: "m1", duration_ms: 2400, waveform: [1, 2] })])).toEqual([
-      { kind: "audio", media: "m1", durationMs: 2400 },
+      { kind: "audio", media: "m1", durationMs: 2400, rest: { waveform: [1, 2] } },
     ]);
   });
 
@@ -357,7 +399,7 @@ describe("an audio block", () => {
 
     expect(describeContent(side)).toBe("cat 소리");
     expect(spokenContent(side, false)).toBe("cat. 소리");
-    expect(isWholeCard(side)).toBe(false);
+    expect(isWhole(side)).toBe(false);
     expect(audioOf(side)).toEqual([{ kind: "audio", media: "m1", durationMs: 1250 }]);
     expect(audioLength(1250)).toBe("0:02");
     expect(audioLength(60000)).toBe("1:00");

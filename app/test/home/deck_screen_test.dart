@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter/semantics.dart';
@@ -7,6 +9,7 @@ import 'package:smartman/deck/deck.dart';
 import 'package:smartman/design/app_button.dart';
 import 'package:smartman/design/app_list_row.dart';
 import 'package:smartman/design/app_text_field.dart';
+import 'package:smartman/design/mascot.dart';
 import 'package:smartman/design/theme.dart';
 import 'package:smartman/home/src/deck_screen.dart';
 import 'package:smartman/home/src/progress_bar.dart';
@@ -34,6 +37,17 @@ List<String> _answers(WidgetTester tester) => [
   for (final row in tester.widgetList<CardBackRow>(find.byType(CardBackRow)))
     if (row.shown) plainText(row.back),
 ];
+
+/// Hands out [csv] as the file picked.
+final class _OneFile implements SpreadsheetPick {
+  const _OneFile(this.csv);
+
+  final String csv;
+
+  @override
+  Future<OpenedFile?> pick() async =>
+      parseSpreadsheet('words.csv', utf8.encode(csv));
+}
 
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
@@ -479,15 +493,20 @@ void main() {
     await screens.close();
   });
 
-  for (final (name, back) in [
-    ('a new cloze card, with no back,', const <Content>[]),
+  for (final (name, back, read) in [
+    (
+      'a new cloze card, with no back,',
+      const <Content>[],
+      'The capital of France is Paris',
+    ),
     (
       'a former cloze card whose stored back no longer matches its front',
       const [TextContent('The capital of France is Lyon')],
+      'The capital of France is Paris. The capital of France is Lyon',
     ),
   ]) {
     testWidgets(
-      '$name is read on its row as its front filled once shown, never its stored back',
+      '$name is read on its row as its 칸 revealed once shown, its kept back after them',
       (tester) async {
         const cloze = ClozeContent('The capital of France is ___', ['Paris']);
         final screens = await DeckScreens.open(tester);
@@ -511,9 +530,7 @@ void main() {
 
         await screens.tap(find.byType(Switch));
         expect(
-          find.bySemanticsLabel(
-            'The capital of France is blank, back The capital of France is Paris',
-          ),
+          find.bySemanticsLabel('The capital of France is blank, back $read'),
           findsOneWidget,
         );
         expect(row, findsOneWidget);
@@ -523,11 +540,11 @@ void main() {
   }
 
   testWidgets(
-    'search reads only the face a card with a blank in its front is studied on, so a former cloze card\'s stale back is not found',
+    'search reads every 칸 revealed, so a cloze card\'s kept back is found',
     (tester) async {
       const cloze = ClozeContent('The capital of France is ___', ['Paris']);
       final screens = await DeckScreens.open(tester, cards: {'Chat': 'cat'});
-      // A 빈칸 card whose derived back was written before its front changed.
+      // A 빈칸 card whose back differs from its filled text, which study shows.
       await tester.runAsync(
         () => screens.repository.addCard(
           screens.deck.id,
@@ -540,10 +557,12 @@ void main() {
 
       await screens.tap(find.byTooltip('Search cards'));
       await screens.enter('Search', 'rome');
-      expect(find.byType(CardBackRow), findsNothing);
+      expect(find.byType(CardBackRow), findsOneWidget);
 
-      // Controls: the cloze card's face is searched, its answer included,
-      // and a split card's back still is.
+      // Controls: a match narrows the list, the cloze card's answer is
+      // searched, and a split card's back still is.
+      await screens.enter('Search', 'nowhere');
+      expect(find.byType(CardBackRow), findsNothing);
       await screens.enter('Search', 'paris');
       expect(find.byType(CardBackRow), findsOneWidget);
       expect(
@@ -726,18 +745,59 @@ void main() {
     },
   );
 
-  testWidgets('without photo import, Add card opens the editor at once', (
-    tester,
-  ) async {
-    final screens = await DeckScreens.open(tester);
-    await screens.push((deck) => DeckScreen(deck: deck));
+  testWidgets(
+    'without photo import, Add card offers by hand and a file, no photo',
+    (tester) async {
+      final screens = await DeckScreens.open(tester);
+      await screens.push((deck) => DeckScreen(deck: deck));
 
-    await screens.tap(find.text('Add card'));
+      await screens.tap(find.text('Add card'));
 
-    expect(find.text('Take photo'), findsNothing);
-    expect(find.widgetWithText(AppBar, 'New card'), findsOneWidget);
-    await screens.close();
-  });
+      expect(find.text('Take photo'), findsNothing);
+      expect(find.text('Choose from album'), findsNothing);
+      expect(find.text('Choose a file'), findsOneWidget);
+      await screens.tap(find.text('Enter by hand'));
+      expect(find.widgetWithText(AppBar, 'New card'), findsOneWidget);
+      await screens.close();
+    },
+  );
+
+  testWidgets(
+    'Choose a file adds the rows reviewed to this deck, and returns to its list',
+    (tester) async {
+      final pick = _OneFile('pear,배\nplum,자두');
+      final screens = await DeckScreens.open(
+        tester,
+        cards: const {'apple': '사과'},
+        overrides: [spreadsheetPickProvider.overrideWithValue(pick)],
+      );
+      await screens.push((deck) => DeckScreen(deck: deck));
+
+      await screens.tap(find.text('Add card'));
+      await screens.tap(find.text('Choose a file'));
+      expect(shownText('Add cards from a file'), findsOneWidget);
+      await screens.tap(find.text('Choose file'));
+      expect(find.text('Review cards'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(AppButton, 'Add 2 cards'));
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 50)),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(DeckScreen), findsOneWidget);
+      expect(find.text('Review cards'), findsNothing);
+      final cards = (await tester.runAsync(
+        () => screens.repository.listCards(screens.deck.id),
+      ))!;
+      expect(cards.map((card) => plainText(card.front)), [
+        'apple',
+        'pear',
+        'plum',
+      ]);
+      await screens.close();
+    },
+  );
 
   testWidgets(
     'with photo import, Add card offers by hand, the camera and the album in one sheet, named as the new-deck sheet names them, each photo row opening photo import for this deck from its source',
@@ -850,6 +910,7 @@ void main() {
       await screens.tap(find.text('Cancel'));
 
       await screens.tap(find.text('Add card'));
+      await screens.tap(find.text('Enter by hand'));
       expect(find.text('Français'), findsOneWidget, reason: "the editor's");
       expect(find.text('French'), findsNothing);
       await screens.close();
@@ -926,6 +987,16 @@ void main() {
         expectBreaksBetweenWords(tester, line);
         // A screen reader reads it as written, without the joiners.
         expect(find.bySemanticsLabel(line), findsOneWidget);
+        // The mascot dozes over it, above the words.
+        final mascot = find.byType(Mascot);
+        expect(
+          tester.widget<Mascot>(mascot).expression,
+          MascotExpression.sleepy,
+        );
+        expect(
+          tester.getBottomLeft(mascot).dy,
+          lessThanOrEqualTo(tester.getTopLeft(shownText(line)).dy),
+        );
         await screens.close();
       },
     );

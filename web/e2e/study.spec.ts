@@ -485,7 +485,7 @@ test("a user with no deck is invited to make one, and the theme they choose surv
   await expect(group.getByRole("radio", { name: "시스템", exact: true })).toBeChecked();
   // The system's dark mode, so 라이트 differs from it and 다크 from the default's light.
   await page.emulateMedia({ colorScheme: "dark" });
-  const ground = { light: "rgb(244, 246, 250)", dark: "rgb(14, 20, 36)" };
+  const ground = { light: "rgb(255, 246, 232)", dark: "rgb(31, 21, 18)" };
   for (const [choice, label, colour] of [
     ["light", "라이트", ground.light],
     ["dark", "다크", ground.dark],
@@ -965,7 +965,7 @@ test.describe("in UTC, where a study day runs from 04:00 to 04:00 UTC", () => {
         heights.viewport,
       );
       expect(heights.column, `the menu's column at ${String(width)}`).toBe(heights.document);
-      expect(heights.surface).toBe("rgb(255, 255, 255)");
+      expect(heights.surface).toBe("rgb(255, 252, 247)");
       await page.evaluate(() => {
         window.scrollTo(0, document.documentElement.scrollHeight);
       });
@@ -1209,8 +1209,8 @@ test("creates a deck and a card on mobile, warns on a duplicate and keeps saved 
   await capture(page, "authoring-deck");
   await page.getByRole("button", { name: "카드 추가", exact: true }).click();
   await page.getByRole("button", { name: "직접 입력", exact: true }).click();
-  await page.getByRole("textbox", { name: "앞면 글 1", exact: true }).fill("apple");
-  await page.getByRole("textbox", { name: "뒷면 글 1", exact: true }).fill("사과");
+  await page.getByRole("textbox", { name: "앞면", exact: true }).fill("apple");
+  await page.getByRole("textbox", { name: "뒷면", exact: true }).fill("사과");
   await capture(page, "authoring-direct");
   await page.getByRole("button", { name: "저장", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
@@ -1225,14 +1225,14 @@ test("creates a deck and a card on mobile, warns on a duplicate and keeps saved 
   expect(read.data).toHaveLength(1);
   expect(read.data?.[0]).toMatchObject({
     template: "free",
-    template_version: 1,
+    template_version: 2,
     card_key: "apple",
   });
   expect(Number(read.data?.[0]?.revision)).toBeGreaterThan(0);
   await page.getByRole("button", { name: "카드 추가", exact: true }).click();
   await page.getByRole("button", { name: "직접 입력", exact: true }).click();
-  await page.getByRole("textbox", { name: "앞면 글 1", exact: true }).fill("ＡPPLE");
-  await page.getByRole("textbox", { name: "뒷면 글 1", exact: true }).fill("different");
+  await page.getByRole("textbox", { name: "앞면", exact: true }).fill("ＡPPLE");
+  await page.getByRole("textbox", { name: "뒷면", exact: true }).fill("different");
   await page.getByRole("button", { name: "저장", exact: true }).click();
   await expect(page.getByRole("dialog").getByRole("alert")).toHaveText(
     "이 덱에 이미 있는 카드예요",

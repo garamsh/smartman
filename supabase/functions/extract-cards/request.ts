@@ -1,8 +1,18 @@
-/** Parses the request body: one base64 image of a supported type, and optional language hints. */
+/**
+ * Parses the request body: one base64 image of a supported type, optional language hints, and the
+ * cursor of a request that goes on reading the photo (ADR 0138).
+ */
+
+import {
+  type Cursor,
+  decodeCursor,
+  MAX_CURSOR_LENGTH,
+} from "./continuation.ts";
 
 export const MAX_IMAGE_BYTES = 6 * 1024 * 1024;
-// Base64 of the largest image, plus room for the JSON around it.
-const MAX_BODY_BYTES = Math.ceil(MAX_IMAGE_BYTES / 3) * 4 + 64 * 1024;
+// Base64 of the largest image and the longest cursor, plus room for the JSON around them.
+const MAX_BODY_BYTES = Math.ceil(MAX_IMAGE_BYTES / 3) * 4 + MAX_CURSOR_LENGTH +
+  64 * 1024;
 
 export type ImageType = "image/jpeg" | "image/png" | "image/webp";
 
@@ -20,6 +30,8 @@ export type LanguageHints = {
 export type ExtractRequest = {
   readonly image: Image;
   readonly languages: LanguageHints;
+  /** Where to go on reading the photo from, or null for its first read. */
+  readonly cursor: Cursor | null;
 };
 
 export type RequestFailure = "bad_request" | "too_large" | "unsupported_type";
@@ -63,7 +75,17 @@ export async function parseRequest(
 
   const languages = parseLanguages(value.languages);
   if (languages === null) return refuse("bad_request");
-  return { ok: true, request: { image: { type, base64 }, languages } };
+  let cursor: Cursor | null = null;
+  if (value.cursor !== undefined) {
+    cursor = typeof value.cursor === "string"
+      ? decodeCursor(value.cursor)
+      : null;
+    if (cursor === null) return refuse("bad_request");
+  }
+  return {
+    ok: true,
+    request: { image: { type, base64 }, languages, cursor },
+  };
 }
 
 /** The type the image's leading bytes declare; a declared MIME type is not trusted. */

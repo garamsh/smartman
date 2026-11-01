@@ -9,11 +9,12 @@ import { type Pace, sessionMinutes } from "./study-time";
 import { todayOf } from "./today-list";
 
 /**
- * A card of the session: `decks`' card with each side as the one line of text `decks` describes
- * it as and, for a table or cloze card, its [WholeFaces], which the server adds, since a client
- * module cannot import `decks`' entry point.
+ * A card of the session: `decks`' card, its sides without the 칸 they read as, with each side as
+ * the one line of text `decks` describes it as, a whole card's back as its revealed reading, and,
+ * for a card holding a blank, its [WholeFaces], which the server adds, since a client module
+ * cannot import `decks`' entry point.
  */
-export type StudyCard = Card & {
+export type StudyCard = Omit<Card, "cells"> & {
   text: { front: string; back: string };
   whole?: WholeFaces;
   sides?: SideViews;
@@ -36,8 +37,8 @@ export type Sound = { media: string; length: string; url: string | null };
 export type SideViews = { front: ReactNode; back: ReactNode };
 
 /**
- * A table or cloze card as `decks` draws it whole: its front as a screen reader reads it with its
- * blanks empty, and the front drawn with its blanks empty and filled (ADR 0068).
+ * A card holding a blank as `decks` draws it whole: what shows before the reveal as a screen
+ * reader reads it, its blanks empty, and each 칸 in place before and after the reveal (ADR 0137).
  */
 export type WholeFaces = { spokenFront: string; empty: ReactNode; filled: ReactNode };
 

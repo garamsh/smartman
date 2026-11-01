@@ -1,4 +1,4 @@
-import type { Content } from "./card-content";
+import type { CardContent } from "./card-content";
 
 /** A deck's id, as the phone created it. */
 export type DeckId = string & { readonly brand: "DeckId" };
@@ -31,8 +31,8 @@ export type Deck = { id: DeckId; name: string; public: boolean; icon?: string; c
  */
 export type CardEntry = { id: CardId; deckId: DeckId; createdAt: number };
 
-/** A card with its two sides. */
-export type Card = CardEntry & { front: Content[]; back: Content[] };
+/** A card with its 칸 and the two sides they read as. */
+export type Card = CardEntry & CardContent;
 
 /** The signed-in user's decks, by name, and their cards, oldest first. */
 export type Library<C extends CardEntry = Card> = { decks: Deck[]; cards: C[] };

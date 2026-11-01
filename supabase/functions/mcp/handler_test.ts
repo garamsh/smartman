@@ -435,7 +435,7 @@ Deno.test("a local stack's metadata names its own SUPABASE_URL as the resource's
     resource: "http://kong:8000/functions/v1/mcp",
     authorization_servers: ["http://kong:8000/auth/v1"],
     bearer_methods_supported: ["header"],
-    resource_name: "smartman",
+    resource_name: "knowno",
   });
 });
 
@@ -464,7 +464,7 @@ Deno.test("with MCP_PUBLIC_URL set the 401 and the metadata name it as the resou
     resource: PUBLIC_URL,
     authorization_servers: [`${PROJECT}/auth/v1`],
     bearer_methods_supported: ["header"],
-    resource_name: "smartman",
+    resource_name: "knowno",
   });
 });
 
@@ -545,6 +545,24 @@ Deno.test("a SUPABASE_URL that is not an http(s) URL leaves the function unconfi
     path: "/mcp/oauth-protected-resource",
   });
   assert.equal(configured.status, 200);
+});
+
+Deno.test("initialize names the server knowno", async () => {
+  const run = await send({
+    body: {
+      jsonrpc: "2.0",
+      id: 1,
+      method: "initialize",
+      params: { protocolVersion: "2025-11-25" },
+    },
+  });
+  const result = (run.json as { result: Row }).result;
+  assert.deepEqual(result.serverInfo, {
+    name: "knowno",
+    title: "knowno",
+    version: "1",
+  });
+  assert.match(String(result.instructions), /^knowno is a flashcard app\./);
 });
 
 Deno.test("initialize answers the offered version when served and the newest otherwise, with the tools capability", async () => {

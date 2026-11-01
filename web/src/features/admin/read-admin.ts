@@ -2,13 +2,20 @@ import "server-only";
 
 import { cookies } from "next/headers";
 
-import { describeContent, parseContent } from "@/features/decks";
+import { describeContent, parseCells, parseContent, sidesOf } from "@/features/decks";
 import { parseTimeZone, studyDayStart, timeZoneCookie } from "@/features/study";
 import { classifyFailure, requestTimeoutMs, type ServerFailure } from "@/supabase/failure";
 import { field, parseTime } from "@/supabase/row";
 import { createClient } from "@/supabase/server";
 import { readUserId } from "@/supabase/session";
 
+import {
+  type CallFailure,
+  type ExtractionCall,
+  type Outcome,
+  type OutcomeDay,
+  outcomeDays,
+} from "./outcomes";
 import type { BreakdownRow } from "./usage";
 
 /** Why an admin read failed: the server's failure, `rejected` for a caller who is not an admin, or a row this version cannot read. */
@@ -273,11 +280,17 @@ export async function readDeck(id: string): Promise<AdminRead<AdminDeck | null>>
   if (removalReason !== null && removal === null) return { failure: "unreadable" };
   const cards = rows(cardsRead.data, (cardRow) => {
     const cardId = text(field(cardRow, "card_id"));
-    const front = parseContent(field(cardRow, "front"));
+    // The call returns no template: a 칸 list reads an earlier front as it was drawn, and a 칸
+    // card's stored back is empty.
+    const cells = parseCells(field(cardRow, "front"));
     const back = parseContent(field(cardRow, "back"));
-    return cardId !== null && front && back
-      ? { id: cardId, front: describeContent(front), back: describeContent(back) }
-      : null;
+    if (cardId === null || !cells || !back) return null;
+    const sides = sidesOf(cells);
+    return {
+      id: cardId,
+      front: describeContent(sides.front),
+      back: describeContent([...sides.back, ...back]),
+    };
   });
   if (name === null || (description !== null && typeof description !== "string")) {
     return { failure: "unreadable" };
@@ -537,6 +550,114 @@ export async function readExtractionBreakdown(): Promise<AdminRead<BreakdownRow[
     if (id === null || typeof model !== "string" || versionId === null) return null;
     return { day: date, plan: id, model, promptVersion: versionId, photos };
   });
+}
+
+/** How many recorded extractions a page of the outcomes view lists. */
+export const extractionPageSize = 50;
+
+/**
+ * The recorded extractions, newest first, a page of them before the usage id [before], or the
+ * newest page when it is null (ADR 0130). The user each served is not read.
+ */
+export async function readExtractionCalls(
+  before: number | null,
+): Promise<AdminRead<ExtractionCall[]>> {
+  return parsed(
+    await call("admin_extraction_calls", { before, page_size: extractionPageSize }),
+    (row) => {
+      const usageId = count(field(row, "usage_id"));
+      const at = parseTime(field(row, "created_at"));
+      const plan = text(field(row, "plan"));
+      const promptVersion = count(field(row, "prompt_version_id"));
+      if (usageId === null || at === null || plan === null || promptVersion === null) return null;
+      const outcome = field(row, "outcome");
+      const attempts = field(row, "attempts");
+      const latencyMs = count(field(row, "latency_ms"));
+      const cardsReturned = count(field(row, "cards_returned"));
+      const cardsDropped = count(field(row, "cards_dropped"));
+      const failures = callFailures(field(row, "failures"));
+      // The outcome's columns are null together, for a call without an outcome.
+      if (outcome === null) {
+        const rest = [attempts, latencyMs, cardsReturned, cardsDropped, failures];
+        return rest.every((value) => value === null)
+          ? { usageId, at, plan, promptVersion, result: null }
+          : null;
+      }
+      if (!isOutcome(outcome) || (attempts !== 1 && attempts !== 2)) return null;
+      if (latencyMs === null || cardsReturned === null || cardsDropped === null || !failures) {
+        return null;
+      }
+      return {
+        usageId,
+        at,
+        plan,
+        promptVersion,
+        result: { outcome, attempts, latencyMs, cardsReturned, cardsDropped, failures },
+      };
+    },
+  );
+}
+
+/** Each UTC day's recorded extractions over the last [outcomeDays] days, by prompt version. */
+export async function readExtractionOutcomes(): Promise<AdminRead<OutcomeDay[]>> {
+  return parsed(await call("admin_extraction_failures", { days: outcomeDays }), (row) => {
+    const day = field(row, "day");
+    const promptVersion = count(field(row, "prompt_version_id"));
+    const [calls, ok, noCards, invalidOutput, modelError, retried, recovered, unrecorded] = [
+      "calls",
+      "ok",
+      "no_cards",
+      "invalid_output",
+      "model_error",
+      "retried",
+      "recovered",
+      "unrecorded",
+    ].map((key) => count(field(row, key)));
+    if (typeof day !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(day) || promptVersion === null) {
+      return null;
+    }
+    if (
+      calls == null ||
+      ok == null ||
+      noCards == null ||
+      invalidOutput == null ||
+      modelError == null ||
+      retried == null ||
+      recovered == null ||
+      unrecorded == null
+    ) {
+      return null;
+    }
+    return {
+      day,
+      promptVersion,
+      calls,
+      ok,
+      noCards,
+      invalidOutput,
+      modelError,
+      retried,
+      recovered,
+      unrecorded,
+    };
+  });
+}
+
+function isOutcome(value: unknown): value is Outcome {
+  return (
+    value === "ok" || value === "no_cards" || value === "invalid_output" || value === "model_error"
+  );
+}
+
+function callFailures(value: unknown): CallFailure[] | null {
+  const list = strings(value);
+  if (list === null) return null;
+  const kinds: CallFailure[] = [];
+  for (const kind of list) {
+    if (kind !== "invalid_output" && kind !== "model_error" && kind !== "timeout") return null;
+    kinds.push(kind);
+  }
+  return kinds;
 }
 
 /** A prompt label: `active` serves every user, `test` the admins (ADR 0073). */

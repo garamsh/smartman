@@ -59,6 +59,8 @@ dependencies:
   record: 7.1.2
   just_audio: 0.10.6
   file_picker: 13.3.0
+  archive: ^4.5.2
+  xml: ^7.0.1
 
 dev_dependencies:
   flutter_test:
@@ -112,7 +114,7 @@ flutter:
   # byte-identical to the npm package pretendard@1.3.9 (registry integrity
   # sha512-PaQAADyLY5v4kYFwkpSJHbSSYIkiriY/1xXw75TKoZ9UQQqeU+tvP05yTdZAWibiIYoo8ZKtRv8PM7w0IaywSw==).
   # Google's "G" mark, from its Sign in with Google assets (docs/architecture/design.md).
-  # The brand's lockups and symbol (docs/architecture/design.md).
+  # The brand's lockups and circled mark (docs/architecture/design.md).
   assets:
     - assets/fonts/OFL.txt
     - assets/google/
@@ -150,26 +152,29 @@ flutter:
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
 
-# The launcher icons, from the owner's 1024 px app icon; iOS 18 and later draws
-# the dark one in dark mode.
+# The launcher icons, from the 1024 px sources make brand writes; iOS 18 and
+# later draws the dark one in dark mode, and Android 8 and later the adaptive
+# icon, the mark over the cream.
 flutter_launcher_icons:
   android: true
   ios: true
   image_path: assets/brand/icon/app-icon-light-1024.png
   image_path_ios_dark_transparent: assets/brand/icon/app-icon-dark-1024.png
   remove_alpha_ios: true
-  background_color_ios: "#FFFFFF"
+  background_color_ios: "#FCEBD5"
+  adaptive_icon_background: "#FCEBD5"
+  adaptive_icon_foreground: assets/brand/icon/app-icon-dark-1024.png
 
-# The native splash: the navy symbol on the light ground, the white one on the
-# dark ground.
+# The native splash: the mark alone on the light ground, the mark on its cream
+# circle on the dark ground.
 flutter_native_splash:
-  color: "#F4F6FA"
+  color: "#FFF6E8"
   image: assets/brand/splash/splash-light.png
-  color_dark: "#0E1424"
+  color_dark: "#1F1512"
   image_dark: assets/brand/splash/splash-dark.png
   android_12:
-    color: "#F4F6FA"
+    color: "#FFF6E8"
     image: assets/brand/splash/android12-light.png
-    color_dark: "#0E1424"
+    color_dark: "#1F1512"
     image_dark: assets/brand/splash/android12-dark.png
   web: false

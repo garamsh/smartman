@@ -16,7 +16,7 @@ export default function ErrorPage({
       <button
         type="button"
         onClick={reset}
-        className="pressable min-h-button rounded-row bg-ink px-6 font-semibold text-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+        className="pressable min-h-button rounded-row bg-primary px-6 font-semibold text-on-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
       >
         다시 시도
       </button>

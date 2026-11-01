@@ -1,3 +1,4 @@
+import 'card_frame.dart';
 import 'card_key.dart';
 import 'content.dart';
 import 'model.dart';
@@ -29,6 +30,11 @@ sealed class AddSource {
 /// Cards read off a photo, stored as [CardSource.import].
 final class FromPhoto extends AddSource {
   const FromPhoto();
+}
+
+/// Cards read from a spreadsheet's rows, stored as [CardSource.import].
+final class FromFile extends AddSource {
+  const FromFile();
 }
 
 /// Cards copied from another user's public deck [origin], stored as
@@ -63,11 +69,16 @@ final class IncomingCard {
   const IncomingCard({
     required this.front,
     required this.back,
+    this.cells,
     required this.onDuplicate,
   });
 
   final List<Content> front;
   final List<Content> back;
+
+  /// The 칸 of a framed card, written in the frame; [front] and [back] are
+  /// then their projection.
+  final List<Cell>? cells;
   final DuplicateChoice onDuplicate;
 }
 

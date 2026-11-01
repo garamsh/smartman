@@ -4,6 +4,7 @@ import { OPENROUTER_URL } from "../../supabase/functions/extract-cards/openroute
 import { composeInstructions } from "../../supabase/functions/extract-cards/cards.ts";
 import * as v9 from "../../supabase/functions/extract-cards/prompt_v9.ts";
 import { SYSTEM_PROMPT } from "../../supabase/functions/extract-cards/prompt_v10.ts";
+import { ALTERNATIVES, LEAN_CONTRACT } from "./dense.ts";
 import { meaningOf, normalize, score } from "./metrics.ts";
 import { MODELS_URL, newest, parseModels, parseSelectors } from "./models.ts";
 import { type Io, loadSamples, main, PATHS, runEval } from "./run.ts";
@@ -709,8 +710,8 @@ Deno.test("a run stops before a call whose worst case could exceed the remaining
   const models = parseModels(MODEL_LIST);
   const cheap = newest("^vendor/cheap$", models);
   assert.ok(cheap !== null);
-  // One call per image, so its worst case is one call's.
-  const worst = worstCallUsd(cheap.pricing);
+  // The function's way may read a photo on, so its worst case is that many calls'.
+  const worst = worstCallUsd(cheap.pricing) * ALTERNATIVES[0].calls;
   // Room for the worst case of the first image, and not for it again once that image spent its reply cost.
   const ledger = { budgetUsd: worst + w.replyCost / 2, runs: [] };
   const run = await runEval(
@@ -720,6 +721,7 @@ Deno.test("a run stops before a call whose worst case could exceed the remaining
     {
       apiKey: "key",
       prompt: { label: "v9", text: SYSTEM_PROMPT },
+      alternative: ALTERNATIVES[0],
       fetch: io(w).fetch,
       now: () => 0,
       timeoutMs: 1000,
@@ -745,6 +747,7 @@ Deno.test("a run stops before a call whose worst case could exceed the remaining
     {
       apiKey: "key",
       prompt: { label: "v9", text: SYSTEM_PROMPT },
+      alternative: ALTERNATIVES[0],
       fetch: io(world()).fetch,
       now: () => 0,
       timeoutMs: 1000,
@@ -1458,6 +1461,102 @@ Deno.test("--prompts v9,v10 runs each prompt file on every configuration, each a
   assert.ok(Math.abs(two - one * 2) <= 0.0001, `${two} against ${one}`);
 });
 
+Deno.test("the committed dense word list holds its hundred French words, each with every meaning it prints as a sense", async () => {
+  const dense = (await committedSamples()).find((sample) =>
+    sample.name === "90-dense-list-fr-ko-print"
+  );
+  assert.ok(dense !== undefined && dense.kind === "vocabulary");
+  const words: { front: string; senses: string[] }[] = JSON.parse(
+    await Deno.readTextFile(new URL("./vocabulary.json", import.meta.url)),
+  )["dense-list-fr"];
+  assert.equal(dense.cards.length, 100);
+  assert.deepEqual(
+    dense.cards.map((card) => [
+      card.front,
+      card.senses.map((sense) => sense.meaning),
+    ]),
+    words.map((word) => [word.front, word.senses]),
+  );
+  assert.equal(
+    dense.cards.filter((card) => card.senses.length === 2).length,
+    15,
+  );
+  assert.deepEqual(dense.languages, { front: "fr", back: "ko" });
+});
+
+Deno.test("the committed two-hundred-word list holds a hundred new French words before the dense list's hundred, numbered from 1", async () => {
+  const samples = await committedSamples();
+  const long = samples.find((sample) =>
+    sample.name === "91-dense-list-200-fr-ko-print"
+  );
+  assert.ok(long !== undefined && long.kind === "vocabulary");
+  const vocabulary: Record<string, { front: string; senses: string[] }[]> = JSON
+    .parse(
+      await Deno.readTextFile(new URL("./vocabulary.json", import.meta.url)),
+    );
+  const words = [
+    ...vocabulary["dense-list-fr-first"],
+    ...vocabulary["dense-list-fr"],
+  ];
+  assert.equal(long.cards.length, 200);
+  assert.deepEqual(
+    long.cards.map((card) => [
+      card.front,
+      card.senses.map((sense) => sense.meaning),
+    ]),
+    words.map((word) => [word.front, word.senses]),
+  );
+  assert.equal(new Set(words.map((word) => word.front)).size, 200);
+  assert.equal(
+    long.cards.filter((card) => card.senses.length === 2).length,
+    30,
+  );
+  assert.deepEqual(long.languages, { front: "fr", back: "ko" });
+});
+
+Deno.test("--alternatives runs each named way as rows of its own, and --samples runs only the samples named", async () => {
+  const w = world({ budgetUsd: 10, runs: [] });
+  w.systems = [];
+  assert.equal(
+    await main(["--alternatives", "today,lean", "--samples", "01"], io(w)),
+    0,
+  );
+  assert.deepEqual(w.chatCalls, [
+    "vendor/cheap",
+    "vendor/dear",
+    "vendor/cheap",
+    "vendor/dear",
+  ]);
+  assert.deepEqual(w.systems, [
+    ...Array(2).fill(composeInstructions(SYSTEM_PROMPT)),
+    ...Array(2).fill(composeInstructions(SYSTEM_PROMPT, LEAN_CONTRACT)),
+  ]);
+  const report = w.files.get(PATHS.report) ?? "";
+  for (const label of ["Cheap, today", "Dear, lean"]) {
+    assert.match(report, new RegExp(`\\| ${label} \\| 1 \\| `), label);
+  }
+  assert.equal(
+    JSON.parse(w.files.get(PATHS.ledger) ?? "").runs.at(-1).note,
+    "prompt v10, today, lean",
+  );
+  // An unknown or repeated way, or a sample number that names none, is refused before any call.
+  for (
+    const args of [
+      ["--alternatives", "lean,lean"],
+      ["--alternatives", "wide"],
+      ["--samples", "03"],
+    ]
+  ) {
+    const refused = world({ budgetUsd: 10, runs: [] });
+    assert.equal(await main(args, io(refused)), 1, args.join(" "));
+    assert.equal(refused.chatCalls.length, 0, args.join(" "));
+  }
+  // Control: without either flag, every sample runs the function's own call alone.
+  const plain = world({ budgetUsd: 10, runs: [] });
+  assert.equal(await main([], io(plain)), 0);
+  assert.equal(plain.chatCalls.length, 4);
+});
+
 Deno.test("--prompts refuses an unknown or repeated file, or --prompt-version beside it, before any call", async () => {
   for (
     const args of [
@@ -1492,7 +1591,7 @@ Deno.test("a reply's cards that break a rule are dropped, kept by rule in its re
   const report = w.files.get(PATHS.report) ?? "";
   assert.match(
     report,
-    /\| Cheap \| 2 \| 0 \| 0 \| 2 \| `vocabulary_answer` 2 \|/,
+    /\| Cheap \| 2 \| 2 \| 0 \| 0 \| 0 \| 2 \| `vocabulary_answer` 2 \|/,
   );
 
   // A reply whose every card breaks a rule is an invalid output.
@@ -1505,7 +1604,7 @@ Deno.test("a reply's cards that break a rule are dropped, kept by rule in its re
   );
   assert.match(
     broken.files.get(PATHS.report) ?? "",
-    /\| Dear \| 2 \| 2 \| 0 \| 2 \| `vocabulary_answer` 2 \|/,
+    /\| Dear \| 2 \| 0 \| 0 \| 2 \| 0 \| 2 \| `vocabulary_answer` 2 \|/,
   );
 
   // Control: valid replies drop none.
@@ -1513,7 +1612,7 @@ Deno.test("a reply's cards that break a rule are dropped, kept by rule in its re
   assert.equal(await main([], io(valid)), 0);
   assert.match(
     valid.files.get(PATHS.report) ?? "",
-    /\| Cheap \| 2 \| 0 \| 0 \| 0 \| — \|/,
+    /\| Cheap \| 2 \| 2 \| 0 \| 0 \| 0 \| 0 \| — \|/,
   );
 });
 
@@ -1532,6 +1631,7 @@ Deno.test("a call that never answers is a model error at the timeout, kept and r
     {
       apiKey: "key",
       prompt: { label: "v10", text: SYSTEM_PROMPT },
+      alternative: ALTERNATIVES[0],
       fetch: io(w).fetch,
       now: () => 0,
       timeoutMs: 20,
@@ -1551,7 +1651,9 @@ Deno.test("a call that never answers is a model error at the timeout, kept and r
     "one model error does not stop the candidate",
   );
   assert.ok(
-    printed.includes("Cheap 01-a: model_error, timed out after 20 ms, $0.0000"),
+    printed.includes(
+      "Cheap 01-a: model_error, timed out after 20 ms, 0 cards, $0.0000",
+    ),
     printed.join("\n"),
   );
   const first = kept.get("cheap/01-a.json") as {

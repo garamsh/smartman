@@ -20,7 +20,7 @@ const pretendard = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "smartman",
+  title: "알아몰라",
   description: "카드로 외우는 암기 앱",
   icons: {
     icon: [
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#1F2A44",
+  themeColor: "#3B2118",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

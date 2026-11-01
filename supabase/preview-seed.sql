@@ -137,6 +137,9 @@ select usage.id, case when usage.user_id = '5eed0000-0000-4000-8000-0000000000a2
 from usage;
 insert into private.extraction_calls_before_versions (usage_id)
 select min(usage_id) from private.extraction_calls;
+insert into private.extraction_cursors (token, usage_id, expires_at)
+select '5eed0000-0000-4000-8000-0000000000e1', max(usage_id), now() + interval '10 minutes'
+from private.extraction_calls;
 
 insert into private.revision_marks (taken_at, revision)
 select now() - interval '1 day', coalesce(max(revision), 0) from public.cards;

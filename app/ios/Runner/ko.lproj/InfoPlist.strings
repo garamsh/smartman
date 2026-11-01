@@ -1,3 +1,5 @@
+/* The app's name under its icon. */
+"CFBundleDisplayName" = "알아몰라";
 /* Shown when photo import first opens the system camera. */
 "NSCameraUsageDescription" = "단어장이나 책 한 페이지를 찍어 카드로 만들 때 카메라를 사용해요.";
 /* Shown if the photo library is asked for; the picker itself needs no permission. */

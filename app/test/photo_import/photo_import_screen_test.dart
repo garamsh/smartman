@@ -9,9 +9,11 @@ import 'package:smartman/database/database.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/design/app_list_row.dart';
 import 'package:smartman/design/app_sheet.dart';
+import 'package:smartman/design/mascot.dart';
 import 'package:smartman/design/theme.dart';
 import 'package:smartman/l10n/app_localizations.dart';
 import 'package:smartman/photo_import/photo_import.dart';
+import 'package:smartman/photo_import/src/import_job.dart' show PhotoRead;
 import 'package:smartman/photo_import/src/photo_viewer.dart' show PhotoViewer;
 import 'package:smartman/photo_import/src/round_check.dart';
 
@@ -174,8 +176,14 @@ class _Import {
   }
 
   /// Answers the open call reading the photo numbered [index] from 0 in the
-  /// order the calls started, with one word, and pumps.
-  Future<void> answerCall(int index, Map<String, String> cards) async {
+  /// order the calls started, with one word, and a [cursor] to read on from
+  /// when given, and pumps.
+  Future<void> answerCall(
+    int index,
+    Map<String, String> cards, {
+    String? cursor,
+  }) async {
+    calls(index).nextCursor = cursor;
     calls(index).answer.complete([
       for (final MapEntry(key: front, value: meaning) in cards.entries)
         word(front: front, meaning: meaning),
@@ -436,6 +444,110 @@ void main() {
     );
 
     testWidgets(
+      'a page left unread goes on through two cursors with the same photo, reading all the while, its cards appended without repeats and the photo counted once',
+      (tester) async {
+        final import = await _Import.open(tester);
+        import.photos.libraryPhotos = [
+          for (final width in [10, 20]) Future.value(photoOfWidth(width)),
+        ];
+        await import.pick();
+        await import.answerCall(1, {'oiseau': 'bird'});
+
+        await import.answerCall(0, {'chat': 'cat'}, cursor: 'first');
+        expect(import.client.calls, hasLength(3), reason: 'no user action');
+        expect(import.calls(2).cursor, 'first');
+        expect(import.calls(2).photo.bytes, import.calls(0).photo.bytes);
+        expect(find.bySemanticsLabel(RegExp(r'^Photo 1\nReading')), findsOne);
+
+        await import.answerCall(2, {
+          'Chat ': 'cat again',
+          'chien': 'dog',
+        }, cursor: 'second');
+        expect(import.calls(3).cursor, 'second');
+        expect(find.bySemanticsLabel(RegExp(r'^Photo 1\nReading')), findsOne);
+        expect(find.bySemanticsLabel('Read 1 of 2 photos'), findsOneWidget);
+
+        await import.answerCall(3, {});
+        await tester.pumpAndSettle();
+        expect(_shown('Words found'), findsOneWidget);
+        expect(import.client.calls, hasLength(4), reason: 'none after the end');
+        expect(
+          switch (import.imports.job?.photos.first.state) {
+            PhotoRead(:final cards) => [for (final card in cards) card.answer],
+            final state => state,
+          },
+          ['cat', 'dog'],
+          reason: 'the repeated front left out',
+        );
+        expect(
+          [
+            for (final call in import.client.calls)
+              if (call.photo.width == 10 && call.cursor == null) call,
+          ],
+          hasLength(1),
+          reason: 'the first photo counted once',
+        );
+        expect(import.client.usages, 2, reason: 'one usage a photo');
+        await import.close();
+      },
+    );
+
+    testWidgets(
+      'a cursor the function no longer takes ends the reading with the retryable failure, and a retry reads the photo from the start, keeping the cards read so far',
+      (tester) async {
+        final import = await _Import.open(tester);
+        import.photos.libraryPhotos = [
+          for (final width in [10, 20]) Future.value(photoOfWidth(width)),
+        ];
+        await import.pick();
+        await import.answerCall(1, {'oiseau': 'bird'});
+        await import.answerCall(0, {'chat': 'cat'}, cursor: 'stale');
+        import
+            .calls(2)
+            .answer
+            .completeError(const ServiceFailed('HTTP 410 cursor_expired'));
+        await import.frames();
+        expect(find.bySemanticsLabel("Couldn't read 1 photo"), findsOneWidget);
+        expect(import.client.calls, hasLength(3), reason: 'nothing sent on');
+
+        await import.tap(_shown('Try again'));
+        expect(import.client.calls, hasLength(4));
+        expect(import.calls(3).cursor, isNull, reason: 'from the start');
+        await import.answerCall(3, {'chien': 'dog'});
+        await tester.pumpAndSettle();
+        expect(_shown('Words found'), findsOneWidget);
+        expect(_shown('chat'), findsOneWidget, reason: 'read before the 410');
+        expect(import.imports.job?.list?.cardCount, 3);
+        await import.close();
+      },
+    );
+
+    testWidgets(
+      'a closed app resumes a page left unread from its cursor, keeping the cards read so far and counting the photo no more',
+      (tester) async {
+        final first = await _Import.open(tester);
+        await first.pickSeveral(2);
+        await first.answerCall(1, {'oiseau': 'bird'});
+        await first.answerCall(0, {'chat': 'cat'}, cursor: 'kept');
+        expect(first.client.calls, hasLength(3), reason: 'reading on');
+        await first.close();
+
+        final next = await _Import.open(tester, restoring: first.store);
+        await next.reopen();
+        await next.tap(_shown('Resume'));
+        expect(next.client.calls, hasLength(1));
+        expect(next.calls(0).cursor, 'kept');
+        await next.answerCall(0, {'chien': 'dog'});
+        await tester.pumpAndSettle();
+        expect(_shown('Words found'), findsOneWidget);
+        expect(_shown('chat'), findsOneWidget, reason: 'read before the close');
+        expect(next.imports.job?.list?.cardCount, 3);
+        expect(next.client.usages, 0, reason: 'not counted again');
+        await next.close();
+      },
+    );
+
+    testWidgets(
       'discarding a job a closed app left forgets it and its photos and reads nothing',
       (tester) async {
         final first = await _Import.open(tester);
@@ -677,10 +789,17 @@ void main() {
             )
             .value;
 
+        // The thinking mascot reads along until a row shows a failure's red.
+        expect(
+          tester.widget<Mascot>(find.byType(Mascot)).expression,
+          MascotExpression.thinking,
+        );
+
         import.calls(0).answer.completeError(const ModelFailed());
         await import.frames();
         expect(find.bySemanticsLabel('Read 0 of 3 photos'), findsOneWidget);
         expect(bar(), 0);
+        expect(find.byType(Mascot), findsNothing);
 
         await import.answerCall(1, {'chien': 'dog'});
         expect(find.bySemanticsLabel('Read 1 of 3 photos'), findsOneWidget);
@@ -1275,6 +1394,10 @@ void main() {
         await import.shoot();
 
         expect(_shown('Finding cards'), findsOneWidget);
+        expect(
+          tester.widget<Mascot>(find.byType(Mascot)).expression,
+          MascotExpression.thinking,
+        );
         expect(find.bySemanticsLabel('Your photo'), findsOneWidget);
         expect(find.byType(LinearProgressIndicator), findsOneWidget);
         expect(
@@ -1651,7 +1774,9 @@ void main() {
         final saved = (await tester.runAsync(
           () => import.repository.listCards(import.french.id),
         ))!;
-        final card = saved.firstWhere((card) => isWholeCard(card.front));
+        final card = saved.firstWhere(
+          (card) => card.front.any((block) => block is TableContent),
+        );
         expect(card.front, [const TextContent('인칭 대명사'), table]);
         expect(card.back, [
           const TextContent('인칭 대명사\n구분 | 높임 | 낮춤\n2인칭 | 당신 | 너'),

@@ -22,13 +22,13 @@ export function AiConnection() {
         <div className="flex flex-col gap-1 px-4 py-3">
           <p className="text-body-strong">Claude</p>
           <p className="text-caption break-keep text-muted">
-            커넥터 설정에서 커스텀 커넥터를 추가하고 서버 주소를 넣은 뒤 smartman으로 로그인해요
+            커넥터 설정에서 커스텀 커넥터를 추가하고 서버 주소를 넣은 뒤 알아몰라로 로그인해요
           </p>
         </div>
         <div className="flex flex-col gap-1 px-4 py-3">
           <p className="text-body-strong">ChatGPT</p>
           <p className="text-caption break-keep text-muted">
-            chatgpt.com/plugins에서 커스텀 MCP 서버를 추가하고 서버 주소를 넣은 뒤 smartman으로
+            chatgpt.com/plugins에서 커스텀 MCP 서버를 추가하고 서버 주소를 넣은 뒤 알아몰라로
             로그인해요
           </p>
         </div>

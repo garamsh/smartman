@@ -69,10 +69,10 @@ void main() {
   test('the light and dark themes carry their own tokens and the font', () {
     expect(lightTheme.brightness, Brightness.light);
     expect(lightTheme.extension<AppColors>(), AppColors.light);
-    expect(lightTheme.scaffoldBackgroundColor, const Color(0xFFF4F6FA));
+    expect(lightTheme.scaffoldBackgroundColor, const Color(0xFFFFF6E8));
     expect(darkTheme.brightness, Brightness.dark);
     expect(darkTheme.extension<AppColors>(), AppColors.dark);
-    expect(darkTheme.scaffoldBackgroundColor, const Color(0xFF0E1424));
+    expect(darkTheme.scaffoldBackgroundColor, const Color(0xFF1F1512));
     expect(lightTheme.textTheme.bodyMedium?.fontFamily, appFontFamily);
     expect(darkTheme.textTheme.bodyMedium?.fontFamily, appFontFamily);
   });
@@ -175,10 +175,10 @@ void main() {
     ], isEmpty);
   });
 
-  test('the radii are one scale: group 14, button 12, chip and label 6, '
+  test('the radii are one scale: group 14, button 18, chip and label 6, '
       'sheet 22, and the theme draws buttons and sheets in them', () {
     expect(AppRadius.group, 14);
-    expect(AppRadius.button, 12);
+    expect(AppRadius.button, 18);
     expect(AppRadius.chip, 6);
     expect(AppRadius.sheet, 22);
     for (final theme in [lightTheme, darkTheme]) {
@@ -195,7 +195,7 @@ void main() {
       ]) {
         expect(
           style?.shape?.resolve({}),
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         );
       }
     }
@@ -259,7 +259,8 @@ void main() {
           (colors.muted, colors.surface),
           (colors.muted, colors.ground),
           (colors.muted, colors.raised),
-          (colors.onPrimary, colors.ink),
+          (colors.onPrimary, colors.primary),
+          (colors.onInk, colors.ink),
           (colors.ink, colors.brandTint),
           (colors.onHero, colors.hero),
           (colors.brand, colors.onHero),
@@ -313,6 +314,31 @@ void main() {
       },
     );
   }
+
+  test('모른다 stays 20 degrees of hue from the coral in both themes', () {
+    double apart(Color a, Color b) {
+      final turn = (HSVColor.fromColor(a).hue - HSVColor.fromColor(b).hue)
+          .abs();
+      return turn > 180 ? 360 - turn : turn;
+    }
+
+    // Control: the red it moved from, ADR 0027's, sits on the coral's hue.
+    expect(
+      apart(const Color(0xFFC2402F), AppColors.light.onHero),
+      lessThan(20),
+    );
+
+    for (final colors in [AppColors.light, AppColors.dark]) {
+      for (final red in [
+        colors.dontKnow,
+        colors.dontKnowText,
+        colors.onDontKnowTint,
+      ]) {
+        expect(apart(red, colors.onHero), greaterThanOrEqualTo(20));
+        expect(apart(red, colors.primary), greaterThanOrEqualTo(20));
+      }
+    }
+  });
 
   for (final (name, theme, colors) in [
     ('light', lightTheme, AppColors.light),

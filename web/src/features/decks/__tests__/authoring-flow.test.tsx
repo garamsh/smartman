@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { http, HttpResponse } from "msw";
 import { render } from "@/testing/render";
-import { cardRow, deckRow, uuidOf } from "@/testing/library";
+import { cardRow, deckRow, side, uuidOf } from "@/testing/library";
 import { FakePostgrest } from "@/testing/mocks/postgrest";
 import { server } from "@/testing/mocks/server";
 import { supabaseUrl, testAccessToken } from "@/testing/mocks/handlers";
@@ -51,11 +51,11 @@ describe("authoring from the page", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "카드 추가" }));
     await userEvent.click(screen.getByRole("button", { name: "직접 입력" }));
-    await userEvent.type(screen.getByRole("textbox", { name: "앞면 글 1" }), "draft");
+    await userEvent.type(screen.getByRole("textbox", { name: "앞면" }), "draft");
     fireEvent(screen.getByRole("dialog"), new Event("cancel", { cancelable: true }));
     expect(screen.getByRole("heading", { name: "작성 중인 카드를 버릴까요?" })).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "계속 쓰기" }));
-    expect(screen.getByRole("textbox", { name: "앞면 글 1" })).toHaveValue("draft");
+    expect(screen.getByRole("textbox", { name: "앞면" })).toHaveValue("draft");
     await userEvent.click(screen.getByRole("button", { name: "닫기" }));
     await userEvent.click(screen.getByRole("button", { name: "버리기" }));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
@@ -66,31 +66,31 @@ describe("authoring from the page", () => {
     await render(() => <AuthoringButton deck={deck} />, {});
     await userEvent.click(screen.getByRole("button", { name: "카드 추가" }));
     await userEvent.click(screen.getByRole("button", { name: "직접 입력" }));
-    await userEvent.type(screen.getByRole("textbox", { name: "앞면 글 1" }), "apple");
-    const groups = screen.getAllByText("+ 추가");
-    const back = groups[1];
-    if (!back) throw new Error("back add control");
-    await userEvent.click(back);
-    const options = screen.getAllByRole("button", { name: "뜻 목록" });
-    const option = options[1];
-    if (!option) throw new Error("back senses option");
-    await userEvent.click(option);
-    await userEvent.type(screen.getByRole("textbox", { name: "뜻 1" }), "사과");
-    await userEvent.type(screen.getByRole("textbox", { name: "뜻 1 라벨" }), "명");
+    await userEvent.click(screen.getByRole("button", { name: "1번째 칸 메뉴" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "삭제" }));
+    await userEvent.click(screen.getByRole("button", { name: "+ 칸 추가" }));
+    await userEvent.click(screen.getByRole("button", { name: "단어" }));
+    await userEvent.type(screen.getByRole("textbox", { name: "단어" }), "apple");
+    await userEvent.type(screen.getByRole("textbox", { name: "뜻" }), "사과");
+    await userEvent.type(screen.getByRole("textbox", { name: "라벨" }), "명");
     const release = db.fail("cards", 400);
     await userEvent.click(screen.getByRole("button", { name: "저장" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("카드를 저장하지 못했어요");
-    expect(screen.getByRole("textbox", { name: "앞면 글 1" })).toHaveValue("apple");
+    expect(screen.getByRole("textbox", { name: "단어" })).toHaveValue("apple");
     release();
     await userEvent.dblClick(screen.getByRole("button", { name: "저장" }));
     await waitFor(() => {
       expect(db.rows.cards).toHaveLength(1);
     });
-    expect(db.rows.cards[0]?.back).toEqual(
+    expect(db.rows.cards[0]).toMatchObject({ template: "free", template_version: 2, back: [] });
+    expect(db.rows.cards[0]?.front).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           type: "senses",
+          v: 2,
           payload: {
+            term: "apple",
+            ask: "term",
             senses: [
               {
                 labels: [{ kind: "part_of_speech", category: "noun", text: "명" }],
@@ -252,7 +252,10 @@ describe("photo request", () => {
     expect(calls).toBe(0);
     const valid = new FormData();
     valid.set("photo", upload());
-    expect(await readPhoto(valid)).toMatchObject({ cards: [{ topic: "도시", selected: null }] });
+    expect(await readPhoto(valid)).toMatchObject({
+      cards: [{ topic: "도시", selected: null }],
+      cursor: null,
+    });
     expect(calls).toBe(1);
     setRequestCookies([]);
     expect(await readPhoto(valid)).toEqual({ failure: { kind: "signIn" } });
@@ -286,6 +289,67 @@ describe("photo request", () => {
       expect(calls).toBe(1);
     },
   );
+  it("reads a cursor only beside partial true, and none from an answer read whole", async () => {
+    for (const [body, cursor] of [
+      [{ cards: [card], partial: true, cursor: "next" }, "next"],
+      [{ cards: [card], partial: "yes", cursor: "next" }, null],
+      [{ cards: [card], partial: true }, null],
+      [{ cards: [card] }, null],
+    ] as const) {
+      server.use(
+        http.post(`${supabaseUrl}/functions/v1/extract-cards`, () => HttpResponse.json(body)),
+      );
+      const form = new FormData();
+      form.set("photo", upload());
+      expect(await readPhoto(form)).toMatchObject({ cursor });
+    }
+  });
+  it("reads an answer of up to the photo's 500 cards, which a request reading on past its first reply holds, and refuses one past them", async () => {
+    const many = (count: number) =>
+      Array.from({ length: count }, (_, at) => ({ ...card, front: `수도 ${String(at)}` }));
+    for (const [count, read] of [
+      [500, true],
+      [501, false],
+    ] as const) {
+      server.use(
+        http.post(`${supabaseUrl}/functions/v1/extract-cards`, () =>
+          HttpResponse.json({ cards: many(count), partial: false }),
+        ),
+      );
+      const form = new FormData();
+      form.set("photo", upload());
+      const result = await readPhoto(form);
+      expect("cards" in result ? result.cards.length : result.failure.kind).toBe(
+        read ? count : "service",
+      );
+    }
+  });
+  it("sends a cursor back with the photo, takes a resumed answer of no card, and reads a 410 as the retryable service failure", async () => {
+    const bodies: unknown[] = [];
+    const answers = [
+      HttpResponse.json({ cards: [], partial: false }),
+      HttpResponse.json({ error: "cursor_expired" }, { status: 410 }),
+    ];
+    server.use(
+      http.post(`${supabaseUrl}/functions/v1/extract-cards`, async ({ request }) => {
+        bodies.push(await request.json());
+        return answers[bodies.length - 1];
+      }),
+    );
+    const form = new FormData();
+    form.set("photo", upload());
+    form.set("cursor", "next");
+    expect(await readPhoto(form)).toEqual({ cards: [], cursor: null });
+    expect(await readPhoto(form)).toEqual({ failure: { kind: "service" } });
+    expect(bodies).toEqual([
+      { image: Buffer.from(jpegBytes).toString("base64"), cursor: "next" },
+      { image: Buffer.from(jpegBytes).toString("base64"), cursor: "next" },
+    ]);
+    // A cursor past the function's bound is refused before any call.
+    form.set("cursor", "x".repeat(24 * 1024 + 1));
+    expect(await readPhoto(form)).toEqual({ failure: { kind: "refused" } });
+    expect(bodies).toHaveLength(2);
+  });
   it("sends a photo once more after no response, and logs one line with the status and latency, never the image or token", async () => {
     const log = vi.spyOn(console, "info").mockImplementation(() => undefined);
     let calls = 0;
@@ -434,6 +498,7 @@ describe("photo import", () => {
     expect(
       await screen.findByText("카드를 읽지 못했어요. 잠시 후 다시 시도해 주세요."),
     ).toBeInTheDocument();
+    expect(document.querySelector('img[src*="knowno-sad"]')).not.toBeNull();
     expect(sent.count).toBe(1);
     await userEvent.click(screen.getByRole("button", { name: "다시 시도" }));
     expect(
@@ -452,6 +517,7 @@ describe("photo import", () => {
     expect(
       await screen.findByText("카드를 찾지 못했어요. 더 밝고 반듯하게 찍어 보세요."),
     ).toBeInTheDocument();
+    expect(document.querySelector('img[src*="knowno-sad"]')).not.toBeNull();
     expect(screen.getByLabelText("다른 사진 고르기", { selector: "input" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "다시 시도" })).not.toBeInTheDocument();
   });
@@ -462,6 +528,8 @@ describe("photo import", () => {
       await screen.findByRole("heading", { name: "사진 1장을 읽지 못했어요" }),
     ).toBeInTheDocument();
     expect(sent.count).toBe(2);
+    // Never beside a failure's red: the row's icon is the screen's one mark.
+    expect(document.querySelector('img[src*="knowno-thinking"]')).toBeNull();
     expect(screen.getByText("카드 1장")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "사진 1 빼기" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "사진 2 다시 시도" })).not.toBeInTheDocument();
@@ -690,6 +758,39 @@ describe("photo import", () => {
       await userEvent.click(screen.getByRole("checkbox", { name: "수도 선택" }));
       expect(screen.getByRole("checkbox", { name: "수도 선택" })).toBeChecked();
     });
+    it("merges a checked card the deck holds into it on saving, as the phone does, beside a new one inserted", async () => {
+      db.seed("cards", cardRow("held", "deck", "수도"));
+      answer({ status: 200, body: { cards: [card, { ...card, front: "인구", answer: "많음" }] } });
+      await choose(1);
+      await screen.findByRole("heading", { name: "카드 2장을 만들었어요" });
+      await waitFor(() => {
+        expect(screen.getByRole("checkbox", { name: "수도 선택" })).not.toBeChecked();
+      });
+      await userEvent.click(screen.getByRole("checkbox", { name: "수도 선택" }));
+      await userEvent.click(screen.getByRole("button", { name: "카드 2장 추가" }));
+      await waitFor(() => {
+        expect(db.rows.cards).toHaveLength(2);
+      });
+      await waitFor(() => {
+        expect(db.rows.cards[0]?.back).toEqual([
+          ...side("수도 back"),
+          expect.objectContaining({ type: "text", payload: { text: "서울" } }),
+        ]);
+      });
+      expect(db.rows.cards[0]?.id).toBe(uuidOf("held"));
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "카드 2장 추가" })).not.toBeInTheDocument();
+    });
+    it("counts two photos' cards of one key as one on the add button, and saves one card", async () => {
+      answer({ status: 200, body: { cards: [card] } });
+      await choose(2);
+      await screen.findByRole("heading", { name: "카드 2장을 만들었어요" });
+      await userEvent.click(screen.getByRole("button", { name: "카드 1장 추가" }));
+      await waitFor(() => {
+        expect(db.rows.cards).toHaveLength(1);
+      });
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    });
     it("merges a photo's cards of one front into one row, joining their backs and senses", async () => {
       const pear = { ...apple, senses: [{ labels: [], meaning: "배나무", examples: [] }] };
       answer({
@@ -747,6 +848,67 @@ describe("photo import", () => {
       await userEvent.click(screen.getByRole("button", { name: "새 덱" }));
       await userEvent.click(screen.getByRole("radio", { name: "단어장" }));
       expect(screen.getByRole("button", { name: "과일 카드 모양, 앞면에 뜻" })).toBeInTheDocument();
+    });
+    it("reads a page left unread on through two cursors with the same photo while it shows reading, appending its cards without repeats and counting the photo once", async () => {
+      const river = { ...card, front: "강", answer: "한강" };
+      const bodies: unknown[] = [];
+      let release: () => void = () => undefined;
+      const held = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const answers = [
+        { cards: [card], partial: true, cursor: "first" },
+        { cards: [{ ...card, front: " 수도" }, river], partial: true, cursor: "second" },
+        { cards: [], partial: false },
+      ];
+      server.use(
+        http.post(`${supabaseUrl}/functions/v1/extract-cards`, async ({ request }) => {
+          const body: unknown = await request.json();
+          bodies.push(body);
+          if (bodies.length === 2) await held;
+          return HttpResponse.json(answers[bodies.length - 1]);
+        }),
+      );
+      await choose(1);
+      await waitFor(() => {
+        expect(bodies).toHaveLength(2);
+      });
+      expect(screen.getByRole("heading", { name: "카드를 찾고 있어요" })).toBeInTheDocument();
+      expect(document.querySelector('img[src*="knowno-thinking"]')).not.toBeNull();
+      release();
+      expect(
+        await screen.findByRole("heading", { name: "카드 2장을 만들었어요" }),
+      ).toBeInTheDocument();
+      expect(screen.getAllByRole("checkbox", { name: "수도 선택" })).toHaveLength(1);
+      expect(screen.getByRole("checkbox", { name: "강 선택" })).toBeInTheDocument();
+      expect(bodies.map((body) => field(body, "cursor"))).toEqual([undefined, "first", "second"]);
+      expect(new Set(bodies.map((body) => field(body, "image"))).size).toBe(1);
+      expect(bodies.filter((body) => field(body, "cursor") === undefined)).toHaveLength(1);
+      expect(screen.queryByText("사진의 일부만 읽었어요")).not.toBeInTheDocument();
+    });
+    it("ends a page's reading at a 410 with the retryable service failure, and a retry reads it from the start, keeping the cards read so far", async () => {
+      const bodies: unknown[] = [];
+      const answers = [
+        HttpResponse.json({ cards: [card], partial: true, cursor: "stale" }),
+        HttpResponse.json({ error: "cursor_expired" }, { status: 410 }),
+        HttpResponse.json({ cards: [{ ...card, front: "강", answer: "한강" }] }),
+      ];
+      server.use(
+        http.post(`${supabaseUrl}/functions/v1/extract-cards`, async ({ request }) => {
+          bodies.push(await request.json());
+          return answers[bodies.length - 1];
+        }),
+      );
+      await choose(1);
+      expect(await screen.findByText(describeFailure({ kind: "service" }))).toBeInTheDocument();
+      expect(bodies).toHaveLength(2);
+      await userEvent.click(screen.getByRole("button", { name: "다시 시도" }));
+      expect(
+        await screen.findByRole("heading", { name: "카드 2장을 만들었어요" }),
+      ).toBeInTheDocument();
+      expect(bodies.map((body) => field(body, "cursor"))).toEqual([undefined, "stale", undefined]);
+      expect(screen.getByRole("checkbox", { name: "수도 선택" })).toBeInTheDocument();
+      expect(screen.getByRole("checkbox", { name: "강 선택" })).toBeInTheDocument();
     });
     it("collapses and expands each photo's group from its header, leaving the other photos' rows", async () => {
       answer(read, { status: 200, body: { cards: [{ ...card, front: "강", answer: "한강" }] } });

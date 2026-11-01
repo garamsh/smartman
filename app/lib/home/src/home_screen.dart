@@ -6,6 +6,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../deck/deck.dart';
 import '../../design/app_button.dart';
+import '../../design/mascot.dart';
 import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../../photo_import/photo_import.dart';
@@ -245,6 +246,7 @@ class _EmptyHome extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final onBrowse = this.onBrowse;
     return FirstRun(
+      mascot: MascotExpression.thinking,
       title: l10n.emptyHomeTitle,
       body: l10n.emptyHomeBody,
       actions: [

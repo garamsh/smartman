@@ -1,13 +1,13 @@
 # MCP
 
-The `mcp` Edge Function, Smartman's remote MCP server for Claude and ChatGPT: its transport, its authorization through the project's OAuth server, its five tools, the rows it writes, and the web's consent page and settings entry it relies on. The schema and the deploy path are [`server.md`](server.md)'s; the web's account pages are [`web-account.md`](web-account.md)'s.
+The `mcp` Edge Function, knowno's remote MCP server for Claude and ChatGPT: its transport, its authorization through the project's OAuth server, its five tools, the rows it writes, and the web's consent page and settings entry it relies on. The schema and the deploy path are [`server.md`](server.md)'s; the web's account pages are [`web-account.md`](web-account.md)'s.
 
 ## Current decisions
 
 ### Transport
 
 - `supabase/functions/mcp/` answers Streamable HTTP at `/functions/v1/mcp`: one JSON-RPC request per POST, answered with one JSON object; a notification or a response with 202 and no body; GET and DELETE with 405 ([ADR 0126](adr/0126-connect-claude-and-chatgpt-through-one-remote-mcp-server-acting-as-the-signed-in-user.md)). It mints no `Mcp-Session-Id` and keeps nothing between requests.
-- It serves the protocol versions that open with `initialize`: 2025-11-25, 2025-06-18 and 2025-03-26. `initialize` answers the version offered when it is one of them and 2025-11-25 otherwise, with the `tools` capability and a short instruction for the model. A request whose `MCP-Protocol-Version` names another version is refused with 400; one without the header is served.
+- It serves the protocol versions that open with `initialize`: 2025-11-25, 2025-06-18 and 2025-03-26. `initialize` answers the version offered when it is one of them and 2025-11-25 otherwise, with the `tools` capability, `serverInfo` naming it `knowno`, and a short instruction for the model. A request whose `MCP-Protocol-Version` names another version is refused with 400; one without the header is served.
 - A request carrying an `Origin` header is refused with 403: Claude and ChatGPT call from their servers, and no browser is a client.
 - It imports nothing but `supabase/functions/_shared/auth.ts`'s types; the MCP SDK is not used.
 
@@ -15,7 +15,7 @@ The `mcp` Edge Function, Smartman's remote MCP server for Claude and ChatGPT: it
 
 - The project's Supabase Auth is the authorization server, through its OAuth 2.1 server (beta, on every plan), with dynamic client registration on. Claude and ChatGPT register themselves by DCR, since it advertises no Client ID Metadata Document support. The verification is #496's comment of 2026-10-29.
 - The server's address is `https://api.knowno.app/functions/v1/mcp`, on the project's Supabase custom domain; the project's own `https://jaxltcczmioxrineznfu.supabase.co/functions/v1/mcp` serves it too ([ADR 0133](adr/0133-serve-the-mcp-server-at-api-knowno-app-name-a-listed-host-as-its-resource-and-auth-s-issuer-as-its-authorization-server.md)).
-- `/functions/v1/mcp/oauth-protected-resource` is the protected resource metadata: the function's public URL as `resource`, Supabase Auth's issuer as its one authorization server, and `header` as the bearer method.
+- `/functions/v1/mcp/oauth-protected-resource` is the protected resource metadata: the function's public URL as `resource`, Supabase Auth's issuer as its one authorization server, `header` as the bearer method, and `knowno` as `resource_name` ([ADR 0134](adr/0134-name-the-app-knowno-serve-it-at-knowno-app-identify-it-as-app-knowno-and-reach-the-backend-at-api-knowno-app.md)).
   - The project's origin is `SUPABASE_URL`'s, which `config.ts` parses once as an http(s) URL; any other value leaves the function unconfigured, every request answered 503.
   - The public URL is the optional secret `MCP_PUBLIC_URL`, which `config.ts` reads once and requires to be an https URL ending in `/functions/v1/mcp`; production sets `https://api.knowno.app/functions/v1/mcp`. Without it, the URL is the project's origin plus that path. A value set but invalid leaves the function unconfigured, every request answered 503. No request header is read: the custom-domain gateway does not forward the client's host.
   - The issuer is `<project origin>/auth/v1`: Auth keeps it on the project's host under the custom domain, and RFC 8414 requires the advertised authorization server to equal it.
@@ -47,7 +47,7 @@ The `mcp` Edge Function, Smartman's remote MCP server for Claude and ChatGPT: it
 
 - `/oauth/consent?authorization_id=…` (`web/src/app/oauth/consent/`) reads the request from Supabase Auth on the server with the user's session, which binds it to the user, under `<Suspense>` with the page's skeleton, since it reads the request; an id that is not 1 to 128 letters, digits, `_` or `-` is refused before any request.
 - It asks "{app}에 연결할까요?", the app's name as the client registered it, or "이 앱", over one group, "연결 내용": the account's email, the host the browser returns to and "덱과 카드를 읽고 새 덱과 카드를 추가해요. 지우거나 고치지는 않아요". For `localhost`, `127.0.0.1` or `[::1]` it adds that the address is a program on this computer, to connect only to one the user started.
-- "취소", outlined, then "연결", the one navy fill, last. Each answers from the browser through `@supabase/ssr`'s browser client, as sign-in starts there, and sends the browser on to the address Supabase Auth returns; while an answer is on its way neither can be pressed again, and a refused answer says "연결하지 못했어요. AI 앱에서 다시 연결해 주세요." and keeps both.
+- "취소", outlined, then "연결", the one coral fill, last. Each answers from the browser through `@supabase/ssr`'s browser client, as sign-in starts there, and sends the browser on to the address Supabase Auth returns; while an answer is on its way neither can be pressed again, and a refused answer says "연결하지 못했어요. AI 앱에서 다시 연결해 주세요." and keeps both.
 - A request the user allowed before is answered by Supabase Auth with its address, and the page sends the browser there at once. An unknown or expired request says "연결 요청을 찾을 수 없어요. AI 앱에서 다시 연결해 주세요."; while Auth cannot be reached, the screen error of 설정 with "다시 시도".
 - A signed-out visitor is sent to `/login` as from any page, and the proxy keeps the request's id in the cookie `smartman-oauth-consent`, HTTP-only, `SameSite=Lax`, for ten minutes, as long as Auth keeps an authorization open; when sign-in lands on `/`, the proxy opens the consent again and deletes the cookie ([`web.md`](web.md) §Session and proxy).
 
@@ -65,6 +65,7 @@ Each line names a file and what it covers; the file holds the cases. The consent
 
 - [ADR 0126](adr/0126-connect-claude-and-chatgpt-through-one-remote-mcp-server-acting-as-the-signed-in-user.md) records the transport, the `client_id` check in place of an audience, the tools, the rows and the consent flow.
 - [ADR 0133](adr/0133-serve-the-mcp-server-at-api-knowno-app-name-a-listed-host-as-its-resource-and-auth-s-issuer-as-its-authorization-server.md) records the custom domain, why the authorization server is a constant issuer, and the host named as the resource, which [its erratum of 2026-11-01](adr/0133-serve-the-mcp-server-at-api-knowno-app-name-a-listed-host-as-its-resource-and-auth-s-issuer-as-its-authorization-server.md#errata) moved from a forwarded-host list to `MCP_PUBLIC_URL`.
+- [ADR 0134](adr/0134-name-the-app-knowno-serve-it-at-knowno-app-identify-it-as-app-knowno-and-reach-the-backend-at-api-knowno-app.md) records the server's name, `knowno`.
 - [ADR 0122](adr/0122-create-decks-and-reviewed-cards-on-the-web.md) records direct entry, whose rows and duplicate rule the tools follow.
 - [ADR 0114](adr/0114-write-every-card-as-a-free-block-list-remove-the-flip-cloze-and-table-forms-and-migrate-every-card-to-free.md) records the free template every new card takes.
 
@@ -72,3 +73,10 @@ Each line names a file and what it covers; the file holds the cases. The consent
 
 - Whether a Custom Access Token Hook should set `aud` to the function's URL for tokens carrying `client_id`, in place of the claim check; it needs a migration.
 - Whether to serve protocol revision 2026-07-28 once Claude or ChatGPT speaks it.
+
+### Planned: the 칸 frame
+
+Accepted in [ADR 0137](adr/0137-frame-a-card-by-its-blocks-each-block-type-deciding-whether-it-has-a-front-and-a-back.md) (#488) and not built yet. Nothing below holds today; the implementation moves it into the current decisions it names.
+
+- **Tools.** `add_cards` takes each card as `{"blocks": [칸, …]}`, a union on `type` of `text` (`front`, `back`), `senses` (`term`, `senses`, `ask`), `cloze` (`text`, `answers`), `table` (`columns`, `rows`, `blanks`, `spans`) and `image` (an https `url`, `boxes`, `side`), validated by `deck.md`'s rules; the plain `front` and `back`, with labels and examples, stays accepted as one 글, or a 단어 when it has labels or examples (#531). `list_cards` and `search_cards` return each card's `blocks` in the same union.
+- **Rows written.** Each card records `free` v2, its 칸 list in `front` and `[]` in `back`.

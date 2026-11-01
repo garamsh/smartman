@@ -48,7 +48,7 @@ export type HandlerDeps = IdSource & {
 };
 
 const INSTRUCTIONS =
-  "Smartman is a flashcard app. These tools read the signed-in user's decks and cards and add new decks and cards; they never change or delete anything. Find a deck's id with list_decks, read a deck with list_cards, find cards with search_cards, make a deck with create_deck and add cards with add_cards. New cards reach the user's phone and the web at their next sync.";
+  "knowno is a flashcard app. These tools read the signed-in user's decks and cards and add new decks and cards; they never change or delete anything. Find a deck's id with list_decks, read a deck with list_cards, find cards with search_cards, make a deck with create_deck and add cards with add_cards. New cards reach the user's phone and the web at their next sync.";
 
 type Exchange = {
   response: Response;
@@ -108,7 +108,7 @@ async function handle(request: Request, deps: HandlerDeps): Promise<Exchange> {
         // Auth's issuer, which RFC 8414 requires this to equal, stays on the project's host.
         authorization_servers: [`${config.projectOrigin}/auth/v1`],
         bearer_methods_supported: ["header"],
-        resource_name: "smartman",
+        resource_name: "knowno",
       }),
       entry: { ...empty, outcome: "metadata" },
     };
@@ -240,7 +240,7 @@ async function handle(request: Request, deps: HandlerDeps): Promise<Exchange> {
       return answer({
         protocolVersion,
         capabilities: { tools: { listChanged: false } },
-        serverInfo: { name: "smartman", title: "Smartman", version: "1" },
+        serverInfo: { name: "knowno", title: "knowno", version: "1" },
         instructions: INSTRUCTIONS,
       });
     }
@@ -267,7 +267,7 @@ async function handle(request: Request, deps: HandlerDeps): Promise<Exchange> {
               content: [{
                 type: "text",
                 text:
-                  "Smartman's server did not answer. Nothing was changed by this call unless list_cards shows it; try again in a moment.",
+                  "knowno's server did not answer. Nothing was changed by this call unless list_cards shows it; try again in a moment.",
               }],
               isError: true,
             },

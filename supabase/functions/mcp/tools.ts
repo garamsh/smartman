@@ -75,7 +75,7 @@ export const TOOLS = [
     name: "list_decks",
     title: "List decks",
     description:
-      "Lists the signed-in user's Smartman flashcard decks, oldest first, each with its id, name and number of cards. Call it first to find the deck_id the other tools take.",
+      "Lists the signed-in user's knowno flashcard decks, oldest first, each with its id, name and number of cards. Call it first to find the deck_id the other tools take.",
     inputSchema: {
       type: "object",
       properties: {},

@@ -74,4 +74,40 @@ void main() {
       expect(fade, findsNothing);
     },
   );
+
+  testWidgets('a whole card keeps its back from the prompt, shows it after a '
+      'tap, and names no side, where a split card names its side', (
+    tester,
+  ) async {
+    Widget preview(List<Content> front, List<Content> back) => MaterialApp(
+      theme: lightTheme,
+      locale: const Locale('en'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: CardPreviewScreen(key: UniqueKey(), front: front, back: back),
+    );
+    await tester.pumpWidget(
+      preview(
+        const [
+          ClozeContent('___ is red.', ['Rose']),
+        ],
+        const [TextContent('A flower.')],
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('A flower.'), findsNothing);
+    expect(find.text('Front'), findsNothing);
+
+    await tester.tap(find.byType(CardScroll));
+    await tester.pumpAndSettle();
+    expect(find.text('A flower.'), findsOneWidget);
+    expect(find.text('Back'), findsNothing);
+
+    // Control: a split card names its side.
+    await tester.pumpWidget(
+      preview(const [TextContent('Rose')], const [TextContent('A flower.')]),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Front'), findsOneWidget);
+  });
 }

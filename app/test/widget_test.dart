@@ -38,8 +38,9 @@ const _ada = UserId('00000000-0000-4000-8000-00000000000a');
 /// An extraction client the test never calls.
 final class _NoExtraction implements ExtractionClient {
   @override
-  Future<List<CandidateCard>?> extract(
+  Future<Extracted?> extract(
     JpegPhoto photo, {
+    String? cursor,
     required Future<void> cancel,
   }) => throw UnimplementedError('not called');
 
@@ -168,6 +169,8 @@ void main() {
 
   Future<void> addCard(WidgetTester tester, String front, String back) async {
     await tester.tap(find.text('Add card'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Enter by hand'));
     await tester.pumpAndSettle();
     await enterFront(tester, front);
     await enterBack(tester, back);
@@ -309,7 +312,7 @@ void main() {
     (tester) async {
       await pumpApp(tester);
 
-      expect(find.bySemanticsLabel('smartman'), findsOneWidget);
+      expect(find.bySemanticsLabel('knowno'), findsOneWidget);
       expect(shownText('Shall we make your first deck?'), findsOneWidget);
       expect(
         shownText(
@@ -402,6 +405,8 @@ void main() {
       await pumpApp(tester);
       await createDeckAndOpen(tester, 'French');
       await tester.tap(find.text('Add card'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Enter by hand'));
       await tester.pumpAndSettle();
     }
 
@@ -597,6 +602,8 @@ void main() {
       // Its one primary opens the deck's card editor; with a card added, the
       // tab shows the day.
       await tester.tap(find.text('Add card'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Enter by hand'));
       await tester.pumpAndSettle();
       await enterFront(tester, 'Chat');
       await enterBack(tester, 'cat');
@@ -885,6 +892,8 @@ void main() {
         await tester.pumpAndSettle();
 
         await tester.tap(find.text('Add card'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Enter by hand'));
         await tester.pumpAndSettle();
         await enterFront(tester, 'Chien');
         await meetsGuidelines();

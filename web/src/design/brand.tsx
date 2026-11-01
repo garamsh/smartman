@@ -1,16 +1,15 @@
 import Image from "next/image";
 
-/** The brand's mark in its light-ground and dark-ground files under public/brand/. */
-type Mark = "lockup" | "stacked" | "symbol";
+/** The brand's lockup in its light-ground and dark-ground files under public/brand/. */
+type Mark = "lockup" | "stacked";
 
 const sizes: Record<Mark, { width: number; height: number }> = {
-  lockup: { width: 667, height: 200 },
-  stacked: { width: 403, height: 320 },
-  symbol: { width: 200, height: 200 },
+  lockup: { width: 981, height: 200 },
+  stacked: { width: 600, height: 484 },
 };
 
 /**
- * The brand's [mark], navy on a light theme and white on a dark one, sized by [className].
+ * The brand's [mark], its words cocoa on a light theme and cream on a dark one, sized by [className].
  * With [alt] it is read as that name; without, it is decorative.
  */
 export function BrandMark({
@@ -26,7 +25,7 @@ export function BrandMark({
   return (
     <>
       <Image
-        src={`/brand/smartman-${mark}-light.svg`}
+        src={`/brand/knowno-${mark}-light.svg`}
         alt={alt}
         width={width}
         height={height}
@@ -34,7 +33,7 @@ export function BrandMark({
         className={`${className} dark:hidden`}
       />
       <Image
-        src={`/brand/smartman-${mark}-dark.svg`}
+        src={`/brand/knowno-${mark}-dark.svg`}
         alt={alt}
         width={width}
         height={height}
@@ -45,11 +44,25 @@ export function BrandMark({
   );
 }
 
-/** The mascot in a round [className] fill, decorative. */
-export function Mascot({ className }: { className: string }) {
+/** The moods of the mascot, each the same drawing (ADR 0141). */
+export type MascotExpression = "thinking" | "happy" | "sad" | "sleepy";
+
+/** The mascot in its [expression], on no ground of its own, sized by [className], decorative. */
+export function Mascot({
+  expression,
+  className,
+}: {
+  expression: MascotExpression;
+  className: string;
+}) {
   return (
-    <span aria-hidden className={`flex items-center justify-center rounded-full ${className}`}>
-      <BrandMark mark="symbol" className="size-2/3" />
-    </span>
+    <Image
+      src={`/brand/knowno-${expression}.svg`}
+      alt=""
+      width={128}
+      height={128}
+      unoptimized
+      className={className}
+    />
   );
 }

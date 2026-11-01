@@ -83,7 +83,7 @@ export function CardDetail({
           type="button"
           onClick={onClose}
           aria-keyshortcuts="Escape"
-          className="pressable min-h-button rounded-row bg-ink px-6 font-semibold text-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+          className="pressable min-h-button rounded-row bg-primary px-6 font-semibold text-on-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
         >
           닫기
         </button>

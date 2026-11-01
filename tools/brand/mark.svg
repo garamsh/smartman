@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024"><title>knowno</title>
+<use href="body.svg"/>
+<g fill="#F65A50">
+<ellipse cx="282" cy="545" rx="38" ry="31"/>
+<ellipse cx="746" cy="458" rx="37" ry="30"/>
+</g>
+<circle cx="360" cy="414" r="95" fill="#FFFFFF"/>
+<circle cx="625" cy="358" r="92" fill="#FFFFFF"/>
+<circle cx="388" cy="380" r="56" fill="#3B2118"/>
+<circle cx="652" cy="326" r="54" fill="#3B2118"/>
+<circle cx="368" cy="354" r="19" fill="#FFFFFF"/>
+<circle cx="633" cy="299" r="18" fill="#FFFFFF"/>
+<g fill="none" stroke="#E8513F" stroke-width="20" stroke-linecap="round" stroke-linejoin="round">
+<path d="M286 287Q306 242 354 240"/>
+<path d="M600 214Q636 186 680 222"/>
+<path d="M298 684C352 660 396 604 430 558C450 530 492 532 494 570C497 640 470 745 405 812"/>
+<path d="M825 656C860 700 868 790 820 855"/>
+</g>
+<path fill="none" stroke="#3B2118" stroke-width="16" stroke-linecap="round" d="M482 508Q520 470 556 500"/>
+</svg>

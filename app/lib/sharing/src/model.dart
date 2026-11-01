@@ -30,10 +30,14 @@ final class PublicDeckSummary {
 
 /// A card of a public deck, read-only.
 final class PublicCard {
-  const PublicCard({required this.front, required this.back});
+  const PublicCard({required this.front, required this.back, this.cells});
 
   final List<Content> front;
   final List<Content> back;
+
+  /// The 칸 a framed card stores, [front] and [back] their projection; null
+  /// on a card stored in two sides.
+  final List<Cell>? cells;
 }
 
 /// The order the listing takes.

@@ -13,10 +13,10 @@ import 'package:smartman/database/database.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/design/app_button.dart';
 import 'package:smartman/design/app_section_label.dart';
-import 'package:smartman/home/src/mascot.dart';
 import 'package:smartman/design/streak_flame.dart';
 import 'package:smartman/study/src/completion_card.dart';
 import 'package:smartman/study/src/study_coach.dart';
+import 'package:smartman/design/mascot.dart';
 import 'package:smartman/design/theme.dart';
 import 'package:smartman/design/word_break.dart';
 import 'package:smartman/l10n/app_localizations.dart';
@@ -1117,9 +1117,9 @@ void main() {
   );
 
   testWidgets(
-    'a card whose back alone holds a blank is studied on one face, its front as the prompt above its back\'s table',
+    'a card whose back alone holds a blank is drawn whole, its front as the prompt above the table, its back text after the answer (O3)',
     (tester) async {
-      await _open(
+      final study = await _open(
         tester,
         ['back'],
         sides: {
@@ -1142,18 +1142,34 @@ void main() {
         find.descendant(of: _currentCard, matching: find.byType(Table)),
         findsOneWidget,
       );
-      final back = find.descendant(
-        of: _currentCard,
-        matching: shownText('Capitals of Europe'),
-      );
-      expect(back, findsOneWidget);
       final prompt = find.descendant(
         of: _currentCard,
         matching: shownText('Capitals'),
       );
       expect(prompt, findsOneWidget, reason: 'the front stays the prompt');
       expect(
-        tester.getRect(prompt).bottom,
+        find.descendant(
+          of: _currentCard,
+          matching: shownText('Capitals of Europe'),
+        ),
+        findsNothing,
+      );
+
+      await study.know();
+      final back = find.descendant(
+        of: _previousCard,
+        matching: shownText('Capitals of Europe'),
+      );
+      expect(back, findsOneWidget);
+      expect(
+        tester
+            .getRect(
+              find.descendant(
+                of: _previousCard,
+                matching: shownText('Capitals'),
+              ),
+            )
+            .bottom,
         lessThanOrEqualTo(tester.getRect(back).top),
         reason: 'the front first',
       );
@@ -1161,9 +1177,9 @@ void main() {
   );
 
   testWidgets(
-    'a card with an empty front and a blank on its back is studied on its back alone',
+    'a card with an empty front and a blank on its back is drawn whole, its table the prompt, its back text after the answer (O3)',
     (tester) async {
-      await _open(
+      final study = await _open(
         tester,
         ['empty'],
         sides: {
@@ -1189,6 +1205,15 @@ void main() {
       expect(
         find.descendant(
           of: _currentCard,
+          matching: shownText('Capitals of Europe'),
+        ),
+        findsNothing,
+      );
+
+      await study.know();
+      expect(
+        find.descendant(
+          of: _previousCard,
           matching: shownText('Capitals of Europe'),
         ),
         findsOneWidget,
@@ -1469,21 +1494,30 @@ void main() {
     (tester) async {
       final study = await _open(tester, ['a', 'b']);
 
+      // Never on a study card: only the completion card draws the mascot.
+      expect(study.current, 'a front');
+      expect(find.byType(Mascot), findsNothing);
       await study.dontKnow(elapsed: const Duration(seconds: 10));
       await study.know(elapsed: const Duration(seconds: 10));
       expect(study.current, 'a front');
+      expect(find.byType(Mascot), findsNothing);
       await study.know(elapsed: const Duration(seconds: 45));
 
       expect(shownText('Done for today'), findsOneWidget);
       expect(_currentCard, findsNothing);
-      // The heading leads the card, with no mascot over it.
+      // The happy mascot over the heading, the screen's one.
       expect(
-        find.descendant(
-          of: find.byType(CompletionCard),
-          matching: find.byType(Mascot),
-        ),
-        findsNothing,
+        tester
+            .widget<Mascot>(
+              find.descendant(
+                of: find.byType(CompletionCard),
+                matching: find.byType(Mascot),
+              ),
+            )
+            .expression,
+        MascotExpression.happy,
       );
+      expect(find.byType(Mascot), findsOneWidget);
       expect(
         find.bySemanticsLabel("Know 2, don't know 1, 2 min, 1-day streak"),
         findsOneWidget,
@@ -1809,6 +1843,10 @@ void main() {
       );
       expect(stored, hasLength(1));
       expect(shownText('No cards to study today'), findsOneWidget);
+      expect(
+        tester.widget<Mascot>(find.byType(Mascot)).expression,
+        MascotExpression.sleepy,
+      );
       expect(shownText('Done for today'), findsNothing);
       expect(shownText('Study'), findsNothing);
       expect(study.current, isNull);
@@ -2371,15 +2409,20 @@ void main() {
       },
     );
 
-    for (final (name, back) in [
-      ('a new cloze card, with no back,', const <Content>[]),
+    for (final (name, back, read) in [
+      (
+        'a new cloze card, with no back,',
+        const <Content>[],
+        'The capital of France is Paris',
+      ),
       (
         'a former cloze card whose stored back no longer matches its front',
         const [TextContent('The capital of France is Lyon')],
+        'The capital of France is Paris. The capital of France is Lyon',
       ),
     ]) {
       testWidgets(
-        '$name is read on the previous card as its one face, filled, never its stored back',
+        '$name is read on the previous card as its 칸 revealed, its kept back after them',
         (tester) async {
           final study = await _open(
             tester,
@@ -2392,7 +2435,7 @@ void main() {
           expect(
             _label(tester, _previous('The capital of France is blank')),
             'Front: The capital of France is blank. '
-            'Back: The capital of France is Paris. Response: Know',
+            'Back: $read. Response: Know',
           );
 
           // Reopened, it is the day's last card from an earlier session.
@@ -2400,7 +2443,7 @@ void main() {
           expect(
             find.bySemanticsLabel(
               '$_earlier. Front: The capital of France is blank. '
-              'Back: The capital of France is Paris. Response: Know',
+              'Back: $read. Response: Know',
             ),
             findsOneWidget,
           );

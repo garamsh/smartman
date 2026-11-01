@@ -392,8 +392,11 @@ export const OUTPUT_CONTRACT = [
 ].join("\n");
 
 /** The model's instructions: the served prompt version's text, then the output contract. */
-export function composeInstructions(prompt: string): string {
-  return `${prompt}\n\n${OUTPUT_CONTRACT}`;
+export function composeInstructions(
+  prompt: string,
+  contract: string = OUTPUT_CONTRACT,
+): string {
+  return `${prompt}\n\n${contract}`;
 }
 
 /** A sense's labels as printed, each in brackets, or undefined when it has none: `[명] [사물]`. */
@@ -465,6 +468,35 @@ export function parseReply(reply: string): ParsedReply | null {
     else cards.push(card);
   }
   return { cards, dropped };
+}
+
+/**
+ * A reply cut off at the output cap, closed after the last card its JSON completed: its text to the
+ * end of that card, then `]}`, so that `parseReply` reads the cards before the cut by the same
+ * rules (ADR 0135). Null when no card of the envelope's list was completed.
+ */
+export function closeCutReply(reply: string): string | null {
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  let end = -1;
+  for (let i = 0; i < reply.length; i++) {
+    const char = reply[i];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (char === "\\") escaped = true;
+      else if (char === '"') inString = false;
+    } else if (char === '"') {
+      inString = true;
+    } else if (char === "{" || char === "[") {
+      depth += 1;
+    } else if (char === "}" || char === "]") {
+      depth -= 1;
+      // A card is an object inside the list inside the envelope.
+      if (char === "}" && depth === 2) end = i + 1;
+    }
+  }
+  return end === -1 ? null : `${reply.slice(0, end)}]}`;
 }
 
 /**
