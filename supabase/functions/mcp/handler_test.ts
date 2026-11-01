@@ -1,6 +1,9 @@
 // The MCP server end to end, with Supabase Auth and PostgREST replaced by an in-memory fake that
 // applies row-level security's owner rule. The suite runs without write or network permission.
 import assert from "node:assert/strict";
+import validity from "../../fixtures/card-frame/validity.json" with {
+  type: "json",
+};
 import type { IdSource } from "./cards.ts";
 import { readConfig } from "./config.ts";
 import { createHandler, type LogEntry } from "./handler.ts";
@@ -39,6 +42,15 @@ type Row = Record<string, unknown>;
 type Fake = {
   decks: Row[];
   cards: Row[];
+  media: Row[];
+  /** The bucket's files by path, as the Storage API received them. */
+  objects: Map<string, { bytes: Uint8Array; type: string | null }>;
+  /** "refusing" makes the Storage API answer every upload 400. */
+  storage: "up" | "refusing";
+  /** The replies of the internet, by URL. */
+  web: Record<string, () => Response>;
+  /** Each host's addresses; a host absent here has one public address. */
+  dns: Record<string, string[]>;
   /** "offline" makes every request to PostgREST fail to arrive. */
   rest: "up" | "offline";
   calls: { url: string; method: string; headers: Headers }[];
@@ -75,6 +87,11 @@ function seed(): Fake {
   return {
     rest: "up",
     calls: [],
+    media: [],
+    objects: new Map(),
+    storage: "up",
+    web: {},
+    dns: {},
     decks: [
       {
         id: ADA_DECK,
@@ -199,6 +216,8 @@ function rest(
     ? fake.decks
     : table === "cards"
     ? fake.cards
+    : table === "media"
+    ? fake.media
     : null;
   if (rows === null) return Response.json({}, { status: 404 });
   if (method === "POST") {
@@ -217,6 +236,13 @@ function rest(
     }
     rows.push(...inserted.map((row) => ({ deleted_at: null, ...row })));
     return new Response(null, { status: 201 });
+  }
+  if (method === "DELETE") {
+    const params = url.searchParams;
+    fake.media = fake.media.filter((row) =>
+      row.user_id !== user || !matches(row, params)
+    );
+    return new Response(null, { status: 204 });
   }
   // The select policy: the user's own rows, and a visibly public deck and its live cards.
   const visible = rows.filter((row) =>
@@ -279,6 +305,24 @@ function fakeFetch(fake: Fake): typeof fetch {
         : undefined;
       return await rest(fake, url, method, headers, body);
     }
+    const object = url.href.match(/\/storage\/v1\/object\/media\/(.+)$/);
+    if (object !== null && url.href.startsWith(SUPABASE_URL)) {
+      const path = object[1]!;
+      const owned = fake.media.some((row) =>
+        `${row.user_id}/${row.id}` === path &&
+        row.user_id === authUser(headers.get("Authorization")?.slice(7))
+      );
+      if (fake.storage === "refusing" || !owned) {
+        return Response.json({ error: "refused" }, { status: 400 });
+      }
+      fake.objects.set(path, {
+        bytes: init?.body as Uint8Array,
+        type: headers.get("Content-Type"),
+      });
+      return Response.json({ Key: path });
+    }
+    const reply = fake.web[url.href];
+    if (reply !== undefined) return reply();
     throw new Error(`unexpected request to ${url.href}`);
   };
 }
@@ -322,6 +366,8 @@ async function send(
       now: () => clock++,
       random: (bytes: number) => crypto.getRandomValues(new Uint8Array(bytes)),
     }),
+    resolve: (host) => Promise.resolve(fake.dns[host] ?? ["93.184.216.34"]),
+    timeout: () => new AbortController().signal,
   });
   const headers = new Headers({
     "X-Forwarded-Host": "127.0.0.1:54321",
@@ -576,7 +622,10 @@ Deno.test("initialize answers the offered version when served and the newest oth
   });
   const result = (offered.json as { result: Row }).result;
   assert.equal(result.protocolVersion, "2025-06-18");
-  assert.deepEqual(result.capabilities, { tools: { listChanged: false } });
+  assert.deepEqual(result.capabilities, {
+    tools: { listChanged: false },
+    resources: { listChanged: false },
+  });
   assert.equal(offered.headers.get("Mcp-Session-Id"), null);
   const unknown = await send({
     body: {
@@ -655,7 +704,7 @@ Deno.test("list_decks lists the caller's live decks with their live card counts,
   );
 });
 
-Deno.test("list_cards pages a deck's live cards as text, a sense's label in brackets and a cloze's back empty", async () => {
+Deno.test("list_cards pages a deck's live cards as blocks, a card of two sides read as its 칸", async () => {
   const first = await call("list_cards", { deck_id: ADA_DECK, limit: 2 });
   assert.deepEqual(first.result.structuredContent, {
     deck: { id: ADA_DECK, name: "영단어" },
@@ -663,13 +712,20 @@ Deno.test("list_cards pages a deck's live cards as text, a sense's label in brac
     cards: [
       {
         id: "00000000-0000-7000-8000-000000000c01",
-        front: "apple",
-        back: "[명] 사과\n  - An apple a day.",
+        blocks: [{
+          type: "senses",
+          term: "apple",
+          ask: "term",
+          senses: [{
+            labels: ["명"],
+            meaning: "사과",
+            examples: ["An apple a day."],
+          }],
+        }],
       },
       {
         id: "00000000-0000-7000-8000-000000000c02",
-        front: "Banana",
-        back: "바나나",
+        blocks: [{ type: "text", front: "Banana", back: "바나나" }],
       },
     ],
     next_offset: 2,
@@ -682,11 +738,25 @@ Deno.test("list_cards pages a deck's live cards as text, a sense's label in brac
   assert.deepEqual(last.result.structuredContent?.cards, [
     {
       id: "00000000-0000-7000-8000-000000000c03",
-      front: "The cherry is red",
-      back: "",
+      blocks: [
+        { type: "cloze", text: "The ___ is red", answers: ["cherry"] },
+        { type: "text", front: "", back: "stale back" },
+      ],
     },
   ]);
   assert.equal(last.result.structuredContent?.next_offset, null);
+});
+
+Deno.test("list_cards says a card that does not parse is unreadable, and lists the rest", async () => {
+  const fake = seed();
+  fake.cards[1]!.front = [{ type: "cloze", v: 1, payload: { text: 7 } }];
+  const { result } = await call("list_cards", { deck_id: ADA_DECK }, fake);
+  const cards = result.structuredContent?.cards as Row[];
+  assert.deepEqual(cards[1]!.blocks, [{
+    type: "unknown",
+    stored_type: "unreadable",
+  }]);
+  assert.notDeepEqual(cards[0]!.blocks, cards[1]!.blocks);
 });
 
 Deno.test("list_cards refuses another user's public deck, which row-level security lets the caller read, and serves the caller's own", async () => {
@@ -697,26 +767,26 @@ Deno.test("list_cards refuses another user's public deck, which row-level securi
   assert.equal(own.result.isError, undefined);
 });
 
-Deno.test("search_cards matches either side ignoring case across the caller's decks, a cloze on its front alone", async () => {
+Deno.test("search_cards matches every 칸 revealed ignoring case across the caller's decks, with its blocks", async () => {
   const apple = await call("search_cards", { query: "APPLE" });
-  assert.deepEqual(
-    (apple.result.structuredContent?.cards as Row[]).map((c) => c.id),
-    [
-      "00000000-0000-7000-8000-000000000c01",
-      "00000000-0000-7000-8000-000000000c05",
-    ],
-  );
-  assert.deepEqual((apple.result.structuredContent?.cards as Row[])[1]?.deck, {
-    id: ADA_OTHER_DECK,
-    name: "Biology",
-  });
-  const stale = await call("search_cards", { query: "stale back" });
-  assert.deepEqual(stale.result.structuredContent, {
+  const cards = apple.result.structuredContent?.cards as Row[];
+  assert.deepEqual(cards.map((c) => c.id), [
+    "00000000-0000-7000-8000-000000000c01",
+    "00000000-0000-7000-8000-000000000c05",
+  ]);
+  assert.deepEqual(cards[1]?.deck, { id: ADA_OTHER_DECK, name: "Biology" });
+  assert.deepEqual(cards[1]?.blocks, [
+    { type: "text", front: "cell", back: "세포 apple" },
+  ]);
+  const back = await call("search_cards", { query: "stale back" });
+  assert.equal((back.result.structuredContent?.cards as Row[]).length, 1);
+  const answer = await call("search_cards", { query: "cherry" });
+  assert.equal((answer.result.structuredContent?.cards as Row[]).length, 1);
+  const absent = await call("search_cards", { query: "no such text" });
+  assert.deepEqual(absent.result.structuredContent, {
     cards: [],
     truncated: false,
   });
-  const front = await call("search_cards", { query: "cherry" });
-  assert.equal((front.result.structuredContent?.cards as Row[]).length, 1);
   const limited = await call("search_cards", { query: "a", limit: 1 });
   assert.equal(limited.result.structuredContent?.truncated, true);
 });
@@ -737,7 +807,7 @@ Deno.test("create_deck stores a private deck of the caller's under a version 7 i
   assert.equal(blank.result.isError, true);
 });
 
-Deno.test("add_cards stores the rows the web's direct entry writes: text and senses blocks, the card key and a free template", async () => {
+Deno.test("add_cards stores the plain form as free v2: one 글, or a 단어 with labels or examples, and the card key", async () => {
   const { result, fake } = await call("add_cards", {
     deck_id: ADA_DECK,
     cards: [
@@ -756,13 +826,15 @@ Deno.test("add_cards stores the rows the web's direct entry writes: text and sen
   }[];
   assert.deepEqual(added.map((a) => a.index), [0, 1]);
   const run = fake.cards.find((row) => row.id === added[0]!.id)!;
-  const { id: _f, ...front } = (run.front as Row[])[0]!;
-  const { id: _b, ...back } = (run.back as Row[])[0]!;
-  assert.deepEqual(front, { type: "text", v: 1, payload: { text: "Run" } });
-  assert.deepEqual(back, {
+  assert.deepEqual(run.back, []);
+  const [{ id: wordId, ...word }] = run.front as Row[];
+  assert.match(String(wordId), /^[0-9a-f-]{14}7/);
+  assert.deepEqual(word, {
     type: "senses",
-    v: 1,
+    v: 2,
     payload: {
+      term: "Run",
+      ask: "term",
       senses: [{
         labels: [
           { kind: "part_of_speech", category: "verb", text: "동" },
@@ -775,19 +847,371 @@ Deno.test("add_cards stores the rows the web's direct entry writes: text and sen
   });
   assert.equal(run.card_key, "run");
   assert.equal(run.template, "free");
-  assert.equal(run.template_version, 1);
+  assert.equal(run.template_version, 2);
   assert.equal(run.source, "import");
   assert.equal(run.user_id, ADA);
   assert.equal(run.deck_id, ADA_DECK);
   assert.equal(run.created_at, run.updated_at);
   assert.equal(run.revision, undefined);
   const cat = fake.cards.find((row) => row.id === added[1]!.id)!;
-  const { id: _c, ...catBack } = (cat.back as Row[])[0]!;
-  assert.deepEqual(catBack, {
+  const [{ id: _c, ...glue }] = cat.front as Row[];
+  assert.deepEqual(glue, {
     type: "text",
-    v: 1,
-    payload: { text: "고양이" },
+    v: 2,
+    payload: { front: "cat", back: "고양이" },
   });
+  assert.deepEqual(cat.back, []);
+});
+
+/** [card]'s stored blocks without their ids. */
+const storedBlocks = (card: Row) =>
+  (card.front as Row[]).map(({ id: _id, ...block }) => block);
+
+Deno.test("add_cards stores each 칸 as the web's encodeCells writes it, a mixed card in order", async () => {
+  const table = {
+    type: "table",
+    columns: ["Organ", "Job"],
+    rows: [["Heart", "Pumps blood"]],
+    blanks: [{ row: 0, column: 1 }],
+    spans: [{ row: 0, column: 0, start: 0, end: 2 }],
+  };
+  const { result, fake } = await call("add_cards", {
+    deck_id: ADA_DECK,
+    cards: [
+      {
+        blocks: [
+          { type: "text", front: "Organs" },
+          table,
+          { type: "text", back: "see p. 3" },
+        ],
+      },
+      {
+        blocks: [{
+          type: "cloze",
+          text: "The capital is ___.",
+          answers: ["Paris"],
+        }],
+      },
+      {
+        blocks: [{
+          type: "senses",
+          term: "apple",
+          ask: "meaning",
+          senses: [{ labels: ["명"], meaning: "사과" }],
+        }],
+      },
+    ],
+  });
+  assert.deepEqual(result.structuredContent?.refused, []);
+  const [mixed, cloze, word] = (result.structuredContent?.added as Row[]).map(
+    (a) => fake.cards.find((row) => row.id === a.id)!,
+  );
+  assert.deepEqual(storedBlocks(mixed!), [
+    { type: "text", v: 2, payload: { front: "Organs", back: "" } },
+    {
+      type: "table",
+      v: 2,
+      payload: {
+        columns: table.columns,
+        rows: table.rows,
+        blanks: table.blanks,
+        spans: table.spans,
+      },
+    },
+    { type: "text", v: 2, payload: { front: "", back: "see p. 3" } },
+  ]);
+  assert.equal(mixed!.card_key, "organs organ | job heart | pumps blood");
+  assert.deepEqual(storedBlocks(cloze!), [{
+    type: "cloze",
+    v: 1,
+    payload: { text: "The capital is ___.", answers: ["Paris"] },
+  }]);
+  assert.equal(cloze!.card_key, "the capital is paris.");
+  assert.equal(cloze!.template_version, 2);
+  assert.deepEqual(cloze!.back, []);
+  assert.equal(word!.card_key, "[명] 사과");
+});
+
+Deno.test("add_cards refuses what the shared validity refuses, over the fixtures, and adds what it accepts", async () => {
+  const toInput = (block: { type: string; payload: Row }) => {
+    const { media: _m, width: _w, height: _h, ...payload } = block.payload;
+    return {
+      type: block.type,
+      ...payload,
+      ...(block.type === "image" && { url: PHOTO }),
+    };
+  };
+  for (const { name, blocks, problem } of validity) {
+    // A sound is not in the union; the frame's reader holds its fixtures in frame_test.ts.
+    if (blocks.some(({ type }) => type === "audio")) continue;
+    const fake = withPhoto();
+    const { result } = await call("add_cards", {
+      deck_id: ADA_OTHER_DECK,
+      cards: [{ blocks: blocks.map(toInput) }],
+    }, fake);
+    const content = result.structuredContent!;
+    assert.equal(
+      (content.refused as Row[]).length,
+      problem === null ? 0 : 1,
+      name,
+    );
+    assert.equal(
+      (content.added as Row[]).length,
+      problem === null ? 1 : 0,
+      name,
+    );
+  }
+});
+
+Deno.test("add_cards says how to fix each refused 칸, by its index, and adds the rest", async () => {
+  const cards = [
+    { blocks: [{ type: "cloze", text: "no blank", answers: ["x"] }] },
+    {
+      blocks: [{
+        type: "table",
+        columns: ["a"],
+        rows: [["b"]],
+        blanks: [{ row: 5, column: 0 }],
+      }],
+    },
+    { blocks: [{ type: "text", front: "fine" }] },
+    { blocks: [{ type: "text", back: "fine" }] },
+    { blocks: [{ type: "text", front: "a", back: "b" }, { type: "audio" }] },
+    { blocks: [{ type: "image", side: "front" }] },
+    { blocks: [{ type: "image", url: PHOTO }] },
+    {
+      blocks: [{ type: "text", front: "a", back: "b" }],
+      front: "c",
+      back: "d",
+    },
+    { blocks: [] },
+    "a card",
+    { blocks: [{ type: "text", front: "x".repeat(2001), back: "b" }] },
+    { blocks: [{ type: "text", front: "kept", back: "남김" }] },
+  ];
+  const fake = withPhoto();
+  const { result } = await call(
+    "add_cards",
+    { deck_id: ADA_DECK, cards },
+    fake,
+  );
+  const refused = result.structuredContent?.refused as {
+    index: number;
+    reason: string;
+  }[];
+  const reasons = Object.fromEntries(refused.map((r) => [r.index, r.reason]));
+  assert.match(reasons[0]!, /^block 0: a cloze needs text with one ___/);
+  assert.match(reasons[1]!, /^block 0: a table needs/);
+  assert.match(reasons[2]!, /adds nothing at the reveal/);
+  assert.match(reasons[3]!, /shows nothing before the reveal/);
+  assert.match(reasons[4]!, /^block 1: type must be text, senses/);
+  assert.match(reasons[5]!, /needs url/);
+  assert.match(reasons[6]!, /holds side, front or back, exactly while/);
+  assert.match(reasons[7]!, /not both/);
+  assert.match(reasons[8]!, /1 to 100 blocks/);
+  assert.match(reasons[9]!, /must be an object/);
+  assert.match(reasons[10]!, /at most 2000 characters/);
+  assert.equal(refused.length, 11);
+  assert.deepEqual(
+    (result.structuredContent?.added as Row[]).map((a) => a.index),
+    [11],
+  );
+  assert.equal(fake.calls.filter((c) => c.url === PHOTO).length, 0);
+});
+
+const PHOTO = "https://cdn.example/heart.png";
+
+/** The first bytes of a PNG of 640 by 480. */
+function pngBytes(): Uint8Array<ArrayBuffer> {
+  const bytes = new Uint8Array(33);
+  bytes.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a], 0);
+  bytes.set([...new TextEncoder().encode("IHDR")], 12);
+  new DataView(bytes.buffer).setUint32(16, 640);
+  new DataView(bytes.buffer).setUint32(20, 480);
+  return bytes;
+}
+
+/** A seed whose internet serves [PHOTO]. */
+function withPhoto(): Fake {
+  const fake = seed();
+  fake.web[PHOTO] = () =>
+    new Response(pngBytes(), { headers: { "Content-Type": "image/png" } });
+  return fake;
+}
+
+Deno.test("add_cards stores a photo as the phone does: its row, its file under the caller's folder, its size in the block", async () => {
+  const fake = withPhoto();
+  const { result } = await call("add_cards", {
+    deck_id: ADA_DECK,
+    cards: [{
+      blocks: [
+        { type: "image", url: PHOTO, side: "front" },
+        { type: "text", back: "A heart" },
+      ],
+    }, {
+      blocks: [{
+        type: "image",
+        url: PHOTO,
+        boxes: [{ x: 0.1, y: 0.2, w: 0.3, h: 0.4, answer: "Aorta" }],
+      }],
+    }],
+  }, fake);
+  assert.deepEqual(result.structuredContent?.refused, []);
+  const [placed, boxed] = (result.structuredContent?.added as Row[]).map(
+    (a) => fake.cards.find((row) => row.id === a.id)!,
+  );
+  const [image] = storedBlocks(placed!) as { v: number; payload: Row }[];
+  const media = String(image!.payload.media);
+  assert.deepEqual(image, {
+    type: "image",
+    v: 2,
+    payload: { media, width: 640, height: 480, boxes: [], side: "front" },
+  });
+  assert.equal(placed!.card_key, media);
+  const row = fake.media.find((r) => r.id === media)!;
+  assert.deepEqual(
+    [row.user_id, row.kind, row.mime_type, row.byte_size],
+    [ADA, "image", "image/png", 33],
+  );
+  assert.match(String(row.sha256), /^[0-9a-f]{64}$/);
+  const file = fake.objects.get(`${ADA}/${media}`)!;
+  assert.equal(file.type, "image/png");
+  assert.deepEqual(file.bytes, pngBytes());
+  const [{ payload }] = storedBlocks(boxed!) as { payload: Row }[];
+  const box = (payload.boxes as Row[])[0]!;
+  assert.equal(typeof box.id, "string");
+  assert.equal(box.answer, "Aorta");
+  assert.equal("side" in payload, false);
+  assert.equal(boxed!.card_key, `${payload.media} aorta`);
+  const photoCall = fake.calls.find((c) => c.url === PHOTO)!;
+  assert.equal(photoCall.headers.has("Authorization"), false);
+});
+
+Deno.test("list_cards reads a stored photo back in the union, by its media id", async () => {
+  const fake = withPhoto();
+  await call("add_cards", {
+    deck_id: ADA_OTHER_DECK,
+    cards: [{
+      blocks: [
+        { type: "text", front: "What is this?" },
+        { type: "image", url: PHOTO, side: "back" },
+      ],
+    }],
+  }, fake);
+  const { result } = await call(
+    "list_cards",
+    { deck_id: ADA_OTHER_DECK },
+    fake,
+  );
+  const cards = result.structuredContent?.cards as { blocks: Row[] }[];
+  const { blocks } = cards.at(-1)!;
+  assert.deepEqual(blocks[1], {
+    type: "image",
+    media: fake.media[0]!.id,
+    width: 640,
+    height: 480,
+    boxes: [],
+    side: "back",
+  });
+});
+
+Deno.test("a photo that cannot be fetched refuses its card alone, says why and stores nothing", async () => {
+  const fake = withPhoto();
+  fake.dns["inner.example"] = ["10.0.0.1"];
+  const { result } = await call("add_cards", {
+    deck_id: ADA_DECK,
+    cards: [
+      {
+        blocks: [
+          { type: "text", front: "private", back: "b" },
+          { type: "image", url: "https://inner.example/a.png", side: "back" },
+        ],
+      },
+      {
+        blocks: [
+          { type: "text", front: "public", back: "b" },
+          { type: "image", url: PHOTO, side: "back" },
+        ],
+      },
+    ],
+  }, fake);
+  const refused = result.structuredContent?.refused as Row[];
+  assert.equal(refused.length, 1);
+  assert.equal(refused[0]!.index, 0);
+  assert.match(String(refused[0]!.reason), /public https address/);
+  assert.deepEqual(
+    (result.structuredContent?.added as Row[]).map((a) => a.index),
+    [1],
+  );
+  assert.equal(fake.media.length, 1);
+  assert.equal(fake.objects.size, 1);
+});
+
+Deno.test("a file Storage refuses takes its media row back and refuses the card, the call answering", async () => {
+  const fake = withPhoto();
+  fake.storage = "refusing";
+  const { result } = await call("add_cards", {
+    deck_id: ADA_DECK,
+    cards: [
+      { blocks: [{ type: "image", url: PHOTO, boxes: [BOX] }] },
+      { blocks: [{ type: "text", front: "kept", back: "남김" }] },
+    ],
+  }, fake);
+  assert.match(
+    String((result.structuredContent?.refused as Row[])[0]!.reason),
+    /could not be stored/,
+  );
+  assert.equal(fake.media.length, 0);
+  assert.equal((result.structuredContent?.added as Row[]).length, 1);
+});
+
+const BOX = { x: 0, y: 0, w: 1, h: 1 };
+
+Deno.test("a duplicate card's back photo is never fetched, and a card with a new front's is", async () => {
+  const fake = withPhoto();
+  const photoBack = { type: "image", url: PHOTO, side: "back" };
+  const { result } = await call("add_cards", {
+    deck_id: ADA_DECK,
+    cards: [
+      { blocks: [{ type: "text", front: "apple" }, photoBack] },
+      { blocks: [{ type: "text", front: "new" }, photoBack] },
+    ],
+  }, fake);
+  assert.equal((result.structuredContent?.skipped as Row[]).length, 1);
+  assert.equal(fake.calls.filter((c) => c.url === PHOTO).length, 1);
+  assert.equal(fake.media.length, 1);
+});
+
+Deno.test("add_cards fetches ten photos a call, an eleventh card refused with what to do", async () => {
+  const fake = withPhoto();
+  const cards = Array.from({ length: 11 }, () => ({
+    blocks: [{ type: "image", url: PHOTO, boxes: [BOX] }],
+  }));
+  const { result } = await call(
+    "add_cards",
+    { deck_id: ADA_DECK, cards },
+    fake,
+  );
+  assert.equal((result.structuredContent?.added as Row[]).length, 10);
+  const refused = result.structuredContent?.refused as Row[];
+  assert.equal(refused[0]!.index, 10);
+  assert.match(String(refused[0]!.reason), /another call/);
+});
+
+Deno.test("the guide resource is listed and read, and another uri is refused", async () => {
+  const rpc = async (method: string, params: unknown) =>
+    (await send({ body: { jsonrpc: "2.0", id: 1, method, params } })).json as {
+      result: Record<string, { uri?: string; text?: string }[]>;
+      error?: { code: number };
+    };
+  const uri = (await rpc("resources/list", {})).result.resources[0]!.uri;
+  const read = await rpc("resources/read", { uri });
+  assert.match(read.result.contents[0]!.text!, /"type":"cloze"/);
+  assert.match(read.result.contents[0]!.text!, /"type":"table"/);
+  assert.equal(
+    (await rpc("resources/read", { uri: "knowno://other" })).error?.code,
+    -32002,
+  );
 });
 
 Deno.test("add_cards skips a front already in the deck or earlier in the call, ignoring case and width, and never overwrites", async () => {
@@ -927,7 +1351,9 @@ Deno.test("cards added in one call within one millisecond are listed in the call
     fake,
   );
   assert.deepEqual(
-    (result.structuredContent?.cards as Row[]).map((card) => card.front),
+    (result.structuredContent?.cards as { blocks: Row[] }[]).map((card) =>
+      card.blocks[0]!.front
+    ),
     ["cell", "first", "second", "third"],
   );
 });

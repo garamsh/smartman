@@ -3,16 +3,26 @@
  * documentation, and their calls, each answering a result or a refusal the model can act on.
  */
 
+import { SupabaseError } from "../_shared/auth.ts";
 import {
   cardKey,
   type IdSource,
-  isWholeCard,
-  labelsOf,
   PART_OF_SPEECH_FORMS,
-  sides,
-  sideText,
   uuidV7,
 } from "./cards.ts";
+import { blocksOut, cellsOf, searchText, type StoredSides } from "./frame.ts";
+import { GUIDE_URI } from "./guide.ts";
+import {
+  MAX_BLOCKS,
+  MAX_EXAMPLES,
+  MAX_LABELS,
+  MAX_SENSES,
+  MAX_TEXT,
+  type ReadCard,
+  readCard,
+  type StoredBlock,
+} from "./input.ts";
+import { fetchPhoto, MAX_PHOTO_BYTES, type PhotoDeps } from "./photo.ts";
 import {
   allCards,
   deckKeys,
@@ -21,16 +31,15 @@ import {
   listDecks,
   readDeck,
   type Store,
+  storePhoto,
 } from "./store.ts";
 
 /** The most cards one `add_cards` call takes. */
 export const MAX_CARDS = 100;
+/** The most photos one call fetches, so a call stays under the platform's wall clock. */
+export const MAX_PHOTOS = 10;
 /** The longest a deck's name may be, as on the web. */
 const MAX_NAME = 500;
-/** The longest a card's front, back, label or example may be. */
-const MAX_TEXT = 2000;
-const MAX_EXAMPLES = 10;
-const MAX_LABELS = 10;
 
 /** A tool's answer: its structured result, or a refusal in words the model can act on. */
 export type ToolResult =
@@ -55,18 +64,174 @@ const deckOut = {
   properties: { id: { type: "string" }, name: { type: "string" } },
   required: ["id", "name"],
 };
+const labelsField = {
+  type: "array",
+  maxItems: MAX_LABELS,
+  items: { type: "string" },
+  description:
+    `Labels shown in brackets before the meaning. A part of speech is one of these short forms: ${
+      PART_OF_SPEECH_FORMS.join(", ")
+    } (명 noun, 동 verb, 형 adjective, 부 adverb, 대 pronoun, 전 preposition, 접 conjunction, 감 interjection, 관 determiner, 수 numeral, 조 particle, 조동 auxiliary, 양 classifier, 구 phrase); any other text is stored as a label of its own.`,
+};
+const examplesField = {
+  type: "array",
+  maxItems: MAX_EXAMPLES,
+  items: { type: "string" },
+  description: "Example sentences for the meaning.",
+};
+const cellIndex = { type: "integer", minimum: 0 };
+const fraction = { type: "number", minimum: 0, maximum: 1 };
+const sideField = { type: "string", enum: ["front", "back"] };
+
+/** The union on `type`, each variant saying when to use it. */
+const blockIn = {
+  anyOf: [
+    {
+      type: "object",
+      description:
+        'A question and its answer, or any text: front is shown first and back at the reveal; either may be left out, not both. {"type":"text","front":"Capital of France?","back":"Paris"}',
+      properties: {
+        type: { const: "text" },
+        front: { type: "string", maxLength: MAX_TEXT },
+        back: { type: "string", maxLength: MAX_TEXT },
+      },
+      required: ["type"],
+      additionalProperties: false,
+    },
+    {
+      type: "object",
+      description:
+        'A word and its meanings; ask names what is shown first. {"type":"senses","term":"apple","ask":"term","senses":[{"labels":["명"],"meaning":"사과","examples":[]}]}',
+      properties: {
+        type: { const: "senses" },
+        term: { type: "string", maxLength: MAX_TEXT },
+        ask: { type: "string", enum: ["term", "meaning"], default: "term" },
+        senses: {
+          type: "array",
+          minItems: 1,
+          maxItems: MAX_SENSES,
+          items: {
+            type: "object",
+            properties: {
+              labels: labelsField,
+              meaning: { type: "string", minLength: 1, maxLength: MAX_TEXT },
+              examples: examplesField,
+            },
+            required: ["meaning"],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: ["type", "term", "senses"],
+      additionalProperties: false,
+    },
+    {
+      type: "object",
+      description:
+        'A sentence to recall in context: one ___ for each answer, in order. Needs no back. {"type":"cloze","text":"The capital of France is ___.","answers":["Paris"]}',
+      properties: {
+        type: { const: "cloze" },
+        text: { type: "string", maxLength: MAX_TEXT },
+        answers: {
+          type: "array",
+          minItems: 1,
+          items: { type: "string", minLength: 1, maxLength: MAX_TEXT },
+        },
+      },
+      required: ["type", "text", "answers"],
+      additionalProperties: false,
+    },
+    {
+      type: "object",
+      description:
+        'A comparison or classification, its cells to recall as blanks, counted from 0 among the rows. Needs no back. {"type":"table","columns":["Organ","Job"],"rows":[["Heart","Pumps blood"]],"blanks":[{"row":0,"column":1}]}',
+      properties: {
+        type: { const: "table" },
+        columns: {
+          type: "array",
+          minItems: 1,
+          items: { type: "string", maxLength: MAX_TEXT },
+        },
+        rows: {
+          type: "array",
+          minItems: 1,
+          items: {
+            type: "array",
+            items: { type: "string", maxLength: MAX_TEXT },
+          },
+        },
+        blanks: {
+          type: "array",
+          description: "Whole cells to recall.",
+          items: {
+            type: "object",
+            properties: { row: cellIndex, column: cellIndex },
+            required: ["row", "column"],
+            additionalProperties: false,
+          },
+        },
+        spans: {
+          type: "array",
+          description:
+            "Runs of a cell's text to recall, start and end in UTF-16 code units, in cells that are not blanks.",
+          items: {
+            type: "object",
+            properties: {
+              row: cellIndex,
+              column: cellIndex,
+              start: cellIndex,
+              end: cellIndex,
+            },
+            required: ["row", "column", "start", "end"],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: ["type", "columns", "rows"],
+      additionalProperties: false,
+    },
+    {
+      type: "object",
+      description:
+        `A diagram or picture, fetched from a public https url: a JPEG, PNG or WebP file of at most ${MAX_PHOTO_BYTES} bytes. Give side while it has no boxes, or boxes to hide parts of it, and no side. {"type":"image","url":"https://example.com/heart.png","boxes":[{"x":0.1,"y":0.2,"w":0.3,"h":0.1,"answer":"aorta"}]}`,
+      properties: {
+        type: { const: "image" },
+        url: { type: "string", format: "uri" },
+        side: sideField,
+        boxes: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              x: fraction,
+              y: fraction,
+              w: fraction,
+              h: fraction,
+              answer: { type: "string" },
+            },
+            required: ["x", "y", "w", "h"],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: ["type", "url"],
+      additionalProperties: false,
+    },
+  ],
+};
+
 const cardOut = {
   type: "object",
   properties: {
     id: { type: "string" },
-    front: { type: "string", description: "The front as text." },
-    back: {
-      type: "string",
+    blocks: {
+      type: "array",
       description:
-        "The back as text; empty for a cloze or table card, whose answer is its front.",
+        "The card's blocks in add_cards' union, except that a photo names its stored media id, width and height in place of url, a sound is an audio block, and a block of a later version is an unknown block.",
+      items: { type: "object", properties: { type: { type: "string" } } },
     },
   },
-  required: ["id", "front", "back"],
+  required: ["id", "blocks"],
 };
 
 /** The tools as `tools/list` returns them. */
@@ -105,7 +270,7 @@ export const TOOLS = [
     name: "list_cards",
     title: "List cards in a deck",
     description:
-      "Lists one deck's cards, oldest first, a page at a time. Each card has a front and a back as text; a meaning's labels are in brackets, such as [명], and its examples follow on lines starting with '-'. To read the next page, call again with offset set to next_offset; next_offset is null on the last page.",
+      "Lists one deck's cards, oldest first, a page at a time. Each card has its blocks, in the form add_cards takes. To read the next page, call again with offset set to next_offset; next_offset is null on the last page.",
     inputSchema: {
       type: "object",
       properties: {
@@ -149,7 +314,7 @@ export const TOOLS = [
     name: "search_cards",
     title: "Search cards",
     description:
-      "Finds the signed-in user's cards, across all their decks, whose front or back contains the query, ignoring case. A cloze or table card is matched on its front alone. Returns at most limit cards, each with its deck.",
+      "Finds the signed-in user's cards, across all their decks, whose text contains the query in any block, an answer included, ignoring case. Returns at most limit cards, each with its blocks and deck.",
     inputSchema: {
       type: "object",
       properties: {
@@ -223,7 +388,7 @@ export const TOOLS = [
     name: "add_cards",
     title: "Add cards to a deck",
     description:
-      `Adds up to ${MAX_CARDS} new cards to one of the signed-in user's decks; send more in several calls. Each card has a front (the word or question) and a back (its meaning or answer), and optionally labels and examples for the meaning. It never changes or deletes a card. A card whose front matches a card already in the deck, or an earlier card in the same call (ignoring case, spacing and width), is skipped as a duplicate unless allow_duplicates is true. The answer lists the cards added, those skipped as duplicates and those refused, each with its index in the request and why. The cards appear on the user's phone and on the web at their next sync.`,
+      `Adds up to ${MAX_CARDS} new cards to one of the signed-in user's decks; send more in several calls. Each card is {"blocks":[...]}, a list of text, senses, cloze, table and image blocks, or the plain front (the word or question) and back (its meaning or answer) with optional labels and examples. Read the resource ${GUIDE_URI} for which form fits. A card needs something shown first and something added at the reveal; a cloze, a table or an image with boxes counts for both. At most ${MAX_PHOTOS} photos are fetched per call. It never changes or deletes a card. A card whose first-shown text matches a card already in the deck, or an earlier card in the same call (ignoring case, spacing and width), is skipped as a duplicate unless allow_duplicates is true. The answer lists the cards added, those skipped as duplicates and those refused, each with its index in the request and why. The cards appear on the user's phone and on the web at their next sync.`,
     inputSchema: {
       type: "object",
       properties: {
@@ -233,28 +398,32 @@ export const TOOLS = [
           minItems: 1,
           maxItems: MAX_CARDS,
           items: {
-            type: "object",
-            properties: {
-              front: { type: "string", minLength: 1, maxLength: MAX_TEXT },
-              back: { type: "string", minLength: 1, maxLength: MAX_TEXT },
-              labels: {
-                type: "array",
-                maxItems: MAX_LABELS,
-                items: { type: "string" },
-                description:
-                  `Labels shown in brackets before the meaning. A part of speech is one of these short forms: ${
-                    PART_OF_SPEECH_FORMS.join(", ")
-                  } (명 noun, 동 verb, 형 adjective, 부 adverb, 대 pronoun, 전 preposition, 접 conjunction, 감 interjection, 관 determiner, 수 numeral, 조 particle, 조동 auxiliary, 양 classifier, 구 phrase); any other text is stored as a label of its own.`,
+            anyOf: [
+              {
+                type: "object",
+                properties: {
+                  blocks: {
+                    type: "array",
+                    minItems: 1,
+                    maxItems: MAX_BLOCKS,
+                    items: blockIn,
+                  },
+                },
+                required: ["blocks"],
+                additionalProperties: false,
               },
-              examples: {
-                type: "array",
-                maxItems: MAX_EXAMPLES,
-                items: { type: "string" },
-                description: "Example sentences for the meaning.",
+              {
+                type: "object",
+                properties: {
+                  front: { type: "string", minLength: 1, maxLength: MAX_TEXT },
+                  back: { type: "string", minLength: 1, maxLength: MAX_TEXT },
+                  labels: labelsField,
+                  examples: examplesField,
+                },
+                required: ["front", "back"],
+                additionalProperties: false,
               },
-            },
-            required: ["front", "back"],
-            additionalProperties: false,
+            ],
           },
         },
         allow_duplicates: {
@@ -319,7 +488,7 @@ export const TOOLS = [
 ] as const;
 
 /** The dependencies a call needs beyond the caller's store. */
-export type ToolDeps = IdSource;
+export type ToolDeps = IdSource & Omit<PhotoDeps, "fetch">;
 
 type Args = Record<string, unknown>;
 
@@ -381,10 +550,14 @@ function deckIdOf(args: Args): string | null {
     : null;
 }
 
-function face(card: { front: unknown; back: unknown }) {
+/** A stored card as the read tools return it; one that does not parse says so by its one block. */
+function cardOf(card: StoredSides & { id: string }) {
+  const cells = cellsOf(card);
   return {
-    front: sideText(card.front),
-    back: isWholeCard(card.front) ? "" : sideText(card.back),
+    id: card.id,
+    blocks: cells === null
+      ? [{ type: "unknown", stored_type: "unreadable" }]
+      : blocksOut(cells),
   };
 }
 
@@ -406,7 +579,7 @@ async function listCardsTool(args: Args, store: Store): Promise<ToolResult> {
   return result({
     deck,
     total,
-    cards: cards.map((card) => ({ id: card.id, ...face(card) })),
+    cards: cards.map(cardOf),
     next_offset: cards.length > 0 && next < total ? next : null,
   });
 }
@@ -426,11 +599,9 @@ async function searchCards(args: Args, store: Store): Promise<ToolResult> {
   const found = cards.flatMap((card) => {
     const name = names.get(card.deck_id);
     if (name === undefined) return [];
-    const shown = face(card);
-    const matches = comparable(shown.front).includes(query) ||
-      comparable(shown.back).includes(query);
-    return matches
-      ? [{ id: card.id, ...shown, deck: { id: card.deck_id, name } }]
+    const cells = cellsOf(card);
+    return cells !== null && comparable(searchText(cells)).includes(query)
+      ? [{ ...cardOf(card), deck: { id: card.deck_id, name } }]
       : [];
   });
   return result({
@@ -468,32 +639,28 @@ async function createDeck(
   return result({ deck: { id, name } });
 }
 
-/** A card of an `add_cards` call, read, or the reason it is refused. */
-function readCard(value: unknown) {
-  if (!isRecord(value)) {
-    return "the card must be an object with front and back.";
-  }
-  const front = trimmed(value.front, MAX_TEXT);
-  if (front === null) {
-    return `front must be text of 1 to ${MAX_TEXT} characters.`;
-  }
-  const back = trimmed(value.back, MAX_TEXT);
-  if (back === null) return `back must be text of 1 to ${MAX_TEXT} characters.`;
-  const list = (field: string, max: number): string[] | string => {
-    const items = value[field] ?? [];
-    if (!Array.isArray(items) || items.length > max) {
-      return `${field} must be a list of at most ${max} texts.`;
+/** [card]'s blocks with its photos fetched and stored, or the sentence refusing the card. */
+async function withPhotos(
+  card: ReadCard,
+  store: Store,
+  deps: ToolDeps,
+): Promise<readonly StoredBlock[] | string> {
+  const sizes = new Map<unknown, { width: number; height: number }>();
+  for (const { media, url } of card.photos) {
+    const photo = await fetchPhoto(url, { ...deps, fetch: store.fetch });
+    if (typeof photo === "string") return photo;
+    try {
+      await storePhoto(store, media, photo);
+    } catch (error) {
+      if (!(error instanceof SupabaseError)) throw error;
+      return "The photo could not be stored: try this card again in a moment.";
     }
-    const texts = items.map((item) => trimmed(item, MAX_TEXT));
-    return texts.includes(null)
-      ? `each of ${field} must be text of 1 to ${MAX_TEXT} characters.`
-      : texts as string[];
-  };
-  const labels = list("labels", MAX_LABELS);
-  if (typeof labels === "string") return labels;
-  const examples = list("examples", MAX_EXAMPLES);
-  if (typeof examples === "string") return examples;
-  return { front, back, labels: labelsOf(labels), examples };
+    sizes.set(media, { width: photo.width, height: photo.height });
+  }
+  return card.blocks.map((block) => {
+    const size = sizes.get(block.payload.media);
+    return size ? { ...block, payload: { ...block.payload, ...size } } : block;
+  });
 }
 
 async function addCards(
@@ -510,7 +677,7 @@ async function addCards(
   const input = args.cards;
   if (!Array.isArray(input) || input.length === 0) {
     return refuse(
-      "cards must be a list of 1 to 100 cards, each with front and back.",
+      "cards must be a list of 1 to 100 cards, each with blocks, or with front and back.",
     );
   }
   if (input.length > MAX_CARDS) {
@@ -535,41 +702,56 @@ async function addCards(
   }[] = [];
   const refused: { index: number; reason: string }[] = [];
   const rows: Record<string, unknown>[] = [];
-  input.forEach((value, index) => {
-    const card = readCard(value);
+  let photosLeft = MAX_PHOTOS;
+  for (const [index, value] of input.entries()) {
+    const card = readCard(value, deps);
     if (typeof card === "string") {
       refused.push({ index, reason: card });
-      return;
+      continue;
     }
-    const key = cardKey(card.front);
-    const existing = keys.get(key);
+    const existing = keys.get(card.key);
     if (existing !== undefined && !allowDuplicates) {
       skipped.push({
         index,
         front: card.front,
-        reason: "a card with the same front is already in the deck",
+        reason: "a card with the same first-shown text is already in the deck",
         existing_card_id: existing,
       });
-      return;
+      continue;
+    }
+    if (card.photos.length > photosLeft) {
+      refused.push({
+        index,
+        reason:
+          `add_cards fetches at most ${MAX_PHOTOS} photos per call: send this card in another call.`,
+      });
+      continue;
+    }
+    photosLeft -= card.photos.length;
+    const blocks = await withPhotos(card, store, deps);
+    if (typeof blocks === "string") {
+      refused.push({ index, reason: blocks });
+      continue;
     }
     const cardId = uuidV7(deps);
-    keys.set(key, cardId);
+    keys.set(card.key, cardId);
     // A deck lists its cards by creation time: one millisecond apart keeps the request's order.
     const now = new Date(start + rows.length).toISOString();
     rows.push({
       id: cardId,
       deck_id: id,
       user_id: store.userId,
-      ...sides(card, deps),
-      card_key: key,
+      front: blocks,
+      back: [],
+      card_key: card.key,
       source: "import",
       template: "free",
-      template_version: 1,
+      template_version: 2,
       created_at: now,
       updated_at: now,
     });
     added.push({ index, id: cardId, front: card.front });
-  });
+  }
   if (rows.length > 0) await insert(store, "cards", rows);
   return result({ deck, added, skipped, refused });
 }

@@ -4,6 +4,7 @@
  */
 
 import { SupabaseError, type UserId } from "../_shared/auth.ts";
+import type { StoredSides } from "./frame.ts";
 
 /** The caller's connection to the project's REST API. */
 export type Store = {
@@ -127,13 +128,13 @@ export async function readDeck(
     : { id: text(row, "id"), name: text(row, "name") };
 }
 
-/** A stored card's id and sides, as the read tools describe them. */
-export type StoredCard = {
+/** A stored card's id and columns, as the read tools describe them. */
+export type StoredCard = StoredSides & {
   readonly id: string;
   readonly deck_id: string;
-  readonly front: unknown;
-  readonly back: unknown;
 };
+
+const CARD_COLUMNS = "id,deck_id,front,back,template,template_version";
 
 function storedCard(row: Record<string, unknown>): StoredCard {
   return {
@@ -141,6 +142,8 @@ function storedCard(row: Record<string, unknown>): StoredCard {
     deck_id: text(row, "deck_id"),
     front: row.front,
     back: row.back,
+    template: row.template,
+    template_version: row.template_version,
   };
 }
 
@@ -153,7 +156,7 @@ export async function listCards(
 ): Promise<{ cards: StoredCard[]; total: number }> {
   const response = await request(
     store,
-    `cards?select=id,deck_id,front,back&deck_id=eq.${deckId}&${own(store)}` +
+    `cards?select=${CARD_COLUMNS}&deck_id=eq.${deckId}&${own(store)}` +
       `&order=created_at.asc,id.asc&limit=${limit}&offset=${offset}`,
     { prefer: "count=exact" },
   );
@@ -172,9 +175,7 @@ export async function listCards(
 export async function allCards(store: Store): Promise<StoredCard[]> {
   return (await allRows(
     store,
-    `cards?select=id,deck_id,front,back&${
-      own(store)
-    }&order=created_at.asc,id.asc`,
+    `cards?select=${CARD_COLUMNS}&${own(store)}&order=created_at.asc,id.asc`,
   )).map(storedCard);
 }
 
@@ -193,7 +194,7 @@ export async function deckKeys(
 /** Inserts [rows] into [table] in one statement, so either all are stored or none is. */
 export async function insert(
   store: Store,
-  table: "decks" | "cards",
+  table: "decks" | "cards" | "media",
   rows: Record<string, unknown>[],
 ): Promise<void> {
   const response = await request(store, table, {
@@ -202,4 +203,47 @@ export async function insert(
     prefer: "return=minimal",
   });
   await response.body?.cancel();
+}
+
+/**
+ * Stores a photo as the phone's upload does: its `media` row, which the bucket's policy requires,
+ * then its file at `{owner}/{media id}`. A file that is refused takes its row back.
+ */
+export async function storePhoto(
+  store: Store,
+  media: string,
+  photo: { bytes: Uint8Array<ArrayBuffer>; mimeType: string },
+): Promise<void> {
+  const digest = await crypto.subtle.digest("SHA-256", photo.bytes);
+  await insert(store, "media", [{
+    id: media,
+    user_id: store.userId,
+    kind: "image",
+    mime_type: photo.mimeType,
+    byte_size: photo.bytes.length,
+    sha256: [...new Uint8Array(digest)].map((byte) =>
+      byte.toString(16).padStart(2, "0")
+    ).join(""),
+  }]);
+  const answer = await store.fetch(
+    `${store.url}/storage/v1/object/media/${store.userId}/${media}`,
+    {
+      method: "POST",
+      headers: {
+        apikey: store.anonKey,
+        Authorization: `Bearer ${store.token}`,
+        "Content-Type": photo.mimeType,
+      },
+      body: photo.bytes,
+    },
+  ).catch(() => null);
+  await answer?.body?.cancel();
+  if (answer?.ok) return;
+  const taken = await request(
+    store,
+    `media?id=eq.${media}&user_id=eq.${store.userId}`,
+    { method: "DELETE" },
+  );
+  await taken.body?.cancel();
+  throw new SupabaseError("the Storage API refused a photo");
 }

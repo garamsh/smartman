@@ -1,0 +1,290 @@
+/**
+ * A card of an `add_cards` call read into the stored `free` v2 form (ADR 0137 §One input format):
+ * `{"blocks": [칸, …]}` in the union on `type`, or the plain front and back. Each 칸 is built as
+ * the block the web's `encodeCells` writes, then held to the frame's own reader.
+ */
+
+import { type IdSource, labelsOf, uuidV7 } from "./cards.ts";
+import {
+  type Cell,
+  FRAME_VERSIONS,
+  frameKey,
+  frameProblem,
+  parseCells,
+  shownFirst,
+} from "./frame.ts";
+
+/** The longest a card's text may be. */
+export const MAX_TEXT = 2000;
+export const MAX_EXAMPLES = 10;
+export const MAX_LABELS = 10;
+/** The most senses a 단어 holds. */
+export const MAX_SENSES = 20;
+/** The most 칸 a card holds, as the web's save takes. */
+export const MAX_BLOCKS = 100;
+
+/** A block as stored in `cards.front`. */
+export type StoredBlock = {
+  readonly type: string;
+  readonly v: number;
+  readonly id: string;
+  readonly payload: Record<string, unknown>;
+};
+
+/** A 사진 still to fetch: the id it will be stored under, and the address. */
+export type PendingPhoto = { readonly media: string; readonly url: string };
+
+/** A card read: its blocks, a pending photo at a placeholder size, and what it shows first. */
+export type ReadCard = {
+  readonly blocks: readonly StoredBlock[];
+  readonly photos: readonly PendingPhoto[];
+  readonly key: string;
+  readonly front: string;
+};
+
+type Args = Record<string, unknown>;
+
+function isRecord(value: unknown): value is Args {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** Text trimmed, or null when it is not text or is longer than [MAX_TEXT]. */
+function optionalText(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const text = value.trim();
+  return text.length > MAX_TEXT ? null : text;
+}
+
+/** Text trimmed, or null when it is also empty. */
+function requiredText(value: unknown): string | null {
+  const text = optionalText(value);
+  return text === "" ? null : text;
+}
+
+/** [value] as a list of at most [max] texts, or a refusal naming [field]. */
+function texts(
+  value: unknown,
+  field: string,
+  max: number,
+): string[] | string {
+  const items = value ?? [];
+  if (!Array.isArray(items) || items.length > max) {
+    return `${field} must be a list of at most ${max} texts.`;
+  }
+  const read = items.map(requiredText);
+  return read.includes(null)
+    ? `each of ${field} must be text of 1 to ${MAX_TEXT} characters.`
+    : read as string[];
+}
+
+function sense(value: unknown) {
+  if (!isRecord(value)) return "each sense must be an object with a meaning.";
+  const meaning = requiredText(value.meaning);
+  if (meaning === null) {
+    return `each meaning must be text of 1 to ${MAX_TEXT} characters.`;
+  }
+  const labels = texts(value.labels, "labels", MAX_LABELS);
+  if (typeof labels === "string") return labels;
+  const examples = texts(value.examples, "examples", MAX_EXAMPLES);
+  if (typeof examples === "string") return examples;
+  return { labels: labelsOf(labels), meaning, examples };
+}
+
+/** A 칸's payload, or a sentence saying what is wrong with it. */
+type Built = { readonly payload: Args; readonly url?: string } | string;
+
+function textBlock(value: Args): Built {
+  const front = optionalText(value.front ?? "");
+  const back = optionalText(value.back ?? "");
+  if (front === null || back === null) {
+    return `a text block's front and back must be text of at most ${MAX_TEXT} characters.`;
+  }
+  return { payload: { front, back } };
+}
+
+function sensesBlock(value: Args): Built {
+  const term = optionalText(value.term ?? "");
+  if (term === null) {
+    return `term must be text of at most ${MAX_TEXT} characters.`;
+  }
+  const list = value.senses;
+  if (!Array.isArray(list) || list.length > MAX_SENSES) {
+    return `senses must be a list of 1 to ${MAX_SENSES} senses.`;
+  }
+  const senses = list.map(sense);
+  const refused = senses.find((item) => typeof item === "string");
+  if (typeof refused === "string") return refused;
+  return { payload: { term, senses, ask: value.ask ?? "term" } };
+}
+
+/** Whether every text of a list of [value] stays within the limit. */
+function withinLimit(value: unknown): boolean {
+  return !Array.isArray(value) ||
+    value.flat().every((item) =>
+      typeof item !== "string" || item.length <= MAX_TEXT
+    );
+}
+
+function clozeBlock(value: Args): Built {
+  const { text, answers } = value;
+  if (!withinLimit([text]) || !withinLimit(answers)) {
+    return `a cloze's text and answers must be at most ${MAX_TEXT} characters each.`;
+  }
+  return { payload: { text, answers } };
+}
+
+function tableBlock(value: Args): Built {
+  const { columns, rows, blanks = [], spans = [] } = value;
+  if (!withinLimit(columns) || !withinLimit(rows)) {
+    return `each column and cell must be at most ${MAX_TEXT} characters.`;
+  }
+  return { payload: { columns, rows, blanks, spans } };
+}
+
+function imageBlock(value: Args, ids: IdSource): Built {
+  const { url, boxes = [], side } = value;
+  if (typeof url !== "string") {
+    return "an image block needs url, the https address of a JPEG, PNG or WebP image.";
+  }
+  if (!Array.isArray(boxes)) {
+    return "boxes must be a list of boxes, each with x, y, w and h as fractions from 0 to 1.";
+  }
+  const stored = boxes.map((box: unknown) =>
+    isRecord(box) ? { ...box, id: uuidV7(ids) } : box
+  );
+  return {
+    url,
+    // A placeholder size and a new id: the fetch fills in the size once the card is otherwise valid.
+    payload: {
+      media: uuidV7(ids),
+      width: 1,
+      height: 1,
+      boxes: stored,
+      ...(side !== undefined && { side }),
+    },
+  };
+}
+
+function built(value: Args, ids: IdSource): Built {
+  switch (value.type) {
+    case "text":
+      return textBlock(value);
+    case "senses":
+      return sensesBlock(value);
+    case "cloze":
+      return clozeBlock(value);
+    case "table":
+      return tableBlock(value);
+    case "image":
+      return imageBlock(value, ids);
+    default:
+      return `type must be text, senses, cloze, table or image, not ${
+        JSON.stringify(value.type)
+      }.`;
+  }
+}
+
+/** What each type must hold, for a block the frame's reader refuses. */
+const SHAPES: Record<string, string> = {
+  text: "a text block needs a front or a back.",
+  senses:
+    "a senses block needs one or more senses, each with a meaning, and ask must be term or meaning.",
+  cloze:
+    "a cloze needs text with one ___ for each of its answers, each answer holding text.",
+  table:
+    "a table needs columns, rows of as many cells as columns, and a blank or a span: each blank a distinct cell holding text, each span a run of a cell's text that overlaps no other span and is in no blank cell.",
+  image:
+    "an image holds side, front or back, exactly while it holds no box, and each box needs x, y, w and h inside the image, as fractions from 0 to 1, and an optional text answer.",
+};
+
+const PROBLEMS = {
+  nothing_before:
+    "the card shows nothing before the reveal: give a text a front, or a senses block the side ask names, or put a photo on the front, or add a cloze or a table.",
+  nothing_added:
+    "the card adds nothing at the reveal: give a text a back, or a senses block both a term and senses, or put a photo on the back, or add a cloze or a table.",
+} as const;
+
+function card(
+  blocks: readonly StoredBlock[],
+  photos: readonly PendingPhoto[],
+  cells: readonly Cell[],
+): ReadCard | string {
+  const problem = frameProblem(cells);
+  if (problem !== null) return PROBLEMS[problem];
+  const key = frameKey(cells);
+  return key === ""
+    ? PROBLEMS.nothing_before
+    : { blocks, photos, key, front: shownFirst(cells) };
+}
+
+/** A card of [values], or why it is refused, naming the block by its index. */
+function readBlocks(values: unknown, ids: IdSource): ReadCard | string {
+  if (
+    !Array.isArray(values) || values.length === 0 ||
+    values.length > MAX_BLOCKS
+  ) {
+    return `blocks must be a list of 1 to ${MAX_BLOCKS} blocks.`;
+  }
+  const blocks: StoredBlock[] = [];
+  const photos: PendingPhoto[] = [];
+  const cells: Cell[] = [];
+  for (const [index, value] of values.entries()) {
+    const where = `block ${index}: `;
+    if (!isRecord(value)) return `${where}a block must be an object.`;
+    const read = built(value, ids);
+    if (typeof read === "string") return where + read;
+    const type = value.type as string;
+    const block = {
+      type,
+      v: FRAME_VERSIONS.get(type) ?? (type === "table" ? 2 : 1),
+      id: uuidV7(ids),
+      payload: read.payload,
+    };
+    const parsed = parseCells([block]);
+    if (parsed === null) return where + SHAPES[type];
+    blocks.push(block);
+    cells.push(...parsed);
+    if (read.url !== undefined) {
+      photos.push({ media: read.payload.media as string, url: read.url });
+    }
+  }
+  return card(blocks, photos, cells);
+}
+
+/** The plain form: one 글, or a 단어 when it has labels or examples. */
+function readPlain(value: Args, ids: IdSource): ReadCard | string {
+  const front = requiredText(value.front);
+  if (front === null) {
+    return `front must be text of 1 to ${MAX_TEXT} characters.`;
+  }
+  const back = requiredText(value.back);
+  if (back === null) {
+    return `back must be text of 1 to ${MAX_TEXT} characters.`;
+  }
+  const labels = texts(value.labels, "labels", MAX_LABELS);
+  if (typeof labels === "string") return labels;
+  const examples = texts(value.examples, "examples", MAX_EXAMPLES);
+  if (typeof examples === "string") return examples;
+  const senses = [{ labels, meaning: back, examples }];
+  return readBlocks(
+    [
+      labels.length === 0 && examples.length === 0
+        ? { type: "text", front, back }
+        : { type: "senses", term: front, ask: "term", senses },
+    ],
+    ids,
+  );
+}
+
+/** A card of an `add_cards` call, read, or the reason it is refused. */
+export function readCard(value: unknown, ids: IdSource): ReadCard | string {
+  if (!isRecord(value)) {
+    return "the card must be an object with blocks, or with front and back.";
+  }
+  if ("blocks" in value) {
+    return "front" in value || "back" in value
+      ? "give a card blocks, or front and back, not both."
+      : readBlocks(value.blocks, ids);
+  }
+  return readPlain(value, ids);
+}

@@ -6,9 +6,9 @@
 
 import { SupabaseError, type UserId } from "../_shared/auth.ts";
 import { authorize } from "./authorize.ts";
-import type { IdSource } from "./cards.ts";
 import type { Config } from "./config.ts";
-import { callTool, TOOLS } from "./tools.ts";
+import { GUIDE_RESOURCE, GUIDE_TEXT, GUIDE_URI } from "./guide.ts";
+import { callTool, type ToolDeps, TOOLS } from "./tools.ts";
 
 /** The protocol versions served, newest first; `initialize` answers the newest it is not offered. */
 export const PROTOCOL_VERSIONS = [
@@ -41,14 +41,14 @@ export type LogEntry = {
   readonly outcome: Outcome;
 };
 
-export type HandlerDeps = IdSource & {
+export type HandlerDeps = ToolDeps & {
   readonly config: Config;
   readonly fetch: typeof fetch;
   readonly log: (entry: LogEntry) => void;
 };
 
 const INSTRUCTIONS =
-  "knowno is a flashcard app. These tools read the signed-in user's decks and cards and add new decks and cards; they never change or delete anything. Find a deck's id with list_decks, read a deck with list_cards, find cards with search_cards, make a deck with create_deck and add cards with add_cards. New cards reach the user's phone and the web at their next sync.";
+  "knowno is a flashcard app. These tools read the signed-in user's decks and cards and add new decks and cards; they never change or delete anything. Find a deck's id with list_decks, read a deck with list_cards, find cards with search_cards, make a deck with create_deck and add cards with add_cards, choosing each card's form: text, senses, cloze, table or a photo. The resource knowno://guide/card-forms says which fits. New cards reach the user's phone and the web at their next sync.";
 
 type Exchange = {
   response: Response;
@@ -239,7 +239,10 @@ async function handle(request: Request, deps: HandlerDeps): Promise<Exchange> {
           : PROTOCOL_VERSIONS[0];
       return answer({
         protocolVersion,
-        capabilities: { tools: { listChanged: false } },
+        capabilities: {
+          tools: { listChanged: false },
+          resources: { listChanged: false },
+        },
         serverInfo: { name: "knowno", title: "knowno", version: "1" },
         instructions: INSTRUCTIONS,
       });
@@ -248,6 +251,28 @@ async function handle(request: Request, deps: HandlerDeps): Promise<Exchange> {
       return answer({});
     case "tools/list":
       return answer({ tools: TOOLS });
+    case "resources/list":
+      return answer({ resources: [GUIDE_RESOURCE] });
+    case "resources/read":
+      return params.uri === GUIDE_URI
+        ? answer({
+          contents: [{
+            uri: GUIDE_URI,
+            mimeType: GUIDE_RESOURCE.mimeType,
+            text: GUIDE_TEXT,
+          }],
+        })
+        : {
+          response: Response.json(
+            rpcError(id, -32002, `No resource at that uri; read ${GUIDE_URI}`),
+          ),
+          entry: {
+            user_id: caller.userId,
+            method,
+            tool: null,
+            outcome: "not_found",
+          },
+        };
     case "tools/call": {
       const name = typeof params.name === "string" ? params.name : "";
       const store = {

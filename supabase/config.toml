@@ -126,12 +126,12 @@ file_size_limit = "50MiB"
 # objects_path = "./images"
 
 # The private media bucket (ADR 0107); the migration 20261026140000_media.sql creates the same
-# in every project, with the same limits, and 20261027120000_media_audio.sql adds the audio types
-# (ADR 0112).
+# in every project, with the same limits, 20261027120000_media_audio.sql adds the audio types
+# (ADR 0112), and 20261102090000_media_image_types.sql adds PNG and WebP (ADR 0144).
 [storage.buckets.media]
 public = false
 file_size_limit = "10MiB"
-allowed_mime_types = ["image/jpeg", "audio/mp4", "audio/mpeg"]
+allowed_mime_types = ["image/jpeg", "image/png", "image/webp", "audio/mp4", "audio/mpeg"]
 
 # Allow connections via S3 compatible clients
 [storage.s3_protocol]
