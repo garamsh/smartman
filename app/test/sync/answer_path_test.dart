@@ -87,6 +87,7 @@ void main() {
     await tapAndSettle(tester, 'Save');
     for (final (front, back) in [('Chat', 'cat'), ('Chien', 'dog')]) {
       await tapAndSettle(tester, 'Add card');
+      await tapAndSettle(tester, 'Enter by hand');
       // A new card's two Text blocks, the front's and the back's.
       await tester.enterText(find.byType(TextField).at(0), front);
       await tester.enterText(find.byType(TextField).at(1), back);
