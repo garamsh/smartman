@@ -1,0 +1,231 @@
+[
+  {
+    "name": "placement 1: an import's cloze, its back the filled text, drops the back",
+    "source": "import",
+    "front": [{"type": "cloze", "v": 1, "id": "b1", "payload": {"text": "The capital is ___.", "answers": ["Paris"]}}],
+    "back": [{"type": "text", "v": 1, "id": "b2", "payload": {"text": "The capital is Paris."}}],
+    "cells": [{"type": "cloze", "v": 1, "id": "b1", "payload": {"text": "The capital is ___.", "answers": ["Paris"]}}]
+  },
+  {
+    "name": "placement 1: a copy's cloze, its back edited, keeps the back",
+    "source": "copy",
+    "front": [{"type": "cloze", "v": 1, "payload": {"text": "The capital is ___.", "answers": ["Paris"]}}],
+    "back": [{"type": "text", "v": 1, "payload": {"text": "Paris, on the Seine."}}],
+    "cells": [
+      {"type": "cloze", "v": 1, "payload": {"text": "The capital is ___.", "answers": ["Paris"]}},
+      {"type": "text", "v": 2, "payload": {"front": "", "back": "Paris, on the Seine."}}
+    ]
+  },
+  {
+    "name": "placement 2: an import's named table, its back the filled text, drops the back",
+    "source": "import",
+    "front": [
+      {"type": "text", "v": 1, "payload": {"text": "Capitals"}},
+      {"type": "table", "v": 2, "payload": {"columns": ["Country", "Capital"], "rows": [["France", "Paris"]], "blanks": [{"row": 0, "column": 1}], "spans": []}}
+    ],
+    "back": [{"type": "text", "v": 1, "payload": {"text": "Capitals\nCountry | Capital\nFrance | Paris"}}],
+    "cells": [
+      {"type": "text", "v": 1, "payload": {"text": "Capitals"}},
+      {"type": "table", "v": 2, "payload": {"columns": ["Country", "Capital"], "rows": [["France", "Paris"]], "blanks": [{"row": 0, "column": 1}], "spans": []}}
+    ]
+  },
+  {
+    "name": "placement 3: a former 빈칸 card with no back",
+    "source": "manual",
+    "front": [{"type": "cloze", "payload": {"text": "___ is red.", "answers": ["Rose"]}}],
+    "back": [],
+    "cells": [{"type": "cloze", "payload": {"text": "___ is red.", "answers": ["Rose"]}}]
+  },
+  {
+    "name": "placement 3 and O2: a written back beside a front blank shows after the answer",
+    "source": "manual",
+    "front": [{"type": "cloze", "v": 1, "payload": {"text": "___ is red.", "answers": ["Rose"]}}],
+    "back": [{"type": "text", "v": 1, "payload": {"text": "A flower."}}],
+    "cells": [
+      {"type": "cloze", "v": 1, "payload": {"text": "___ is red.", "answers": ["Rose"]}},
+      {"type": "text", "v": 2, "payload": {"front": "", "back": "A flower."}}
+    ]
+  },
+  {
+    "name": "placement 4: a manual back equal to the filled text drops, whatever the source",
+    "source": "manual",
+    "front": [
+      {"type": "text", "v": 1, "payload": {"text": "Colour"}},
+      {"type": "cloze", "v": 1, "payload": {"text": "___ is red.", "answers": ["Rose"]}}
+    ],
+    "back": [{"type": "text", "v": 1, "payload": {"text": "Colour\nRose is red."}}],
+    "cells": [
+      {"type": "text", "v": 1, "payload": {"text": "Colour"}},
+      {"type": "cloze", "v": 1, "payload": {"text": "___ is red.", "answers": ["Rose"]}}
+    ]
+  },
+  {
+    "name": "placement 4: a back text beside a front text is that text's back",
+    "source": "import",
+    "front": [
+      {"type": "text", "v": 1, "payload": {"text": "Colour"}},
+      {"type": "cloze", "v": 1, "payload": {"text": "___ is red.", "answers": ["Rose"]}}
+    ],
+    "back": [{"type": "text", "v": 1, "payload": {"text": "Mine, edited."}}],
+    "cells": [
+      {"type": "text", "v": 2, "payload": {"front": "Colour", "back": "Mine, edited."}},
+      {"type": "cloze", "v": 1, "payload": {"text": "___ is red.", "answers": ["Rose"]}}
+    ]
+  },
+  {
+    "name": "placement 4: a front holding senses compares with no back, so an equal back is kept",
+    "source": "manual",
+    "front": [
+      {"type": "senses", "v": 1, "payload": {"senses": [{"labels": [], "meaning": "apple", "examples": []}]}},
+      {"type": "cloze", "v": 1, "payload": {"text": "___ is red.", "answers": ["Rose"]}}
+    ],
+    "back": [{"type": "text", "v": 1, "payload": {"text": "apple\nRose is red."}}],
+    "cells": [
+      {"type": "senses", "v": 2, "payload": {"term": "apple\nRose is red.", "ask": "meaning", "senses": [{"labels": [], "meaning": "apple", "examples": []}]}},
+      {"type": "cloze", "v": 1, "payload": {"text": "___ is red.", "answers": ["Rose"]}}
+    ]
+  },
+  {
+    "name": "back blank beside a front blank: a cloze shows after the answer as filled text",
+    "source": "manual",
+    "front": [{"type": "cloze", "v": 1, "payload": {"text": "___ is red.", "answers": ["Rose"]}}],
+    "back": [{"type": "cloze", "v": 1, "payload": {"text": "___ is blue.", "answers": ["Sky"]}}],
+    "cells": [
+      {"type": "cloze", "v": 1, "payload": {"text": "___ is red.", "answers": ["Rose"]}},
+      {"type": "text", "v": 2, "payload": {"front": "", "back": "Sky is blue."}}
+    ]
+  },
+  {
+    "name": "back blank beside a front blank: a table shows after the answer as filled text",
+    "source": "manual",
+    "front": [{"type": "cloze", "v": 1, "payload": {"text": "___ is red.", "answers": ["Rose"]}}],
+    "back": [{"type": "table", "v": 2, "payload": {"columns": ["A"], "rows": [["a"]], "blanks": [{"row": 0, "column": 0}], "spans": []}}],
+    "cells": [
+      {"type": "cloze", "v": 1, "payload": {"text": "___ is red.", "answers": ["Rose"]}},
+      {"type": "text", "v": 2, "payload": {"front": "", "back": "A\na"}}
+    ]
+  },
+  {
+    "name": "back blank beside a front blank: a boxed photo is placed on the back, its answers a 글",
+    "source": "manual",
+    "front": [{"type": "cloze", "v": 1, "payload": {"text": "___ is red.", "answers": ["Rose"]}}],
+    "back": [{"type": "image", "v": 1, "payload": {"media": "m1", "width": 9, "height": 9, "boxes": [{"id": "x", "x": 0, "y": 0, "w": 1, "h": 1, "answer": "Heart"}]}}],
+    "cells": [
+      {"type": "cloze", "v": 1, "payload": {"text": "___ is red.", "answers": ["Rose"]}},
+      {"type": "image", "v": 2, "payload": {"media": "m1", "width": 9, "height": 9, "boxes": [], "side": "back"}},
+      {"type": "text", "v": 2, "payload": {"front": "", "back": "Heart"}}
+    ]
+  },
+  {
+    "name": "placement 5: a back blank alone is a question",
+    "source": "manual",
+    "front": [{"type": "text", "v": 1, "payload": {"text": "Fill it"}}],
+    "back": [{"type": "cloze", "v": 1, "payload": {"text": "___ is red.", "answers": ["Rose"]}}],
+    "cells": [
+      {"type": "text", "v": 1, "payload": {"text": "Fill it"}},
+      {"type": "cloze", "v": 1, "payload": {"text": "___ is red.", "answers": ["Rose"]}}
+    ]
+  },
+  {
+    "name": "placement 5 and O3: a back text beside a back blank shows after the answer",
+    "source": "manual",
+    "front": [{"type": "text", "v": 1, "payload": {"text": "Fill it"}}],
+    "back": [
+      {"type": "cloze", "v": 1, "payload": {"text": "___ is red.", "answers": ["Rose"]}},
+      {"type": "text", "v": 1, "payload": {"text": "A flower."}}
+    ],
+    "cells": [
+      {"type": "text", "v": 2, "payload": {"front": "Fill it", "back": "A flower."}},
+      {"type": "cloze", "v": 1, "payload": {"text": "___ is red.", "answers": ["Rose"]}}
+    ]
+  },
+  {
+    "name": "placement 6: a boxed photo on a front moves unchanged",
+    "source": "manual",
+    "front": [{"type": "image", "v": 1, "payload": {"media": "m1", "width": 9, "height": 9, "boxes": [{"id": "x", "x": 0, "y": 0, "w": 1, "h": 1}]}}],
+    "back": [],
+    "cells": [{"type": "image", "v": 1, "payload": {"media": "m1", "width": 9, "height": 9, "boxes": [{"id": "x", "x": 0, "y": 0, "w": 1, "h": 1}]}}]
+  },
+  {
+    "name": "placement 6: a boxed photo on a back alone is a question",
+    "source": "manual",
+    "front": [{"type": "text", "v": 1, "payload": {"text": "Name it"}}],
+    "back": [{"type": "image", "v": 1, "payload": {"media": "m1", "width": 9, "height": 9, "boxes": [{"id": "x", "x": 0, "y": 0, "w": 1, "h": 1}]}}],
+    "cells": [
+      {"type": "text", "v": 1, "payload": {"text": "Name it"}},
+      {"type": "image", "v": 1, "payload": {"media": "m1", "width": 9, "height": 9, "boxes": [{"id": "x", "x": 0, "y": 0, "w": 1, "h": 1}]}}
+    ]
+  },
+  {
+    "name": "placement 7: a literal ___ in text is a 글, no blank",
+    "source": "manual",
+    "front": [{"type": "text", "v": 1, "payload": {"text": "The ___ sat."}}],
+    "back": [{"type": "text", "v": 1, "payload": {"text": "cat"}}],
+    "cells": [{"type": "text", "v": 2, "payload": {"front": "The ___ sat.", "back": "cat"}}]
+  },
+  {
+    "name": "no blank: a word with its senses is one 단어 asking the word",
+    "source": "import",
+    "front": [{"type": "text", "v": 1, "payload": {"text": "apple"}}],
+    "back": [
+      {"type": "senses", "v": 1, "payload": {"senses": [{"labels": [], "meaning": "사과", "examples": []}]}},
+      {"type": "text", "v": 1, "payload": {"text": "fruit"}}
+    ],
+    "cells": [
+      {"type": "senses", "v": 2, "payload": {"term": "apple", "ask": "term", "senses": [{"labels": [], "meaning": "사과", "examples": []}]}},
+      {"type": "text", "v": 2, "payload": {"front": "", "back": "fruit"}}
+    ]
+  },
+  {
+    "name": "no blank: front senses with a back word is one 단어 asking the meaning",
+    "source": "import",
+    "front": [{"type": "senses", "v": 1, "payload": {"senses": [{"labels": [], "meaning": "사과", "examples": []}]}}],
+    "back": [{"type": "text", "v": 1, "payload": {"text": "apple"}}],
+    "cells": [{"type": "senses", "v": 2, "payload": {"term": "apple", "ask": "meaning", "senses": [{"labels": [], "meaning": "사과", "examples": []}]}}]
+  },
+  {
+    "name": "no blank: front senses alone keep their meanings first",
+    "source": "manual",
+    "front": [{"type": "senses", "v": 1, "payload": {"senses": [{"labels": [], "meaning": "사과", "examples": []}]}}],
+    "back": [],
+    "cells": [{"type": "senses", "v": 1, "payload": {"senses": [{"labels": [], "meaning": "사과", "examples": []}]}}]
+  },
+  {
+    "name": "no blank: back senses that join no word show after the reveal",
+    "source": "manual",
+    "front": [
+      {"type": "text", "v": 1, "payload": {"text": "one"}},
+      {"type": "text", "v": 1, "payload": {"text": "two"}}
+    ],
+    "back": [{"type": "senses", "v": 1, "payload": {"senses": [{"labels": [], "meaning": "사과", "examples": []}]}}],
+    "cells": [
+      {"type": "text", "v": 1, "payload": {"text": "one"}},
+      {"type": "text", "v": 1, "payload": {"text": "two"}},
+      {"type": "senses", "v": 2, "payload": {"term": "", "ask": "term", "senses": [{"labels": [], "meaning": "사과", "examples": []}]}}
+    ]
+  },
+  {
+    "name": "no blank: photo and sound keep their sides",
+    "source": "manual",
+    "front": [{"type": "image", "v": 1, "payload": {"media": "m1", "width": 9, "height": 9, "boxes": []}}],
+    "back": [{"type": "audio", "v": 1, "payload": {"media": "m2", "duration_ms": 9}}],
+    "cells": [
+      {"type": "image", "v": 1, "payload": {"media": "m1", "width": 9, "height": 9, "boxes": []}},
+      {"type": "audio", "v": 2, "payload": {"media": "m2", "duration_ms": 9, "side": "back"}}
+    ]
+  },
+  {
+    "name": "a block of an unknown type leaves the card as it is",
+    "source": "manual",
+    "front": [{"type": "chart", "payload": {}}],
+    "back": [],
+    "cells": null
+  },
+  {
+    "name": "a block of a later version leaves the card as it is",
+    "source": "manual",
+    "front": [{"type": "text", "v": 1, "payload": {"text": "one"}}],
+    "back": [{"type": "cloze", "v": 2, "payload": {"text": "___", "answers": ["x"]}}],
+    "cells": null
+  }
+]
