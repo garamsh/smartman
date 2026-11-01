@@ -10,7 +10,7 @@ import { parseCandidates } from "../photo-candidates";
 import { cardsOf, defaultForm, formFor, sectionsOf } from "../section-form";
 import { cardsOfRows, type Columns } from "../spreadsheet-cards";
 
-/** The cases the app's `import_frame_test.dart` reads, so both save equal 칸 (ADR 0137). */
+/** The cases the app's two `import_frame_test.dart` read, so both save equal 칸 (ADR 0137). */
 const root = path.join(import.meta.dirname, "../../../../..");
 const fixture = JSON.parse(
   readFileSync(path.join(root, "supabase/fixtures/card-frame/import.json"), "utf8"),

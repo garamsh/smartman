@@ -5,13 +5,12 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/database/database.dart';
 import 'package:smartman/deck/deck.dart';
-import 'package:smartman/deck/src/spreadsheet.dart';
-import 'package:smartman/deck/src/spreadsheet_cards.dart';
 import 'package:smartman/photo_import/src/extraction_client.dart';
 import 'package:smartman/photo_import/src/import_list.dart';
 
 /// The cases `web/src/features/decks/__tests__/import-frame.test.ts` reads, so
-/// the app and the web save equal 칸 for the same candidates (ADR 0137).
+/// the app and the web save equal 칸 for the same candidates (ADR 0137);
+/// `test/deck/import_frame_test.dart` holds the sheet's and the merge's.
 final _fixture = jsonDecode(
   File('../supabase/fixtures/card-frame/import.json').readAsStringSync(),
 ) as Map<String, Object?>;
@@ -38,15 +37,6 @@ ImportList _list(Object? cards, [Object? form]) {
   }
   return list;
 }
-
-/// One row of a sheet of [cells], all text.
-List<SheetRow> _sheet(List<Object?> rows) => [
-  for (final (index, row) in rows.indexed)
-    SheetRow(index + 1, [
-      for (final cell in row! as List<Object?>)
-        SheetCell(cell! as String, isText: true),
-    ]),
-];
 
 Map<String, Object?> _rowCard({
   String front = 'face',
@@ -81,37 +71,6 @@ void main() {
         ], everyElement(isNull));
       });
     }
-    for (final c in _cases('sheet')) {
-      test('sheet: ${c['name']}', () {
-        final columns = c['columns']! as Map<String, Object?>;
-        final result = cardsOfRows(
-          _sheet(c['rows']! as List<Object?>),
-          SheetColumns(
-            front: columns['front']! as int,
-            back: columns['back']! as int,
-            label: columns['label'] as int?,
-            example: columns['example'] as int?,
-          ),
-          header: false,
-        );
-        expect([
-          for (final card in result.cards) _stored(card.cells),
-        ], c['saved']);
-      });
-    }
-    for (final c in _cases('held')) {
-      test('held: ${c['name']}', () {
-        final merged = mergeBack([
-          TextContent(c['stored']! as String),
-        ], c['back']! as String);
-        expect(merged == null, c['held']);
-      });
-    }
-  });
-
-  test('an empty back merges nothing, against a back of text', () {
-    expect(mergeBack(const [TextContent('수도')], '  '), isNull);
-    expect(mergeBack(const [TextContent('수도')], '서울'), isNotNull);
   });
 
   group('saved', () {
@@ -148,26 +107,6 @@ void main() {
       expect(row.cardKey, 'face');
       expect(row.source, 'import');
       expect((decodeCells(row.front).single as WordCell).ask, WordAsk.term);
-    });
-
-    test('a spreadsheet row is written free v2', () async {
-      final result = cardsOfRows(
-        _sheet([
-          ['수도', '서울'],
-        ]),
-        const SheetColumns(front: 0, back: 1),
-        header: false,
-      );
-      await repository.addCards(const AddToNewDeck('덱'), [
-        IncomingCard.framed(
-          result.cards.single.cells,
-          onDuplicate: DuplicateChoice.addNew,
-        ),
-      ], source: const FromFile());
-
-      final row = await single();
-      expect((row.template, row.templateVersion, row.back), ('free', 2, '[]'));
-      expect(decodeCells(row.front), [const TextCell(front: '수도', back: '서울')]);
     });
 
     test('a repeated import of two senses merges nothing, against a new '
