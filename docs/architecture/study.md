@@ -242,3 +242,11 @@ How the setting the day's new cards fill is changed: in the first-run step, and 
 ## Open questions
 
 - Whether the counts should follow writes as they land rather than being read when their route returns on top. A write still running at that moment is missed until the next read (ADR 0009).
+
+### Planned: the 칸 frame
+
+Accepted in [ADR 0137](adr/0137-frame-a-card-by-its-blocks-each-block-type-deciding-whether-it-has-a-front-and-a-back.md) (#488) and not built yet. Nothing below holds today; the implementation moves it into the current decisions it names.
+
+- A card is a list of 칸 ([`deck.md`](deck.md)). The current card draws every 칸's part shown before the reveal; the previous card and its sheet draw every 칸 revealed. It is one card, with one state and one grade.
+- A card with no 칸 holding blanks is drawn split as today: the before parts in the upper half, the added parts in the lower, the sheet's "앞면" and "뒷면" over them. A card with one is drawn whole, each 칸 in place in order: blanks empty, then filled; a 글's or a 단어's added part under its first part at 20/600 in `ink2`; the sheet names no side. This replaces the face `oneFaceOf` gives.
+- Autoplay plays the first sound placed on the front. A screen reader reads the 칸 in order, each blank "빈칸" before the reveal and filled after.

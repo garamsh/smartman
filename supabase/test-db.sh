@@ -27,6 +27,12 @@ trap 'exit 143' TERM
 # The tests need only Postgres. Start applies the migrations; its output, which carries the local
 # keys, is not printed.
 supabase start --exclude gotrue,realtime,storage-api,imgproxy,kong,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor >/dev/null
+# `supabase test db` mounts supabase/tests/ alone, so the dry run's file reaches its test,
+# card_frame_dry_run_test.sql, as a database setting each test's session reads.
+docker exec -i "supabase_db_$SUPABASE_PROJECT_ID" psql -U supabase_admin -d postgres -X -q -v ON_ERROR_STOP=1 \
+  -v query="$(cat supabase/card-frame-dry-run.sql)" <<'SQL'
+alter database postgres set smartman.card_frame_dry_run = :'query';
+SQL
 output=$(supabase test db --local) || { echo "$output"; exit 1; }
 echo "$output"
 
