@@ -1,6 +1,6 @@
 /**
  * The `mcp` Edge Function on the project's custom domain, which Claude and ChatGPT connect to
- * (ADR 0133); the function's `PUBLIC_HOSTS` lists the domain first.
+ * (ADR 0133), which the function's `CUSTOM_DOMAINS` lists.
  */
 const MCP_SERVER_URL = "https://api.knowno.app/functions/v1/mcp";
 

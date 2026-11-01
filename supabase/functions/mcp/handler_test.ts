@@ -302,13 +302,17 @@ async function send(
     headers?: Record<string, string>;
     fake?: Fake;
     ids?: IdSource;
+    supabaseUrl?: string;
   } = {},
 ): Promise<Run> {
   const fake = options.fake ?? seed();
   const logs: LogEntry[] = [];
   const handler = createHandler({
     config: readConfig((name) =>
-      ({ SUPABASE_URL, SUPABASE_ANON_KEY: ANON_KEY })[name]
+      ({
+        SUPABASE_URL: options.supabaseUrl ?? SUPABASE_URL,
+        SUPABASE_ANON_KEY: ANON_KEY,
+      })[name]
     ),
     fetch: fakeFetch(fake),
     log: (entry) => logs.push(entry),
@@ -318,7 +322,7 @@ async function send(
     }),
   });
   const headers = new Headers({
-    "X-Forwarded-Host": "jaxltcczmioxrineznfu.supabase.co",
+    "X-Forwarded-Host": "127.0.0.1:54321",
     "Content-Type": "application/json",
     ...options.headers,
   });
@@ -372,8 +376,9 @@ async function call(
   return { result, fake, logs: run.logs };
 }
 
-const METADATA =
-  "https://jaxltcczmioxrineznfu.supabase.co/functions/v1/mcp/oauth-protected-resource";
+const METADATA = `${SUPABASE_URL}/functions/v1/mcp/oauth-protected-resource`;
+/** A hosted project's `SUPABASE_URL`. */
+const PROJECT = "https://abcdefghijklmnopqrst.supabase.co";
 
 Deno.test("a request without a token is answered 401 with the resource metadata's address, and one with a connector's token is served", async () => {
   const missing = await send({
@@ -417,7 +422,7 @@ Deno.test("a session Supabase Auth accepts but the OAuth server did not issue is
   assert.equal(run.fake.calls.length, 0);
 });
 
-Deno.test("the protected resource metadata names the MCP URL and the project's Auth as its authorization server", async () => {
+Deno.test("a local stack's metadata names its own SUPABASE_URL as the resource's origin and Auth's issuer", async () => {
   const run = await send({
     token: null,
     method: "GET",
@@ -425,8 +430,8 @@ Deno.test("the protected resource metadata names the MCP URL and the project's A
   });
   assert.equal(run.status, 200);
   assert.deepEqual(run.json, {
-    resource: "https://jaxltcczmioxrineznfu.supabase.co/functions/v1/mcp",
-    authorization_servers: ["https://jaxltcczmioxrineznfu.supabase.co/auth/v1"],
+    resource: "http://kong:8000/functions/v1/mcp",
+    authorization_servers: ["http://kong:8000/auth/v1"],
     bearer_methods_supported: ["header"],
     resource_name: "smartman",
   });
@@ -437,6 +442,7 @@ Deno.test("on the custom domain the 401 and the metadata name its URL as the res
   const challenge = await send({
     token: null,
     headers,
+    supabaseUrl: PROJECT,
     body: { jsonrpc: "2.0", id: 1, method: "ping" },
   });
   assert.equal(challenge.status, 401);
@@ -447,56 +453,82 @@ Deno.test("on the custom domain the 401 and the metadata name its URL as the res
   const metadata = await send({
     token: null,
     headers,
+    supabaseUrl: PROJECT,
     method: "GET",
     path: "/mcp/oauth-protected-resource",
   });
   assert.deepEqual(metadata.json, {
     resource: "https://api.knowno.app/functions/v1/mcp",
-    authorization_servers: ["https://jaxltcczmioxrineznfu.supabase.co/auth/v1"],
+    authorization_servers: [`${PROJECT}/auth/v1`],
     bearer_methods_supported: ["header"],
     resource_name: "smartman",
   });
 });
 
-Deno.test("a forwarded host outside PUBLIC_HOSTS is never named; the custom domain's URL is, as a listed host's own is", async () => {
+Deno.test("a forwarded host outside CUSTOM_DOMAINS is never named and falls back to SUPABASE_URL's host, as the custom domain is named", async () => {
   for (
     const host of [
       "evil.example",
       "api.knowno.app.evil.example",
-      "localhost:54321",
+      "abcdefghijklmnopqrst.supabase.co",
     ]
   ) {
-    const refused = await send({
+    const metadata = await send({
       token: null,
       headers: { "X-Forwarded-Host": host },
+      supabaseUrl: PROJECT,
       method: "GET",
       path: "/mcp/oauth-protected-resource",
     });
     assert.equal(
-      (refused.json as Row).resource,
-      "https://api.knowno.app/functions/v1/mcp",
+      (metadata.json as Row).resource,
+      `${PROJECT}/functions/v1/mcp`,
       host,
     );
     const challenge = await send({
       token: null,
       headers: { "X-Forwarded-Host": host },
+      supabaseUrl: PROJECT,
     });
     assert.equal(
       challenge.headers.get("WWW-Authenticate"),
-      'Bearer resource_metadata="https://api.knowno.app/functions/v1/mcp/oauth-protected-resource"',
+      `Bearer resource_metadata="${PROJECT}/functions/v1/mcp/oauth-protected-resource"`,
       host,
     );
   }
-  // The control: a listed host other than the first is named as itself.
+  // The control: the same request from the custom domain is named on it.
   const listed = await send({
     token: null,
+    headers: { "X-Forwarded-Host": "api.knowno.app" },
+    supabaseUrl: PROJECT,
     method: "GET",
     path: "/mcp/oauth-protected-resource",
   });
   assert.equal(
     (listed.json as Row).resource,
-    "https://jaxltcczmioxrineznfu.supabase.co/functions/v1/mcp",
+    "https://api.knowno.app/functions/v1/mcp",
   );
+});
+
+Deno.test("a SUPABASE_URL that is not an http(s) URL leaves the function unconfigured, as a valid one configures it", async () => {
+  for (
+    const supabaseUrl of ["not a url", "ftp://abcdefghijklmnopqrst.supabase.co"]
+  ) {
+    const run = await send({
+      token: null,
+      supabaseUrl,
+      method: "GET",
+      path: "/mcp/oauth-protected-resource",
+    });
+    assert.equal(run.status, 503, supabaseUrl);
+  }
+  const configured = await send({
+    token: null,
+    supabaseUrl: PROJECT,
+    method: "GET",
+    path: "/mcp/oauth-protected-resource",
+  });
+  assert.equal(configured.status, 200);
 });
 
 Deno.test("initialize answers the offered version when served and the newest otherwise, with the tools capability", async () => {

@@ -16,15 +16,16 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
   - `supabase.com/docs/guides/ai-tools/byo-mcp`, §Use a custom domain: Auth "keeps its issuer on the project domain", `https://<project-ref>.supabase.co/auth/v1`; the resource follows the domain the client used, so both addresses keep working. It sets the issuer through an `MCP_AUTH_ISSUER` secret.
   - `supabase.com/docs/guides/functions/secrets`: `SUPABASE_URL` is "The API gateway for your Supabase project", which does not say whether it names the project's domain or the custom one.
 - **Alternatives considered:**
-  - **The issuer from `SUPABASE_URL`.** Its value under a custom domain is not documented, and an issuer that silently followed it would bring back the mismatch.
-  - **An `MCP_AUTH_ISSUER` secret**, as the BYO-MCP guide does. A secret is a project setting outside the repository; the issuer is one fixed URL of the one project the function serves.
+  - **The production project's issuer as a constant.** It would send a local stack's or another project's clients to production's Auth, and configuration belongs at the boundary, read from the environment.
+  - **An `MCP_AUTH_ISSUER` secret**, as the BYO-MCP guide does. A secret is a project setting outside the repository, and `SUPABASE_URL` already names the project.
   - **The Vercel host rewrite of the first scope** (`mcp.smartman.garam.sh`). Dropped with the domain it served.
 
 ## Decision
 
-- **The authorization server is Auth's issuer**, `https://jaxltcczmioxrineznfu.supabase.co/auth/v1`, a constant in `supabase/functions/mcp/handler.ts` built from the project's host, whichever host the client used.
-- **The resource is the host the client used, from a list.** `PUBLIC_HOSTS` in the same file holds `api.knowno.app` and `jaxltcczmioxrineznfu.supabase.co`. When the gateway's `X-Forwarded-Host` is one of them, the resource is `https://<host>/functions/v1/mcp`, in the 401's `resource_metadata` and in the metadata; any other host is given the first, `api.knowno.app`, and never named. `X-Forwarded-Proto` and `-Port` are no longer read: every listed host is HTTPS on its standard port.
-- **A new host** is added to `PUBLIC_HOSTS`; the first entry is the address 설정 shows.
+- **The project's origin is `SUPABASE_URL`'s**, read once by `supabase/functions/mcp/config.ts` and parsed as an http(s) URL; any other value leaves the function unconfigured, answering 503.
+- **The authorization server is Auth's issuer**, `<project origin>/auth/v1`, whichever host the client used.
+- **The resource is the host the client used, from a list.** When the gateway's `X-Forwarded-Host` is in `CUSTOM_DOMAINS` (`supabase/functions/mcp/handler.ts`), holding `api.knowno.app`, the resource is `https://<host>/functions/v1/mcp`, in the 401's `resource_metadata` and in the metadata. Any other host falls back to the project's origin, so it is never named. `X-Forwarded-Proto` and `-Port` are no longer read.
+- **A new custom domain** is added to `CUSTOM_DOMAINS`.
 - **The settings entry** shows `https://api.knowno.app/functions/v1/mcp`, a constant in `ai-connection.tsx`, in place of `NEXT_PUBLIC_SUPABASE_URL` with the function's path.
 - This supersedes ADR 0126's resource and authorization server read from the gateway's forwarded origin, and its settings entry's address.
 
@@ -32,12 +33,13 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 
 - Claude and ChatGPT connect with `https://api.knowno.app/functions/v1/mcp`. A connection made with the project's URL keeps working, since Supabase Auth does not reflect the `resource` parameter in a token ([ADR 0126](0126-connect-claude-and-chatgpt-through-one-remote-mcp-server-acting-as-the-signed-in-user.md)).
 - No migration, no secret and no change to the web's Supabase URL.
-- The project's ref is written into the function; a second project would need its own entries.
-- `supabase functions serve` names `api.knowno.app` and the hosted issuer, since its host is not listed; local OAuth discovery is not served.
+- Each project names its own origin and issuer; only the custom domain is written into the function.
+- Supabase does not document whether the hosted `SUPABASE_URL` names the project's domain or the custom domain once one is active. The issuer is right only while it names the project's domain; the post-deploy check compares the two.
+- A local stack names whatever its `SUPABASE_URL` is inside the runtime, not the address a client on the host used.
 - 설정 shows the production address in every environment, a local web included.
 
 ## Signs the decision was wrong
 
-- Supabase moves Auth's issuer to the custom domain, so the constant stops matching `/.well-known/oauth-authorization-server`.
+- After a deploy, the metadata's `authorization_servers` differs from `issuer` in Auth's `/.well-known/oauth-authorization-server`, which means the hosted `SUPABASE_URL` is not the project's domain.
 - Claude or ChatGPT refuses an authorization server on another host than the resource.
-- The project gains a second environment that serves the function.
+- A local client cannot reach the address a local stack names.
