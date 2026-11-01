@@ -95,12 +95,24 @@ describe("the admin area's gate", () => {
       within(menu)
         .getAllByRole("link")
         .map((link) => link.textContent),
-    ).toEqual(["개요", "신고", "공개 덱", "사용자", "요금제", "프롬프트", "관리자", "작업 기록"]);
+    ).toEqual([
+      "개요",
+      "신고",
+      "공개 덱",
+      "사용자",
+      "요금제",
+      "프롬프트",
+      "추출 결과",
+      "관리자",
+      "작업 기록",
+    ]);
     expect(within(menu).getByRole("link", { name: "신고" })).toHaveAttribute(
       "aria-current",
       "page",
     );
     expect(screen.getByText("내용")).toBeInTheDocument();
+    // Korean on every page breaks only between words.
+    expect(screen.getByText("내용").parentElement).toHaveClass("break-keep");
   });
 
   it("gives a revoked admin the not-found page at once", async () => {
@@ -258,7 +270,9 @@ describe("the reports page", () => {
   it("says when there are no reports", async () => {
     admin.decks.length = 0;
     await render(ReportsContent, {});
-    expect(screen.getByText("신고된 덱이 없어요.")).toBeInTheDocument();
+    expect(
+      screen.getByText("신고된 덱이 없어요. 새 신고가 들어오면 여기에 보여요."),
+    ).toBeInTheDocument();
   });
 });
 

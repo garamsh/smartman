@@ -3,6 +3,7 @@ import Link from "next/link";
 import { formatTime } from "../format";
 import { actionLabels, labelOf, planLabels, termsLabel } from "../labels";
 import type { AuditEntry } from "../read-admin";
+import { Empty, group } from "./admin-section";
 
 /** What an entry acted on: the deck's name or the user's email it recorded, linked where it can be opened. */
 function Target({ entry }: { entry: AuditEntry }) {
@@ -42,11 +43,13 @@ function Target({ entry }: { entry: AuditEntry }) {
 
 /** The audit log, newest first: when, who, what and on what. */
 export function AuditLog({ entries, timeZone }: { entries: AuditEntry[]; timeZone: string }) {
-  if (entries.length === 0) return <p className="text-muted">기록된 작업이 없어요.</p>;
+  if (entries.length === 0) {
+    return <Empty>기록된 작업이 없어요. 관리자가 작업하면 여기에 남아요.</Empty>;
+  }
   return (
-    <ul className="flex flex-col gap-2">
+    <ul className={group}>
       {entries.map((entry) => (
-        <li key={entry.id} className="flex flex-col gap-1 rounded-row bg-surface px-4 py-3">
+        <li key={entry.id} className="flex flex-col gap-1 px-4 py-3">
           <span className="text-body-strong">
             {labelOf(actionLabels, entry.action)} · <Target entry={entry} />
             {typeof entry.detail.reports === "number" ? ` · ${String(entry.detail.reports)}건` : ""}

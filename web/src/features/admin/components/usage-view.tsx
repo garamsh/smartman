@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { usd } from "../format";
 import type { Amount, Stack, Usage } from "../usage";
+import { group } from "./admin-section";
 import { DailyUsageChart, StackedCostChart } from "./usage-charts";
 
 /** An amount in words: its photos and estimated cost, and the photos no measured cost prices. */
@@ -21,7 +22,7 @@ function AmountTable({
   rows: { key: string; name: React.ReactNode; amount: Amount }[];
 }) {
   return (
-    <table aria-label={label} className="w-full rounded-card bg-surface text-secondary">
+    <table aria-label={label} className="w-full rounded-group bg-surface text-caption tabular-nums">
       <thead>
         <tr className="text-left text-muted">
           <th scope="col" className="px-4 py-2 font-medium">
@@ -84,9 +85,9 @@ export function UsageView({ usage }: { usage: Usage }) {
       ? "최근 30일 동안 사진 추출이 없어요."
       : `최근 30일 사진 ${amountWords(usage.totals.month)}. 가장 많은 날은 ${busiest.day}, ${String(busiest.photos)}장이에요.`;
   return (
-    <section aria-label="사진 추출" className="flex flex-col gap-4">
-      <h2 className="text-section">사진 추출</h2>
-      <dl className="grid gap-row-gap lg:grid-cols-3">
+    <section aria-label="사진 추출" className="flex flex-col gap-2">
+      <h2 className="px-1 text-section text-muted">사진 추출</h2>
+      <dl className={group}>
         {(
           [
             ["오늘", usage.totals.today],
@@ -94,13 +95,13 @@ export function UsageView({ usage }: { usage: Usage }) {
             ["최근 30일", usage.totals.month],
           ] as const
         ).map(([term, amount]) => (
-          <div key={term} className="flex flex-col gap-1 rounded-card bg-surface p-5">
-            <dt className="text-secondary text-muted">{term}</dt>
-            <dd className="text-body-strong">{amountWords(amount)}</dd>
+          <div key={term} className="flex items-baseline justify-between gap-3 px-4 py-3">
+            <dt className="text-body text-ink-2">{term}</dt>
+            <dd className="text-right text-body-strong tabular-nums">{amountWords(amount)}</dd>
           </div>
         ))}
       </dl>
-      <p className="text-caption text-muted">
+      <p className="px-1 text-caption text-muted">
         UTC 날짜 기준이에요. 예상 비용은 사진마다 그 사진을 만든 모델의 eval 측정 비용으로 계산해요.
         {usage.unrecordedModel === null
           ? ""
@@ -109,14 +110,14 @@ export function UsageView({ usage }: { usage: Usage }) {
           ? ""
           : ` 측정하지 않은 모델(${usage.unpricedModels.join(", ")})의 사진은 비용에서 빠졌어요.`}
       </p>
-      <figure className="flex flex-col gap-3">
-        <figcaption className="text-label font-semibold">
+      <figure className="mt-5 flex flex-col gap-2">
+        <figcaption className="px-1 text-section text-muted">
           날짜별 사진(막대)과 예상 비용(점선)
         </figcaption>
         <DailyUsageChart days={usage.days} summary={dailySummary} />
         <table
           aria-label="날짜별 사진과 예상 비용"
-          className="w-full rounded-card bg-surface text-secondary"
+          className="w-full rounded-group bg-surface text-caption tabular-nums"
         >
           <thead>
             <tr className="text-left text-muted">
@@ -153,14 +154,14 @@ export function UsageView({ usage }: { usage: Usage }) {
           ["모델별 예상 비용", "모델", usage.models],
         ] as const
       ).map(([title, column, stack]) => (
-        <figure key={title} className="flex flex-col gap-3">
-          <figcaption className="text-label font-semibold">{title}</figcaption>
+        <figure key={title} className="mt-5 flex flex-col gap-2">
+          <figcaption className="px-1 text-section text-muted">{title}</figcaption>
           <StackedCostChart stack={stack} summary={stackSummary(title, stack)} />
           <AmountTable label={column} rows={stackRows(stack)} />
         </figure>
       ))}
-      <section aria-label="프롬프트 버전별" className="flex flex-col gap-3">
-        <h3 className="text-label font-semibold">프롬프트 버전별</h3>
+      <section aria-label="프롬프트 버전별" className="mt-5 flex flex-col gap-2">
+        <h3 className="px-1 text-section text-muted">프롬프트 버전별</h3>
         <AmountTable
           label="버전"
           rows={usage.versions.map(({ version, amount }) => ({
