@@ -31,7 +31,7 @@ void main() {
   test('Info.plist describes camera, photo library and microphone use', () {
     final plist = _plistStrings('ios/Runner/Info.plist');
     // Control: the reader finds a key the plist has always held.
-    expect(plist['CFBundleDisplayName'], 'Smartman');
+    expect(plist['CFBundleDisplayName'], 'knowno');
 
     for (final key in usageKeys) {
       expect(plist[key], isNotNull, reason: key);

@@ -634,8 +634,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(opened, [
-        Uri.parse('https://smartman.garam.sh/terms'),
-        Uri.parse('https://smartman.garam.sh/privacy'),
+        Uri.parse('https://knowno.app/terms'),
+        Uri.parse('https://knowno.app/privacy'),
       ]);
       expect(find.byType(SnackBar), findsNothing);
     },

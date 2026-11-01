@@ -309,7 +309,7 @@ void main() {
     (tester) async {
       await pumpApp(tester);
 
-      expect(find.bySemanticsLabel('smartman'), findsOneWidget);
+      expect(find.bySemanticsLabel('knowno'), findsOneWidget);
       expect(shownText('Shall we make your first deck?'), findsOneWidget);
       expect(
         shownText(

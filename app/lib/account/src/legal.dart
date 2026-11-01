@@ -7,10 +7,10 @@ import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
 
 /// Where the terms of service are published, on the web app.
-final termsOfServiceUrl = Uri.parse('https://smartman.garam.sh/terms');
+final termsOfServiceUrl = Uri.parse('https://knowno.app/terms');
 
 /// Where the privacy policy is published, on the web app.
-final privacyPolicyUrl = Uri.parse('https://smartman.garam.sh/privacy');
+final privacyPolicyUrl = Uri.parse('https://knowno.app/privacy');
 
 /// Opens a URL outside the app, resolving to whether it opened.
 typedef LinkOpener = Future<bool> Function(Uri uri);

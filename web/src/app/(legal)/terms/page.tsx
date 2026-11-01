@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 import { LegalDocument, type LegalSection } from "@/features/legal";
 
-export const metadata: Metadata = { title: "이용약관 · smartman" };
+export const metadata: Metadata = { title: "이용약관 · 알아몰라" };
 
 const contact = "sauce@garam.sh";
 
@@ -13,7 +13,7 @@ const sections: readonly LegalSection[] = [
     body: (
       <>
         <p>
-          smartman은 암기 카드를 만들고 복습하는 서비스예요. 휴대폰 앱과 웹(smartman.garam.sh)으로
+          알아몰라는 암기 카드를 만들고 복습하는 서비스예요. 휴대폰 앱과 웹(knowno.app)으로
           제공해요.
         </p>
         <ul>
@@ -165,7 +165,7 @@ const sections: readonly LegalSection[] = [
     heading: "문의처",
     body: (
       <p>
-        서비스와 이 약관에 관한 문의는 smartman 운영자에게{" "}
+        서비스와 이 약관에 관한 문의는 알아몰라 운영자에게{" "}
         <a href={`mailto:${contact}`}>{contact}</a>로 보내 주세요.
       </p>
     ),
@@ -182,7 +182,7 @@ const sections: readonly LegalSection[] = [
   },
 ];
 
-/** The terms of service: what smartman offers, and what the user and the operator agree to. */
+/** The terms of service: what knowno offers, and what the user and the operator agree to. */
 export default function TermsPage() {
   return (
     <LegalDocument
@@ -190,7 +190,7 @@ export default function TermsPage() {
       effectiveDate="2026년 11월 3일"
       intro={
         <p>
-          이 약관은 smartman 운영자(이하 &ldquo;운영자&rdquo;)가 제공하는 smartman 서비스를 이용하는
+          이 약관은 알아몰라 운영자(이하 &ldquo;운영자&rdquo;)가 제공하는 알아몰라 서비스를 이용하는
           조건을 정해요. 서비스에 로그인하면 이 약관에 동의하는 것으로 봐요.
         </p>
       }

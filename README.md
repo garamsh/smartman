@@ -1,6 +1,6 @@
-# smartman
+# knowno
 
-A memorization app: decks of cards studied on a phone. This file is the project's entry point for anyone running or changing it.
+A memorization app, 알아몰라 in Korean: decks of cards studied on a phone and at `https://knowno.app`. This file is the project's entry point for anyone running or changing it.
 
 ## Who it is for
 
