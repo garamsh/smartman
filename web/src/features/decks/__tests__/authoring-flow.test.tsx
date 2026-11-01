@@ -304,6 +304,26 @@ describe("photo request", () => {
       expect(await readPhoto(form)).toMatchObject({ cursor });
     }
   });
+  it("reads an answer of up to the photo's 500 cards, which a request reading on past its first reply holds, and refuses one past them", async () => {
+    const many = (count: number) =>
+      Array.from({ length: count }, (_, at) => ({ ...card, front: `수도 ${String(at)}` }));
+    for (const [count, read] of [
+      [500, true],
+      [501, false],
+    ] as const) {
+      server.use(
+        http.post(`${supabaseUrl}/functions/v1/extract-cards`, () =>
+          HttpResponse.json({ cards: many(count), partial: false }),
+        ),
+      );
+      const form = new FormData();
+      form.set("photo", upload());
+      const result = await readPhoto(form);
+      expect("cards" in result ? result.cards.length : result.failure.kind).toBe(
+        read ? count : "service",
+      );
+    }
+  });
   it("sends a cursor back with the photo, takes a resumed answer of no card, and reads a 410 as the retryable service failure", async () => {
     const bodies: unknown[] = [];
     const answers = [
