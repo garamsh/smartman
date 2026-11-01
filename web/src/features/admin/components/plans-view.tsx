@@ -2,7 +2,6 @@ import { formatTime } from "../format";
 import { planLabels, termsLabel } from "../labels";
 import { estimatedCost, measuredModels, usdPerPhoto } from "../model-costs";
 import type { PlanId, PlanVersion } from "../read-admin";
-import { AdminSection, group, row } from "./admin-section";
 import { PlanForm } from "./plan-form";
 
 const plans: PlanId[] = ["free", "pro", "max"];
@@ -14,7 +13,7 @@ const plans: PlanId[] = ["free", "pro", "max"];
 export function PlansView({ versions, timeZone }: { versions: PlanVersion[]; timeZone: string }) {
   return (
     <div className="flex flex-col gap-section-gap">
-      <div className="grid items-start gap-section-gap lg:grid-cols-3 lg:gap-4">
+      <div className="grid gap-row-gap lg:grid-cols-3">
         {plans.map((plan) => {
           const name = planLabels[plan] ?? plan;
           const own = versions.filter((version) => version.plan === plan);
@@ -23,25 +22,26 @@ export function PlansView({ versions, timeZone }: { versions: PlanVersion[]; tim
           // The form starts from the current terms, or the latest version's while none is current.
           const start = current ?? own[0] ?? null;
           return (
-            <AdminSection key={plan} label={name}>
-              <div className={group}>
-                <div className={row}>
-                  {current === null ? (
-                    <p className="text-body-strong">지금 가입하면 받을 버전이 없어요</p>
-                  ) : (
-                    <>
-                      <p className="text-body-strong break-all">
-                        지금 가입하면 {termsLabel(current.quota, current.amount)} · {current.model}
-                      </p>
-                      <p className="text-caption text-muted">
-                        {usd === null
-                          ? "이 모델은 측정한 비용이 없어요."
-                          : `측정 비용 사진 한 장에 ${estimatedCost(1, usd)}`}
-                      </p>
-                    </>
-                  )}
-                </div>
-              </div>
+            <section
+              key={plan}
+              aria-label={name}
+              className="flex flex-col gap-3 rounded-card bg-surface p-5"
+            >
+              <h2 className="text-section">{name}</h2>
+              {current === null ? (
+                <p className="text-body-strong">지금 가입하면 받을 버전이 없어요</p>
+              ) : (
+                <>
+                  <p className="text-body-strong">
+                    지금 가입하면 {termsLabel(current.quota, current.amount)} · {current.model}
+                  </p>
+                  <p className="text-caption text-muted">
+                    {usd === null
+                      ? "이 모델은 측정한 비용이 없어요."
+                      : `측정 비용 사진 한 장에 ${estimatedCost(1, usd)}`}
+                  </p>
+                </>
+              )}
               <PlanForm
                 plan={plan}
                 name={name}
@@ -49,11 +49,11 @@ export function PlansView({ versions, timeZone }: { versions: PlanVersion[]; tim
                 amount={start?.amount ?? 0}
                 model={start?.model ?? ""}
               />
-              <h3 className="mt-3 px-1 text-section text-muted">버전</h3>
-              <ul aria-label={`${name} 버전`} className={group}>
+              <h3 className="text-label font-semibold">버전</h3>
+              <ul aria-label={`${name} 버전`} className="flex flex-col gap-2">
                 {own.map((version) => (
-                  <li key={version.id} className={row}>
-                    <span className="text-body break-all">
+                  <li key={version.id} className="flex flex-col gap-0.5">
+                    <span className="text-secondary">
                       {termsLabel(version.quota, version.amount)} · {version.model}
                       {version.current ? " · 지금 가입 시 적용" : ""}
                     </span>
@@ -67,23 +67,27 @@ export function PlansView({ versions, timeZone }: { versions: PlanVersion[]; tim
                   </li>
                 ))}
               </ul>
-            </AdminSection>
+            </section>
           );
         })}
       </div>
-      <AdminSection
-        label="측정한 모델"
-        note="평가(eval)가 프롬프트 v6, 표본 47장으로 잰 사진 한 장의 비용이에요."
-      >
-        <ul className={group}>
-          {measuredModels.map(({ model, usdPerPhoto: cost }) => (
-            <li key={model} className="flex items-baseline justify-between gap-3 px-4 py-3">
+      <section aria-label="측정한 모델" className="flex flex-col gap-3">
+        <h2 className="text-section">측정한 모델</h2>
+        <p className="text-caption text-muted">
+          평가(eval)가 프롬프트 v6, 표본 47장으로 잰 사진 한 장의 비용이에요.
+        </p>
+        <ul className="flex flex-col gap-2">
+          {measuredModels.map(({ model, usdPerPhoto: usd }) => (
+            <li
+              key={model}
+              className="flex items-baseline justify-between gap-3 rounded-row bg-surface px-4 py-3"
+            >
               <span className="text-body-strong break-all">{model}</span>
-              <span className="text-body tabular-nums">{estimatedCost(1, cost)}</span>
+              <span className="text-secondary">{estimatedCost(1, usd)}</span>
             </li>
           ))}
         </ul>
-      </AdminSection>
+      </section>
     </div>
   );
 }

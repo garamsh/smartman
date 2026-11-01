@@ -73,21 +73,51 @@ function withOrientation6(jpeg: Buffer): Buffer {
   return Buffer.concat([jpeg.subarray(0, 2), app1, exif, jpeg.subarray(2)]);
 }
 
+const text = (value: string) => ({
+  type: "text",
+  v: 1,
+  id: randomUUID(),
+  payload: { text: value },
+});
+
 /** A card the action returns, as `parseCandidates` makes it. */
 function candidate(front: string, back: string) {
-  const text = (value: string) => ({
-    type: "text",
-    v: 1,
-    id: randomUUID(),
-    payload: { text: value },
-  });
   return {
     id: randomUUID(),
+    reverseId: randomUUID(),
     topic: "도시",
     kind: "note",
+    identify: false,
+    pronunciation: null,
+    extras: [],
     front: [text(front)],
     back: [text(back)],
     selected: true,
+  };
+}
+
+/** A vocabulary entry the action returns, with two senses, a pronunciation and an extra. */
+function entry(word: string) {
+  const sense = (meaning: string, labels: unknown[]) => ({ labels, meaning, examples: [] });
+  return {
+    ...candidate(word, ""),
+    topic: "단어",
+    kind: "vocabulary",
+    pronunciation: "ˈæpəl",
+    extras: [{ label: "유의어", text: "pome" }],
+    back: [
+      {
+        type: "senses",
+        v: 1,
+        id: randomUUID(),
+        payload: {
+          senses: [
+            sense("사과", [{ kind: "part_of_speech", category: "noun", text: "명" }]),
+            sense("사과나무", []),
+          ],
+        },
+      },
+    ],
   };
 }
 
@@ -167,7 +197,7 @@ test("normalises each photo, shows a 502 on its row, retries it in place, and sa
     { failure: { kind: "model" } },
     { cards: [candidate("서울", "한국의 수도")] },
     { cards: [candidate("도쿄", "일본의 수도")] },
-    { cards: [candidate("파리", "프랑스의 수도")] },
+    { cards: [candidate("파리", "프랑스의 수도"), entry("apple")] },
   ];
   const sizes: ({ width: number; height: number } | null)[] = [];
   let release: () => void = () => undefined;
@@ -230,7 +260,7 @@ test("normalises each photo, shows a 502 on its row, retries it in place, and sa
   await page.getByRole("button", { name: "사진 1 다시 시도", exact: true }).click();
 
   await expect(
-    page.getByRole("heading", { name: "카드 3장을 만들었어요", exact: true }),
+    page.getByRole("heading", { name: "카드 4장을 만들었어요", exact: true }),
   ).toBeVisible();
   expect(sizes).toEqual([
     { width: 2048, height: 1536 },
@@ -238,9 +268,27 @@ test("normalises each photo, shows a 502 on its row, retries it in place, and sa
     { width: 800, height: 600 },
     { width: 2048, height: 1536 },
   ]);
-  await page.getByRole("textbox", { name: "이름", exact: true }).fill("사진 덱");
+  await expect(page.getByText("새 덱에 추가돼요", { exact: true })).toBeVisible();
   await capture(page, "list");
-  await page.getByRole("button", { name: "카드 3장 추가", exact: true }).click();
+  await page.getByRole("button", { name: "사진 2, 카드 1장", exact: true }).click();
+  await expect(page.getByRole("button", { name: "사진 2, 카드 1장", exact: true })).toHaveAttribute(
+    "aria-expanded",
+    "false",
+  );
+  await capture(page, "collapsed");
+  await page.getByRole("button", { name: "단어 카드 모양, 앞면에 단어", exact: true }).click();
+  await page.getByRole("menuitemcheckbox", { name: "발음 표시", exact: true }).click();
+  await page.getByRole("button", { name: "단어 카드 모양, 앞면에 단어", exact: true }).click();
+  await expect(page.getByRole("menu", { name: "단어 카드 모양", exact: true })).toBeVisible();
+  // The menu stays open through each capture: a viewport change does not close it.
+  await capture(page, "menu");
+  await page.getByRole("menuitemradio", { name: "양쪽 방향 모두", exact: true }).click();
+  await page.getByRole("button", { name: "새 덱", exact: true }).click();
+  await capture(page, "deck-choice");
+  await page.getByRole("radio", { name: "새 덱", exact: true }).click();
+  await page.getByRole("button", { name: "카드 5장 추가", exact: true }).click();
+  await page.getByRole("textbox", { name: "이름", exact: true }).fill("사진 덱");
+  await page.getByRole("button", { name: "만들기", exact: true }).click();
   await expect(page.getByRole("heading", { name: "사진 덱", exact: true })).toBeVisible();
 
   const client = createClient(url, key, { auth: { persistSession: false } });
@@ -251,7 +299,10 @@ test("normalises each photo, shows a 502 on its row, retries it in place, and sa
     .eq("user_id", userId)
     .order("card_key");
   expect(read.error).toBeNull();
-  expect(read.data?.map((card): unknown => card.card_key)).toEqual(["도쿄", "서울", "파리"]);
+  // "양쪽 방향" saved the entry both ways: its word, and its meanings as a front of their own.
+  expect(read.data?.map((card) => String(card.card_key)).sort()).toEqual(
+    ["[명] 사과 사과나무", "apple ˈæpəl", "도쿄", "서울", "파리"].sort(),
+  );
   for (const card of read.data ?? []) {
     expect(card).toMatchObject({ source: "import" });
     expect(Number(card.revision)).toBeGreaterThan(0);

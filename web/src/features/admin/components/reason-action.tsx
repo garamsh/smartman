@@ -3,7 +3,9 @@
 import { useEffect, useId, useRef, useState, useTransition } from "react";
 
 import type { ActionResult } from "../action-call";
-import { button, field as fieldStyle } from "./admin-section";
+
+const button =
+  "pressable flex min-h-button items-center justify-center rounded-button px-4 text-label font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-50";
 
 /**
  * An admin action that records a reason: [label] opens a field for the reason, then [question]
@@ -41,9 +43,9 @@ export function ReasonAction({
         <div
           role="group"
           aria-label={question}
-          className="flex flex-col gap-3 rounded-group border border-outline bg-surface p-4"
+          className="flex flex-col gap-2 rounded-field border border-outline p-3"
         >
-          <label htmlFor={id} className="text-section text-muted">
+          <label htmlFor={id} className="text-label font-semibold">
             {reasonLabel}
           </label>
           <textarea
@@ -55,9 +57,9 @@ export function ReasonAction({
             onChange={(event) => {
               setReason(event.target.value);
             }}
-            className={`${fieldStyle} bg-ground p-3`}
+            className="rounded-field border border-outline bg-surface p-3 text-body focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-ink"
           />
-          <p className="text-body-strong">{question}</p>
+          <p className="text-secondary">{question}</p>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
@@ -65,7 +67,7 @@ export function ReasonAction({
               onClick={() => {
                 setOpen(false);
               }}
-              className={button.secondary}
+              className={`${button} border border-outline text-ink`}
             >
               취소
             </button>
@@ -82,7 +84,7 @@ export function ReasonAction({
                   }
                 });
               }}
-              className={final ? button.destructiveFinal : button.primary}
+              className={`${button} ${final ? "bg-dont-know-text text-on-dont-know-text" : "bg-ink text-surface"}`}
             >
               {confirmLabel}
             </button>
@@ -95,7 +97,7 @@ export function ReasonAction({
             setMessage(null);
             setOpen(true);
           }}
-          className={final ? button.destructive : button.secondary}
+          className={`${button} self-start border border-outline text-ink`}
         >
           {label}
         </button>

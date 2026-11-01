@@ -1,4 +1,3 @@
-import { Search } from "lucide-react";
 import { notFound } from "next/navigation";
 
 import { parseDeckId } from "@/features/decks";
@@ -8,11 +7,6 @@ import {
   AdminList,
   adminTimeZone,
   AuditLog,
-  extractionPageSize,
-  OutcomesView,
-  readExtractionCalls,
-  readExtractionOutcomes,
-  summarizeOutcomes,
   DeckView,
   GrantAdminForm,
   OverviewView,
@@ -67,31 +61,6 @@ export async function OverviewContent() {
   return <OverviewView overview={read.data} usage={summarizeUsage(breakdown.data, today, free)} />;
 }
 
-export async function ExtractionsContent({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
-  const before = versionId((await searchParams).before);
-  const [outcomes, calls, timeZone] = await Promise.all([
-    readExtractionOutcomes(),
-    readExtractionCalls(before),
-    adminTimeZone(),
-  ]);
-  if ("failure" in outcomes) return <AdminFailureMessage failure={outcomes.failure} />;
-  if ("failure" in calls) return <AdminFailureMessage failure={calls.failure} />;
-  const today = new Date().toISOString().slice(0, 10);
-  return (
-    <OutcomesView
-      summary={summarizeOutcomes(outcomes.data, today)}
-      calls={calls.data}
-      before={before}
-      more={calls.data.length === extractionPageSize}
-      timeZone={timeZone}
-    />
-  );
-}
-
 export async function PlansContent() {
   const [read, timeZone] = await Promise.all([readPlanVersions(), adminTimeZone()]);
   if ("failure" in read) return <AdminFailureMessage failure={read.failure} />;
@@ -113,19 +82,14 @@ export async function PublicDecksContent({
   const [read, timeZone] = await Promise.all([readPublicDecks({ search }), adminTimeZone()]);
   return (
     <>
-      <form role="search" action="/admin/decks" className="relative">
-        <Search
-          aria-hidden
-          className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-muted"
-          strokeWidth={2}
-        />
+      <form role="search" action="/admin/decks">
         <input
           type="search"
           name="q"
           aria-label="덱 이름 검색"
           placeholder="덱 이름 검색"
           defaultValue={search}
-          className="h-search w-full rounded-field border border-outline bg-surface pr-4 pl-12 text-body placeholder:text-muted focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-ink"
+          className="h-search w-full rounded-field border border-outline bg-surface px-4 text-body placeholder:text-muted focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-ink"
         />
       </form>
       {"failure" in read ? (
@@ -134,11 +98,7 @@ export async function PublicDecksContent({
         <PublicDecks
           decks={read.data}
           timeZone={timeZone}
-          empty={
-            search
-              ? "찾는 덱이 없어요. 다른 단어로 검색해 보세요."
-              : "공개된 덱이 없어요. 사용자가 덱을 공개하면 여기에 보여요."
-          }
+          empty={search ? "찾는 덱이 없어요. 다른 단어로 검색해 보세요." : "공개된 덱이 없어요."}
         />
       )}
     </>
@@ -210,7 +170,7 @@ export async function AuditContent() {
   return <AuditLog entries={read.data} timeZone={timeZone} />;
 }
 
-/** A version's or an extraction's id in an address: digits only, as the server numbers them. */
+/** A version's id in an address: digits only, as the server numbers them. */
 function versionId(value: string | string[] | undefined): number | null {
   return typeof value === "string" && /^[1-9]\d{0,15}$/.test(value) ? Number(value) : null;
 }

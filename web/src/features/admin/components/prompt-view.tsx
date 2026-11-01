@@ -34,21 +34,19 @@ export function PromptView({ version, timeZone }: { version: PromptDetail; timeZ
       </div>
       {diff !== null && version.active !== null && (
         <section aria-label="사용 중인 버전과 다른 점" className="flex flex-col gap-2">
-          <h2 className="px-1 text-section text-muted">
-            사용 중인 버전 {version.active.id}과 다른 점
-          </h2>
-          <p className="px-1 text-caption text-muted">
+          <h2 className="text-section">사용 중인 버전 {version.active.id}과 다른 점</h2>
+          <p className="text-secondary text-muted">
             {changed === 0
               ? "내용이 같아요."
               : `바뀐 줄 ${String(changed)}개: 빼는 줄은 −, 더하는 줄은 +로 표시해요.`}
           </p>
-          <ol className="flex flex-col rounded-group bg-surface p-3 font-mono text-caption">
+          <ol className="flex flex-col rounded-field border border-outline bg-surface p-3 font-mono text-caption">
             {diff.map((line, index) => (
               <li
                 key={index}
                 className={`grid grid-cols-[1.5rem_1fr] whitespace-pre-wrap ${
                   line.kind === "removed"
-                    ? "bg-tint-amber text-ink"
+                    ? "bg-tint-red text-dont-know-text"
                     : line.kind === "added"
                       ? "bg-brand-tint text-ink"
                       : "text-ink-2"
@@ -95,14 +93,14 @@ export function PromptView({ version, timeZone }: { version: PromptDetail; timeZ
         )}
       </div>
       <section aria-label="프롬프트" className="flex flex-col gap-2">
-        <h2 className="px-1 text-section text-muted">프롬프트</h2>
+        <h2 className="text-section">프롬프트</h2>
         <Link
           href={`/admin/prompts?from=${String(version.id)}`}
-          className="self-start px-1 text-body text-ink-2 underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-ink"
+          className="self-start text-label underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-ink"
         >
           이 버전에서 새 버전 쓰기
         </Link>
-        <pre className="rounded-group bg-surface p-4 font-mono text-caption whitespace-pre-wrap">
+        <pre className="rounded-field border border-outline bg-surface p-3 font-mono text-caption whitespace-pre-wrap">
           {version.text}
         </pre>
       </section>

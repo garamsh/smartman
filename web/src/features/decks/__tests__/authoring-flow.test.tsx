@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { http, HttpResponse } from "msw";
@@ -14,6 +14,7 @@ import { preparePhoto } from "../extract-photo";
 import { describeFailure } from "../photo-failure";
 import { readPhoto } from "../read-photo";
 import { parseDeckId } from "../library";
+import { field } from "@/supabase/row";
 
 vi.mock("next/headers", () => import("@/testing/next-headers"));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -311,6 +312,67 @@ describe("photo request", () => {
     expect(line).not.toContain(testAccessToken);
     expect(line).not.toContain(Buffer.from(jpegBytes).toString("base64"));
   });
+  describe("on a clock the test moves", () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+      // Node's own timeout signal runs on a timer the fake clock does not move; this one does.
+      vi.spyOn(AbortSignal, "timeout").mockImplementation((ms) => {
+        const controller = new AbortController();
+        setTimeout(() => {
+          controller.abort(new DOMException("signal timed out", "TimeoutError"));
+        }, ms);
+        return controller.signal;
+      });
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+    /**
+     * The function's cards, answered once [ms] of the clock have passed since the request arrived;
+     * `arrived` settles as it does, so the clock moves only once the request waits on it.
+     */
+    function answerAfter(ms: number) {
+      const sent = { count: 0 };
+      const { promise: arrived, resolve } = Promise.withResolvers<void>();
+      server.use(
+        http.post(`${supabaseUrl}/functions/v1/extract-cards`, async () => {
+          sent.count += 1;
+          const answered = new Promise((done) => setTimeout(done, ms));
+          resolve();
+          await answered;
+          return HttpResponse.json({ cards: [card] });
+        }),
+      );
+      return { sent, arrived };
+    }
+    it("waits out the function's worst case, a retry that times out by about 135 s", async () => {
+      const log = vi.spyOn(console, "info").mockImplementation(() => undefined);
+      const { sent, arrived } = answerAfter(139_000);
+      const form = new FormData();
+      form.set("photo", upload());
+      const result = readPhoto(form);
+      await arrived;
+      await vi.advanceTimersByTimeAsync(139_000);
+      expect(await result).toHaveProperty("cards");
+      expect(sent.count).toBe(1);
+      expect(JSON.parse(String(log.mock.calls[0]?.[0]))).toMatchObject({ status: 200 });
+    });
+    it("stops waiting before the Edge Function's 150 s wall clock, as a timeout sent once", async () => {
+      const log = vi.spyOn(console, "info").mockImplementation(() => undefined);
+      const { sent, arrived } = answerAfter(10 * 60_000);
+      const form = new FormData();
+      form.set("photo", upload());
+      const result = readPhoto(form);
+      await arrived;
+      await vi.advanceTimersByTimeAsync(150_000);
+      expect(await result).toEqual({ failure: { kind: "service" } });
+      expect(sent.count).toBe(1);
+      expect(JSON.parse(String(log.mock.calls[0]?.[0]))).toMatchObject({
+        status: "timeout",
+        attempts: 1,
+      });
+    });
+  });
   it("gives up after a second request with no response, as a service failure to retry", async () => {
     vi.spyOn(console, "info").mockImplementation(() => undefined);
     let calls = 0;
@@ -334,9 +396,16 @@ describe("photo import", () => {
     URL.createObjectURL = () => "blob:photo";
     URL.revokeObjectURL = () => undefined;
   });
-  async function choose(count: number) {
-    await render(() => <AuthoringButton deck={deck} />, {});
-    await userEvent.click(screen.getByRole("button", { name: "카드 추가" }));
+  /** Picks [count] photos from the album, from the deck's page or, without [from], the deck list. */
+  async function choose(count: number, from: "deck" | "list" = "deck") {
+    await render(
+      () =>
+        from === "deck" ? <AuthoringButton deck={deck} /> : <AuthoringButton decks={[deck]} />,
+      {},
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: from === "deck" ? "카드 추가" : "새 덱 만들기" }),
+    );
     const picker = screen.getByLabelText("앨범에서 고르기", { selector: "input" });
     fireEvent.change(picker, {
       target: {
@@ -401,8 +470,8 @@ describe("photo import", () => {
       await screen.findByRole("heading", { name: "카드 2장을 만들었어요" }),
     ).toBeInTheDocument();
     expect(sent.count).toBe(3);
-    expect(screen.getByRole("heading", { name: "사진 1" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "사진 2" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "사진 1, 카드 1장" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "사진 2, 카드 1장" })).toBeInTheDocument();
   });
   it("re-sends every retryable failed photo at once, leaving a failure sending cannot fix on its row", async () => {
     const sent = answer(failed502, { status: 422, body: { error: "no_cards" } }, failed502, read);
@@ -451,5 +520,235 @@ describe("photo import", () => {
     ).toBeInTheDocument();
     expect(sent.count).toBe(0);
     expect(screen.queryByRole("button", { name: "다시 시도" })).not.toBeInTheDocument();
+  });
+
+  describe("the review list", () => {
+    const noun = { kind: "part_of_speech", category: "noun", text: "명" };
+    const apple = {
+      kind: "vocabulary",
+      type: "concept",
+      front: "apple",
+      answer: "사과",
+      topic: "과일",
+      senses: [
+        { labels: [noun], meaning: "사과", examples: [] },
+        { labels: [], meaning: "사과나무", examples: [] },
+      ],
+      pronunciation: "ˈæpəl",
+      extras: [{ label: "유의어", text: "pome" }],
+    };
+    const identify = { ...card, type: "identify", front: "수도는?", answer: "서울" };
+    const words = { status: 200, body: { cards: [apple] } };
+    /** The section menu named for [topic] in its form [form], opened. */
+    async function openMenu(topic: string, form: string) {
+      await userEvent.click(screen.getByRole("button", { name: `${topic} 카드 모양, ${form}` }));
+      return screen.getByRole("menu", { name: `${topic} 카드 모양` });
+    }
+    /** The type and text of a stored side's first block. */
+    function firstBlock(side: unknown) {
+      const first: unknown = Array.isArray(side) ? side[0] : undefined;
+      return { type: field(first, "type"), text: field(field(first, "payload"), "text") };
+    }
+    /** A menu's items of every role, in their order. */
+    function items(menu: HTMLElement) {
+      return Array.from(menu.querySelectorAll("[role^=menuitem]"));
+    }
+    afterEach(() => {
+      localStorage.clear();
+    });
+
+    it("turns a vocabulary section's cards from its menu, and saves both directions as two cards", async () => {
+      answer(words);
+      await choose(1);
+      expect(await screen.findByRole("heading", { name: "단어를 찾았어요" })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "과일 1" })).toBeInTheDocument();
+      const menu = await openMenu("과일", "앞면에 단어");
+      expect(
+        items(menu).map((item) => [item.textContent, item.getAttribute("aria-checked")]),
+      ).toEqual([
+        ["앞면에 단어", "true"],
+        ["앞면에 뜻", "false"],
+        ["양쪽 방향 모두", "false"],
+        ["첫 뜻만", "false"],
+        ["라벨 표시", "true"],
+        ["발음 표시", "false"],
+        ["유의어 등 표시", "false"],
+        ["이 묶음 빼기", null],
+      ]);
+      await userEvent.click(within(menu).getByRole("menuitemradio", { name: "앞면에 뜻" }));
+      expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+      // The row's edit button is named by its front, which now is the meaning.
+      expect(screen.getByRole("button", { name: "[명] 사과\n사과나무 편집" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "카드 1장 추가" })).toBeInTheDocument();
+      await userEvent.click(
+        within(await openMenu("과일", "앞면에 뜻")).getByRole("menuitemradio", {
+          name: "양쪽 방향 모두",
+        }),
+      );
+      expect(screen.getByRole("button", { name: "과일 카드 모양, 양쪽 방향" })).toBeInTheDocument();
+      await userEvent.click(screen.getByRole("button", { name: "카드 2장 추가" }));
+      await waitFor(() => {
+        expect(db.rows.cards).toHaveLength(2);
+      });
+      // One card word to meaning, the other meaning to word.
+      expect(
+        db.rows.cards.map((row) => [firstBlock(row.front).type, firstBlock(row.back).type]).sort(),
+      ).toEqual([
+        ["senses", "text"],
+        ["text", "senses"],
+      ]);
+    });
+    it("shows the first sense alone without its part of speech, with the pronunciation and extras, as the menu sets", async () => {
+      answer(words);
+      await choose(1);
+      await screen.findByRole("heading", { name: "단어를 찾았어요" });
+      for (const setting of ["첫 뜻만", "라벨 표시", "발음 표시", "유의어 등 표시"])
+        await userEvent.click(
+          within(await openMenu("과일", "앞면에 단어")).getByRole("menuitemcheckbox", {
+            name: setting,
+          }),
+        );
+      const row = screen.getByRole("button", { name: /편집$/u });
+      expect(row).toHaveAccessibleName("apple\nˈæpəl 편집");
+      expect(row).not.toHaveTextContent("사과나무");
+      expect(row).not.toHaveTextContent("[명]");
+      expect(row).toHaveTextContent("유의어 pome");
+      await userEvent.click(screen.getByRole("button", { name: "카드 1장 추가" }));
+      await waitFor(() => {
+        expect(db.rows.cards).toHaveLength(1);
+      });
+      expect(db.rows.cards[0]?.front).toEqual([
+        expect.objectContaining({ type: "text", payload: { text: "apple\nˈæpəl" } }),
+      ]);
+      expect(db.rows.cards[0]?.back).toEqual([
+        expect.objectContaining({
+          type: "senses",
+          payload: { senses: [{ labels: [], meaning: "사과", examples: [] }] },
+        }),
+        expect.objectContaining({ type: "text", payload: { text: "유의어 pome" } }),
+      ]);
+    });
+    it("swaps a note section's sides, and leaves a section out and puts it back from its menu", async () => {
+      answer({ status: 200, body: { cards: [card, { ...card, front: "인구", answer: "많음" }] } });
+      await choose(1);
+      await screen.findByRole("heading", { name: "카드 2장을 만들었어요" });
+      const menu = await openMenu("도시", "앞면에 질문");
+      expect(items(menu).map((item) => item.textContent)).toEqual([
+        "앞면과 뒷면 바꾸기",
+        "이 묶음 빼기",
+      ]);
+      await userEvent.click(
+        within(menu).getByRole("menuitemcheckbox", { name: "앞면과 뒷면 바꾸기" }),
+      );
+      expect(screen.getByRole("button", { name: "서울 편집" })).toBeInTheDocument();
+      await userEvent.click(
+        within(await openMenu("도시", "앞면에 답")).getByRole("menuitem", { name: "이 묶음 빼기" }),
+      );
+      expect(screen.getAllByRole("checkbox", { checked: false })).toHaveLength(2);
+      expect(screen.getByRole("button", { name: "카드 0장 추가" })).toBeDisabled();
+      await userEvent.click(
+        within(await openMenu("도시", "앞면에 답")).getByRole("menuitem", { name: "이 묶음 넣기" }),
+      );
+      expect(screen.getAllByRole("checkbox", { checked: true })).toHaveLength(2);
+      await userEvent.click(screen.getByRole("button", { name: "카드 2장 추가" }));
+      await waitFor(() => {
+        expect(db.rows.cards).toHaveLength(2);
+      });
+      expect(db.rows.cards.map((row) => firstBlock(row.front).text).sort()).toEqual([
+        "많음",
+        "서울",
+      ]);
+    });
+    it("closes the menu on Escape alone, returning focus to its button, and keeps the sheet open", async () => {
+      answer(words);
+      await choose(1);
+      await screen.findByRole("heading", { name: "단어를 찾았어요" });
+      const menu = await openMenu("과일", "앞면에 단어");
+      expect(within(menu).getByRole("menuitemradio", { name: "앞면에 단어" })).toHaveFocus();
+      await userEvent.keyboard("{ArrowDown}");
+      expect(within(menu).getByRole("menuitemradio", { name: "앞면에 뜻" })).toHaveFocus();
+      await userEvent.keyboard("{Escape}");
+      expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "과일 카드 모양, 앞면에 단어" })).toHaveFocus();
+      expect(screen.getByRole("heading", { name: "단어를 찾았어요" })).toBeInTheDocument();
+    });
+    it("heads identify cards as 판별 apart from the page's own, left out until checked", async () => {
+      answer({ status: 200, body: { cards: [card, identify] } });
+      await choose(1);
+      await screen.findByRole("heading", { name: "카드 2장을 만들었어요" });
+      expect(screen.getByRole("heading", { name: "도시 1" })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "판별 · 도시 1" })).toBeInTheDocument();
+      expect(screen.getByRole("checkbox", { name: "수도는? 선택" })).not.toBeChecked();
+      expect(screen.getByRole("checkbox", { name: "수도 선택" })).toBeChecked();
+      expect(screen.getByRole("button", { name: "카드 1장 추가" })).toBeInTheDocument();
+    });
+    it("remembers each section's form for the deck it saved into, and takes it when that deck is chosen", async () => {
+      answer(words);
+      await choose(1);
+      await screen.findByRole("heading", { name: "단어를 찾았어요" });
+      await userEvent.click(
+        within(await openMenu("과일", "앞면에 단어")).getByRole("menuitemradio", {
+          name: "앞면에 뜻",
+        }),
+      );
+      await userEvent.click(screen.getByRole("button", { name: "카드 1장 추가" }));
+      await waitFor(() => {
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      });
+      cleanup();
+      answer(words);
+      await choose(1, "list");
+      await screen.findByRole("heading", { name: "단어를 찾았어요" });
+      // A new deck has no remembered form; choosing the deck takes its own.
+      expect(
+        screen.getByRole("button", { name: "과일 카드 모양, 앞면에 단어" }),
+      ).toBeInTheDocument();
+      await userEvent.click(screen.getByRole("button", { name: "새 덱" }));
+      await userEvent.click(screen.getByRole("radio", { name: "단어장" }));
+      expect(screen.getByRole("button", { name: "과일 카드 모양, 앞면에 뜻" })).toBeInTheDocument();
+    });
+    it("collapses and expands each photo's group from its header, leaving the other photos' rows", async () => {
+      answer(read, { status: 200, body: { cards: [{ ...card, front: "강", answer: "한강" }] } });
+      await choose(2);
+      const first = await screen.findByRole("button", { name: "사진 1, 카드 1장" });
+      const second = screen.getByRole("button", { name: "사진 2, 카드 1장" });
+      expect(first).toHaveAttribute("aria-expanded", "true");
+      expect(screen.getByRole("checkbox", { name: "수도 선택" })).toBeInTheDocument();
+      await userEvent.click(first);
+      expect(first).toHaveAttribute("aria-expanded", "false");
+      expect(screen.queryByRole("checkbox", { name: "수도 선택" })).not.toBeInTheDocument();
+      expect(second).toHaveAttribute("aria-expanded", "true");
+      expect(screen.getByRole("checkbox", { name: "강 선택" })).toBeInTheDocument();
+      // A collapsed group's cards are still saved.
+      expect(screen.getByRole("button", { name: "카드 2장 추가" })).toBeInTheDocument();
+      await userEvent.click(first);
+      expect(first).toHaveAttribute("aria-expanded", "true");
+      expect(screen.getByRole("checkbox", { name: "수도 선택" })).toBeInTheDocument();
+    });
+    it("states the deck the cards go into, chooses another from its name, and names a new deck on saving", async () => {
+      answer(read);
+      await choose(1, "list");
+      await screen.findByRole("heading", { name: "카드 1장을 만들었어요" });
+      expect(screen.getByText(/에 추가돼요$/u)).toHaveTextContent(/^새 덱에 추가돼요$/u);
+      await userEvent.click(screen.getByRole("button", { name: "새 덱" }));
+      const chooser = screen.getByRole("radiogroup", { name: "추가할 덱" });
+      expect(within(chooser).getByRole("radio", { name: "새 덱" })).toBeChecked();
+      await userEvent.click(within(chooser).getByRole("radio", { name: "단어장" }));
+      expect(screen.queryByRole("radiogroup")).not.toBeInTheDocument();
+      expect(screen.getByText(/에 추가돼요$/u)).toHaveTextContent(/^덱 '단어장'에 추가돼요$/u);
+      await userEvent.click(screen.getByRole("button", { name: "단어장" }));
+      await userEvent.click(screen.getByRole("radio", { name: "새 덱" }));
+      await userEvent.click(screen.getByRole("button", { name: "카드 1장 추가" }));
+      expect(screen.getByRole("heading", { name: "새 덱" })).toBeInTheDocument();
+      expect(db.rows.decks).toHaveLength(1);
+      await userEvent.type(screen.getByRole("textbox", { name: "이름" }), "도시들");
+      await userEvent.click(screen.getByRole("button", { name: "만들기" }));
+      await waitFor(() => {
+        expect(db.rows.cards).toHaveLength(1);
+      });
+      const made = db.rows.decks.find((row) => row.name === "도시들");
+      expect(made).toBeDefined();
+      expect(db.rows.cards[0]?.deck_id).toBe(made?.id);
+    });
   });
 });

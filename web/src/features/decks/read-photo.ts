@@ -14,6 +14,12 @@ export type Extraction = { cards: Candidate[] } | { failure: PhotoFailure };
 const maxUploadBytes = 3 * 1024 * 1024;
 
 /**
+ * How long a request waits for the function: past its worst case, a retry started by 75 s that
+ * times out at 60 s, about 135 s (ADR 0130), and under the Edge Function's 150 s wall clock.
+ */
+const extractionTimeoutMs = 145_000;
+
+/**
  * Calls the existing extraction function as the verified user, without a browser CORS request,
  * and logs one line per photo with the function's status and latency, never the image or token.
  */
@@ -56,7 +62,7 @@ export async function readPhoto(form: FormData): Promise<Extraction> {
             "Content-Type": "application/json",
           },
           body,
-          signal: AbortSignal.timeout(90_000),
+          signal: AbortSignal.timeout(extractionTimeoutMs),
         },
       );
       status = response.status;

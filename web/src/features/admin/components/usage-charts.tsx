@@ -5,7 +5,7 @@ import { Bar, BarChart, CartesianGrid, ComposedChart, Line, XAxis, YAxis } from 
 
 import type { Amount, Stack } from "../usage";
 
-const axis = { stroke: "var(--color-muted)", fontSize: 13 } as const;
+const axis = { stroke: "var(--color-muted)", fontSize: 12 } as const;
 const shortDay = (day: string) => day.slice(5);
 
 /**
@@ -20,7 +20,7 @@ export function DailyUsageChart({
   summary: string;
 }) {
   return (
-    <div role="img" aria-label={summary} className="h-60 w-full rounded-group bg-surface p-3">
+    <div role="img" aria-label={summary} className="h-60 w-full">
       <ComposedChart
         data={days}
         responsive
@@ -95,7 +95,7 @@ export function StackedCostChart({ stack, summary }: { stack: Stack; summary: st
   }));
   return (
     <div className="flex flex-col gap-2">
-      <div role="img" aria-label={summary} className="h-60 w-full rounded-group bg-surface p-3">
+      <div role="img" aria-label={summary} className="h-60 w-full">
         <BarChart
           data={data}
           responsive

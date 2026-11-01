@@ -106,10 +106,6 @@ export class FakeAdmin {
   };
   /** The rows `admin_extraction_breakdown` answers: each UTC day's photos by plan, model and version. */
   breakdown: Row[] = [];
-  /** The rows `admin_extraction_calls` pages through, newest first, as the server orders them. */
-  extractionCalls: Row[] = [];
-  /** The rows `admin_extraction_failures` answers: each UTC day's counts by prompt version. */
-  extractionFailures: Row[] = [];
   /**
    * The plan versions, oldest first: each plan's settings before versions, and the owner's terms
    * after them, as the migration makes them of the seed. A plan's current version is its latest
@@ -206,15 +202,6 @@ export class FakeAdmin {
         return [this.overview];
       case "admin_extraction_breakdown":
         return this.breakdown;
-      case "admin_extraction_calls": {
-        const before = typeof args.before === "number" ? args.before : null;
-        const size = Math.min(Math.max(Number(args.page_size ?? 100), 1), 500);
-        return this.extractionCalls
-          .filter((call) => before === null || Number(call.usage_id) < before)
-          .slice(0, size);
-      }
-      case "admin_extraction_failures":
-        return this.extractionFailures;
       case "admin_reported_decks":
         return this.decks
           .filter((deck) => deck.reports.length > 0)
