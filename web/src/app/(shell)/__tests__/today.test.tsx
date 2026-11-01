@@ -570,7 +570,7 @@ describe("the 오늘 and 덱 pages", () => {
     expect(within(card()).getByText("목표 1장 달성")).toBeInTheDocument();
     expect(within(card()).getAllByText("1일 연속")).toHaveLength(1);
     // The happy mascot with no z's beside it, the goal's chip its words, and the streak's chip
-    // its flame, the one icon a chip keeps (ADR 0116, ADR 0140).
+    // its flame, the one icon a chip keeps (ADR 0116, ADR 0141).
     expect(card().querySelector('img[src*="knowno-happy"]')).not.toBeNull();
     expect(card().textContent).not.toMatch(/z/);
     expect(within(card()).getByText("목표 1장 달성").querySelector("svg")).toBeNull();
@@ -870,7 +870,7 @@ describe("the 오늘 and 덱 pages", () => {
     expect(
       screen.queryByRole("heading", { name: "오늘 할 카드를 다 했어요" }),
     ).not.toBeInTheDocument();
-    // The happy mascot, glad of the deck just made (ADR 0140).
+    // The happy mascot, glad of the deck just made (ADR 0141).
     expect(document.querySelector('img[src*="knowno-happy"]')).not.toBeNull();
     // The web adds no card, so it offers no action.
     expect(screen.queryByRole("link")).not.toBeInTheDocument();

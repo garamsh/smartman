@@ -189,7 +189,7 @@ describe("the deck page", () => {
     const empty = screen.getByRole("region", { name: "아직 카드가 없어요" });
     expect(empty).toHaveTextContent("카드를 추가해 시작해 보세요.");
     expect(screen.queryByRole("searchbox", { name: "카드 검색" })).not.toBeInTheDocument();
-    // The sleepy mascot over the words (ADR 0140).
+    // The sleepy mascot over the words (ADR 0141).
     expect(empty.querySelector('img[src*="knowno-sleepy"]')).not.toBeNull();
     // Control: a deck with cards lists them instead, with no mascot.
     cleanup();

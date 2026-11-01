@@ -44,7 +44,7 @@ export function BrandMark({
   );
 }
 
-/** The moods of the mascot, each the same drawing (ADR 0140). */
+/** The moods of the mascot, each the same drawing (ADR 0141). */
 export type MascotExpression = "thinking" | "happy" | "sad" | "sleepy";
 
 /** The mascot in its [expression], on no ground of its own, sized by [className], decorative. */

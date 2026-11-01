@@ -462,7 +462,7 @@ describe("the study page", () => {
       // This morning's 모른다 and the session's three 안다; 90 s and the session's time, rounded
       // up; yesterday and today in a row.
       expect(completionLine()).toBe("3 안다1 모른다2분연속 2일");
-      // The happy mascot (ADR 0140), and the flame its one icon (ADR 0116).
+      // The happy mascot (ADR 0141), and the flame its one icon (ADR 0116).
       expect(completion.querySelector('img[src*="knowno-happy"]')).not.toBeNull();
       expect(
         [...completion.querySelectorAll("svg")].map((icon) => icon.getAttribute("class")),

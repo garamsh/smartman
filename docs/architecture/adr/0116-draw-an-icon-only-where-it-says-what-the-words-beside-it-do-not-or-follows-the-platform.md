@@ -1,6 +1,6 @@
 # ADR 0116: Draw an icon only where it says what the words beside it do not, or follows the platform
 
-> Status: accepted; its list of the places the mascot appears superseded by ADR-0140
+> Status: accepted; its list of the places the mascot appears superseded by ADR-0141
 > Date: 2026-10-27
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.

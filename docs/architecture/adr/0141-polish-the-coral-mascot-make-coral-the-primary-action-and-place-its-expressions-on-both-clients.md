@@ -1,4 +1,4 @@
-# ADR 0140: Polish the coral mascot, make coral the primary action, and place its expressions on both clients
+# ADR 0141: Polish the coral mascot, make coral the primary action, and place its expressions on both clients
 
 > Status: accepted
 > Date: 2026-11-02

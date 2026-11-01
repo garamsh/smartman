@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'theme.dart';
 
-/// The moods of the mascot, each the same drawing (ADR 0140).
+/// The moods of the mascot, each the same drawing (ADR 0141).
 enum MascotExpression {
   /// Looking up, a hand at its chin: the mark itself, and a photo being read.
   thinking,
