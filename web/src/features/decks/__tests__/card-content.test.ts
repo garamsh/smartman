@@ -299,7 +299,7 @@ describe("an image block", () => {
     image({ media: "m1", width: 4, height: 3, boxes: [fields] });
   const whole = { id: "1", x: 0.1, y: 0.2, w: 0.3, h: 0.4 };
 
-  it("reads its photo, size and boxes in fractions of the image, past fields it does not know", () => {
+  it("reads its photo, size and boxes in fractions of the image, keeping fields it does not know", () => {
     expect(
       parseContent([
         image({
@@ -320,9 +320,10 @@ describe("an image block", () => {
         width: 1200,
         height: 800,
         boxes: [
-          { ...whole, answer: "Paris" },
+          { ...whole, answer: "Paris", rest: { shape: "oval" } },
           { id: "2", x: 0.5, y: 0.5, w: 0.5, h: 0.5, answer: null },
         ],
+        rest: { crop: { x: 0 } },
       },
     ]);
   });
@@ -366,9 +367,9 @@ describe("an image block", () => {
 describe("an audio block", () => {
   const audio = (payload: Record<string, unknown>) => ({ type: "audio", payload });
 
-  it("reads its media id and length in milliseconds, past fields it does not know", () => {
+  it("reads its media id and length in milliseconds, keeping fields it does not know", () => {
     expect(parseContent([audio({ media: "m1", duration_ms: 2400, waveform: [1, 2] })])).toEqual([
-      { kind: "audio", media: "m1", durationMs: 2400 },
+      { kind: "audio", media: "m1", durationMs: 2400, rest: { waveform: [1, 2] } },
     ]);
   });
 

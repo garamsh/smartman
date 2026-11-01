@@ -7,10 +7,10 @@
  * intrinsic size and the boxes over it (ADR 0109); or a sound by its media id, with how long it
  * plays in milliseconds (ADR 0112). A block of another type, or of a known
  * type at a version above the one this build reads, is shown as a placeholder naming it, so a
- * card a later version wrote is shown, not lost. Authoring inserts new cards, and a merged back
- * is appended after a stored card's blocks, which stay as read.
+ * card a later version wrote is shown, not lost. A block keeps the id it was stored with, and a
+ * photo or a sound the payload fields this build does not know, so a save writes them back.
  */
-export type Content =
+export type Content = (
   | { kind: "text"; text: string }
   | { kind: "cloze"; text: string; answers: string[] }
   | {
@@ -21,9 +21,20 @@ export type Content =
       spans: CellSpan[];
     }
   | { kind: "senses"; senses: Sense[] }
-  | { kind: "image"; media: string; width: number; height: number; boxes: ImageBox[] }
-  | { kind: "audio"; media: string; durationMs: number }
-  | { kind: "unsupported"; type: string };
+  | {
+      kind: "image";
+      media: string;
+      width: number;
+      height: number;
+      boxes: ImageBox[];
+      rest?: Rest;
+    }
+  | { kind: "audio"; media: string; durationMs: number; rest?: Rest }
+  | { kind: "unsupported"; type: string }
+) & { id?: string };
+
+/** The fields of a stored photo, box or sound this build does not know. */
+export type Rest = Record<string, unknown>;
 
 /**
  * A box over a photo, a blank to recall: its left, top, width and height as fractions, from 0
@@ -38,6 +49,7 @@ export type ImageBox = {
   w: number;
   h: number;
   answer: string | null;
+  rest?: Rest;
 };
 
 /** Each part of speech a sense's label may name, with the short form every card shows it as. */
@@ -146,6 +158,17 @@ export function upcastPayload(
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+/** The fields of [payload] but [known], as a property to spread, absent when there are none. */
+function restOf(payload: Record<string, unknown>, known: string[]): { rest?: Rest } {
+  const rest = Object.entries(payload).filter(([key]) => !known.includes(key));
+  return rest.length > 0 ? { rest: Object.fromEntries(rest) } : {};
+}
+
+/** [id] as a property to spread, absent when there is none. */
+function idOf(id: unknown): { id?: string } {
+  return typeof id === "string" ? { id } : {};
 }
 
 function isStrings(value: unknown): value is string[] {
@@ -271,7 +294,7 @@ function parseBox(value: unknown): ImageBox | null {
   if (x < 0 || y < 0 || w <= 0 || h <= 0) return null;
   if (x + w > 1 + boxTolerance || y + h > 1 + boxTolerance) return null;
   if (answer !== null && typeof answer !== "string") return null;
-  return { id, x, y, w, h, answer };
+  return { id, x, y, w, h, answer, ...restOf(value, ["id", "x", "y", "w", "h", "answer"]) };
 }
 
 /**
@@ -294,6 +317,7 @@ function parseImage(payload: Record<string, unknown>): Content | null {
     width: width as number,
     height: height as number,
     boxes: parsed as ImageBox[],
+    ...restOf(payload, ["media", "width", "height", "boxes"]),
   };
 }
 
@@ -302,16 +326,36 @@ function parseAudio(payload: Record<string, unknown>): Content | null {
   const { media, duration_ms: durationMs } = payload;
   if (typeof media !== "string" || media === "") return null;
   if (!Number.isInteger(durationMs) || (durationMs as number) <= 0) return null;
-  return { kind: "audio", media, durationMs: durationMs as number };
+  return {
+    kind: "audio",
+    media,
+    durationMs: durationMs as number,
+    ...restOf(payload, ["media", "duration_ms"]),
+  };
 }
 
 /**
- * The blocks of a stored card side, or null when [value] is not an array of blocks each with
- * a string `type`, a `v` that is a positive integer when present, an `id` that is text when
- * present, and a payload of its type's shape for a text, cloze, table or senses block at the
- * version this build reads, an older one upgraded first.
+ * The blocks of a stored card side without their ids, or null as [parseStoredBlocks] says.
  */
 export function parseContent(value: unknown): Content[] | null {
+  const blocks = parseStoredBlocks(value);
+  return (
+    blocks &&
+    blocks.map((block) => {
+      const read = { ...block };
+      delete read.id;
+      return read;
+    })
+  );
+}
+
+/**
+ * The blocks of a stored card side, each with the id it was stored with, or null when [value] is
+ * not an array of blocks each with a string `type`, a `v` that is a positive integer when present,
+ * an `id` that is text when present, and a payload of its type's shape for a text, cloze, table or
+ * senses block at the version this build reads, an older one upgraded first.
+ */
+function parseStoredBlocks(value: unknown): Content[] | null {
   if (!Array.isArray(value)) return null;
   const blocks: Content[] = [];
   for (const block of value as unknown[]) {
@@ -323,7 +367,7 @@ export function parseContent(value: unknown): Content[] | null {
     if (!Number.isInteger(version) || (version as number) < 1) return null;
     if (id !== undefined && typeof id !== "string") return null;
     if (!isKnownType(type) || (version as number) > blockVersion(type)) {
-      blocks.push({ kind: "unsupported", type });
+      blocks.push({ kind: "unsupported", type, ...idOf(id) });
       continue;
     }
     const payload = upcastPayload(
@@ -347,7 +391,7 @@ export function parseContent(value: unknown): Content[] | null {
                 ? parseImage(payload)
                 : parseAudio(payload);
     if (!parsed) return null;
-    blocks.push(parsed);
+    blocks.push({ ...parsed, ...idOf(id) });
   }
   return blocks;
 }
@@ -516,11 +560,12 @@ export type WordAsk = "term" | "meaning";
  * One 칸 of a card, whose type decides whether it has sides (ADR 0137): a 글, its front shown
  * before the reveal and its back added by it, either empty; a 단어, its word and meanings, [ask]
  * naming the one shown first; a 칸 whose blanks are the question and whose filling is the answer;
- * a 사진 without a box or a 소리 on one side; or a 칸 this build does not know, kept as read.
+ * a 사진 without a box or a 소리 on one side; or a 칸 this build does not know, kept as read. A 글
+ * or a 단어 keeps its stored block's [id], as every other 칸's block does.
  */
 export type Cell =
-  | { kind: "text"; front: string; back: string }
-  | { kind: "word"; term: string; senses: Sense[]; ask: WordAsk }
+  | { kind: "text"; front: string; back: string; id?: string }
+  | { kind: "word"; term: string; senses: Sense[]; ask: WordAsk; id?: string }
   | { kind: "blank"; block: Content }
   | { kind: "placed"; block: Content; side: CellSide }
   | { kind: "unknown"; block: Content };
@@ -541,9 +586,9 @@ export const frameVersions = new Map([
 function frontCell(block: Content): Cell {
   switch (block.kind) {
     case "text":
-      return { kind: "text", front: block.text, back: "" };
+      return { kind: "text", front: block.text, back: "", ...idOf(block.id) };
     case "senses":
-      return { kind: "word", term: "", senses: block.senses, ask: "meaning" };
+      return { kind: "word", term: "", senses: block.senses, ask: "meaning", ...idOf(block.id) };
     case "cloze":
     case "table":
       return { kind: "blank", block };
@@ -556,23 +601,24 @@ function frontCell(block: Content): Cell {
   }
 }
 
-function parseTextCell(payload: Record<string, unknown>): Cell | null {
+function parseTextCell(payload: Record<string, unknown>, id: unknown): Cell | null {
   const { front, back } = payload;
   if (typeof front !== "string" || typeof back !== "string") return null;
-  return front.trim() === "" && back.trim() === "" ? null : { kind: "text", front, back };
+  if (front.trim() === "" && back.trim() === "") return null;
+  return { kind: "text", front, back, ...idOf(id) };
 }
 
-function parseWordCell(payload: Record<string, unknown>): Cell | null {
+function parseWordCell(payload: Record<string, unknown>, id: unknown): Cell | null {
   const { term, ask } = payload;
   const read = parseSenses(payload);
   if (typeof term !== "string" || !read || (ask !== "term" && ask !== "meaning")) return null;
-  return { kind: "word", term, senses: read.senses, ask };
+  return { kind: "word", term, senses: read.senses, ask, ...idOf(id) };
 }
 
 /** A v2 image or audio block: a 사진 holds `side` exactly while it holds no box, a 소리 always. */
-function parsePlacedCell(type: string, payload: Record<string, unknown>): Cell | null {
+function parsePlacedCell(type: string, payload: Record<string, unknown>, id: unknown): Cell | null {
   const { side, ...rest } = payload;
-  const block = parseContent([{ type, payload: rest }])?.[0];
+  const block = parseStoredBlocks([{ type, ...idOf(id), payload: rest }])?.[0];
   if (!block) return null;
   if (hasBlank(block)) return side === undefined || side === null ? { kind: "blank", block } : null;
   return side === "front" || side === "back" ? { kind: "placed", block, side } : null;
@@ -588,11 +634,11 @@ function parseCell(block: unknown): Cell | null {
     isRecord(payload)
   ) {
     if (id !== undefined && id !== null && typeof id !== "string") return null;
-    if (type === "text") return parseTextCell(payload);
-    if (type === "senses") return parseWordCell(payload);
-    return parsePlacedCell(type, payload);
+    if (type === "text") return parseTextCell(payload, id);
+    if (type === "senses") return parseWordCell(payload, id);
+    return parsePlacedCell(type, payload, id);
   }
-  const read = parseContent([block])?.[0];
+  const read = parseStoredBlocks([block])?.[0];
   return read ? frontCell(read) : null;
 }
 
@@ -627,21 +673,21 @@ function isDerived(front: Content[], back: Content[]): boolean {
   );
 }
 
-function addBackText(cells: Cell[], text: string): void {
+function addBackText(cells: Cell[], text: string, id: string | undefined): void {
   const index = cells.findIndex(
     (cell) => cell.kind === "text" && cell.front !== "" && cell.back === "",
   );
   const cell = cells[index];
   if (cell?.kind === "text") cells[index] = { ...cell, back: text };
-  else cells.push({ kind: "text", front: "", back: text });
+  else cells.push({ kind: "text", front: "", back: text, ...idOf(id) });
 }
 
-function addBackSenses(cells: Cell[], senses: Sense[]): void {
+function addBackSenses(cells: Cell[], senses: Sense[], id: string | undefined): void {
   const [only] = cells;
   if (cells.length === 1 && only?.kind === "text" && only.back === "") {
-    cells[0] = { kind: "word", term: only.front, senses, ask: "term" };
+    cells[0] = { kind: "word", term: only.front, senses, ask: "term", ...idOf(only.id) };
   } else {
-    cells.push({ kind: "word", term: "", senses, ask: "term" });
+    cells.push({ kind: "word", term: "", senses, ask: "term", ...idOf(id) });
   }
 }
 
@@ -661,16 +707,16 @@ function placedOnBack(image: Extract<Content, { kind: "image" }>): Cell[] {
 function addBack(cells: Cell[], block: Content, frontBlank: boolean): void {
   switch (block.kind) {
     case "text":
-      addBackText(cells, block.text);
+      addBackText(cells, block.text, block.id);
       break;
     case "senses":
-      addBackSenses(cells, block.senses);
+      addBackSenses(cells, block.senses, block.id);
       break;
     case "cloze":
     case "table":
       cells.push(
         frontBlank
-          ? { kind: "text", front: "", back: describeContent([block]) }
+          ? { kind: "text", front: "", back: describeContent([block]), ...idOf(block.id) }
           : { kind: "blank", block },
       );
       break;
@@ -809,8 +855,11 @@ export function isEarlier(template: unknown, version: unknown): boolean {
   return earlierTemplates.has(template) && (typeof version !== "number" || version <= 1);
 }
 
-/** A stored card's content: its 칸 and the two sides they read as. */
-export type CardContent = { cells: Cell[]; front: Content[]; back: Content[] };
+/**
+ * A stored card's content: its 칸 and the two sides they read as; [readOnly] when this build cannot
+ * edit it, a card of a later template or holding a block this build does not know (ADR 0106).
+ */
+export type CardContent = { cells: Cell[]; front: Content[]; back: Content[]; readOnly?: true };
 
 /**
  * A stored card as its 칸, or null when it does not parse: a `free` v2 card's list; an earlier
@@ -825,13 +874,17 @@ export function parseCardContent(stored: {
 }): CardContent | null {
   if (isFramed(stored.template, stored.templateVersion)) {
     const cells = parseCells(stored.front);
-    return cells && { cells, ...sidesOf(cells) };
+    if (!cells) return null;
+    const read = { cells, ...sidesOf(cells) };
+    return cells.some(({ kind }) => kind === "unknown") ? { ...read, readOnly: true } : read;
   }
-  const front = parseContent(stored.front);
-  const back = parseContent(stored.back);
+  const front = parseStoredBlocks(stored.front);
+  const back = parseStoredBlocks(stored.back);
   if (!front || !back) return null;
   const cells = isEarlier(stored.template, stored.templateVersion)
     ? cellsFromSides(front, back)
     : null;
-  return cells ? { cells, ...sidesOf(cells) } : { cells: cellsToDraw(front, back), front, back };
+  return cells
+    ? { cells, ...sidesOf(cells) }
+    : { cells: cellsToDraw(front, back), front, back, readOnly: true };
 }
