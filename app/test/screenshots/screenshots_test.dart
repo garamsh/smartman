@@ -47,6 +47,16 @@ import '../word_breaks.dart';
 /// run in `app/`, writes them to `app/build/screenshots/<theme>/`.
 const _capture = bool.fromEnvironment('SCREENSHOTS');
 
+/// Hands out [file] as the file picked.
+final class _FileToPick implements SpreadsheetPick {
+  _FileToPick(this.file);
+
+  OpenedFile file;
+
+  @override
+  Future<OpenedFile?> pick() async => file;
+}
+
 const _ada = UserId('00000000-0000-4000-8000-00000000000a');
 
 /// A phone's screen: 390 × 844 logical pixels at twice the density.
@@ -1701,6 +1711,100 @@ void main() {
       photos.cameraFailure = const PhotoAccessDenied('denied');
       await tap(tester, find.text(ko.retake));
       await shot(tester, '25-photo-refused');
+
+      await unmount(tester);
+      semantics.dispose();
+    });
+
+    testWidgets('spreadsheet import in $mode', skip: !_capture, (tester) async {
+      final semantics = tester.ensureSemantics();
+      phone(tester);
+      final db = AppDatabase(NativeDatabase.memory());
+      addTearDown(db.close);
+      var ids = 0;
+      final repository = DeckRepository(
+        db,
+        clock: DateTime.now,
+        newId: () => 'id${ids++}',
+      );
+      await tester.runAsync(() async {
+        await repository.createDeck('영단어 기본');
+        await repository.createDeck('일본어 N3 한자');
+      });
+      final long = '가' * 501;
+      final pick = _FileToPick(
+        parseSpreadsheet(
+          '토익 필수 단어.csv',
+          utf8.encode(
+            '단어,뜻,품사,예문\n'
+            'lucid,명쾌한,형,"a lucid explanation"\n'
+            'candid,솔직한,형,"a candid answer"\n'
+            ',앞면이 빈 행,,\n'
+            'mitigate,완화하다,동,"mitigate the risk\nmitigate a loss"\n'
+            'Lucid,맑은,형,\n'
+            'ephemeral,$long,형,\n'
+            'tenacious,끈질긴,형,\n'
+            'prudent,신중한,형,\n'
+            'scrutiny,면밀한 조사,명,\n',
+          ),
+        ),
+      );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            deckRepositoryProvider.overrideWithValue(repository),
+            spreadsheetPickProvider.overrideWithValue(pick),
+          ],
+          child: MaterialApp(
+            theme: lightTheme,
+            darkTheme: darkTheme,
+            themeMode: ThemeMode.values.byName(mode),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Builder(
+              builder: (context) => Scaffold(
+                body: Center(
+                  child: TextButton(
+                    onPressed: () => importFromSpreadsheet(context, null),
+                    child: const Text('open'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tap(tester, find.text('open'));
+      await shot(tester, '34-spreadsheet-start');
+
+      final picked = pick.file;
+      pick.file = const RefusedFile(SpreadsheetRefusal.notUtf8);
+      await tap(tester, find.text(ko.spreadsheetChoose));
+      await shot(tester, '34a-spreadsheet-refused');
+
+      pick.file = picked;
+      await tap(tester, find.text(ko.spreadsheetChoose));
+      await shot(tester, '35-spreadsheet-columns');
+
+      await tap(tester, find.text(ko.spreadsheetLabelColumn));
+      await shot(tester, '35a-spreadsheet-column-sheet');
+      await tap(tester, find.text('C · 품사').last);
+      await tap(tester, find.text(ko.spreadsheetExampleColumn));
+      await tap(tester, find.text('D · 예문').last);
+
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -420));
+      await tester.pumpAndSettle();
+      await shot(tester, '36-spreadsheet-review');
+
+      await tester.tap(find.text(ko.importAdd(7)));
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 50)),
+      );
+      await tester.pumpAndSettle();
+      await shot(tester, '36a-spreadsheet-duplicate');
+
+      await tap(tester, find.byTooltip(ko.close));
+      await shot(tester, '36b-spreadsheet-discard');
 
       await unmount(tester);
       semantics.dispose();

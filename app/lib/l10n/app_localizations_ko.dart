@@ -1756,4 +1756,124 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get keepWriting => '계속 쓰기';
+
+  @override
+  String get spreadsheetPick => '파일에서 고르기';
+
+  @override
+  String get spreadsheetPickBody => '엑셀이나 CSV 파일의 행을 카드로 만들어요';
+
+  @override
+  String get spreadsheetStartTitle => '파일에서 카드 추가';
+
+  @override
+  String get spreadsheetStartBody =>
+      '엑셀(.xlsx)이나 CSV 파일의 한 행이 카드 한 장이 돼요. 파일은 5MB, 1,000행까지 읽어요.';
+
+  @override
+  String get spreadsheetChoose => '파일 고르기';
+
+  @override
+  String get spreadsheetReading => '읽는 중';
+
+  @override
+  String get spreadsheetAnother => '다른 파일';
+
+  @override
+  String get spreadsheetReviewTitle => '카드 확인';
+
+  @override
+  String get spreadsheetColumns => '열';
+
+  @override
+  String get spreadsheetSheet => '시트';
+
+  @override
+  String get spreadsheetLabelColumn => '라벨';
+
+  @override
+  String get spreadsheetExampleColumn => '예문';
+
+  @override
+  String get spreadsheetNoColumn => '없음';
+
+  @override
+  String get spreadsheetHeaderRow => '첫 행은 머리글';
+
+  @override
+  String get spreadsheetDistinct => '항목마다 다른 열을 골라 주세요';
+
+  @override
+  String get spreadsheetExcludeAll => '모두 빼기';
+
+  @override
+  String get spreadsheetSelectAll => '모두 선택';
+
+  @override
+  String spreadsheetRow(int row) {
+    return '$row행';
+  }
+
+  @override
+  String spreadsheetRowCard(int row, String front) {
+    return '$row행 $front';
+  }
+
+  @override
+  String spreadsheetSkipped(int count) {
+    return '앞면이나 뒷면이 빈 행 $count개는 건너뛰어요';
+  }
+
+  @override
+  String spreadsheetTooLong(String rows, int limit) {
+    return '$rows은 $limit자가 넘는 칸이 있어 뺐어요';
+  }
+
+  @override
+  String spreadsheetRowsMore(String rows, int count) {
+    return '$rows 외 $count개 행';
+  }
+
+  @override
+  String spreadsheetDuplicateStored(int row) {
+    return '$row행은 이 덱에 이미 있는 카드예요';
+  }
+
+  @override
+  String spreadsheetDuplicateRow(int row, int earlier) {
+    return '$row행의 앞면이 $earlier행과 같아요';
+  }
+
+  @override
+  String spreadsheetLeaveOut(int row) {
+    return '$row행 빼기';
+  }
+
+  @override
+  String get spreadsheetAddAnyway => '그래도 추가';
+
+  @override
+  String get spreadsheetDiscardTitle => '읽은 카드를 버릴까요?';
+
+  @override
+  String get spreadsheetDiscardBody => '저장하지 않은 카드는 사라져요.';
+
+  @override
+  String get spreadsheetWrongType => '.xlsx나 .csv 파일을 골라 주세요';
+
+  @override
+  String get spreadsheetTooLarge => '파일이 5MB보다 커서 읽지 못했어요. 파일을 나눠 다시 골라 주세요.';
+
+  @override
+  String get spreadsheetNotUtf8 => 'CSV를 읽지 못했어요. UTF-8 CSV로 저장해 다시 골라 주세요.';
+
+  @override
+  String get spreadsheetUnreadable => '파일을 읽지 못했어요. 엑셀에서 다시 저장해 골라 주세요.';
+
+  @override
+  String get spreadsheetTooManyRows =>
+      '행이 1,000개보다 많아 읽지 못했어요. 파일을 나눠 다시 골라 주세요.';
+
+  @override
+  String get spreadsheetNotRead => '파일을 읽지 못했어요. 다시 골라 주세요.';
 }
