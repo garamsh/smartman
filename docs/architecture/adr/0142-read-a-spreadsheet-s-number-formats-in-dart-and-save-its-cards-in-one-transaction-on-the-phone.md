@@ -8,11 +8,12 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 ## Context
 
 - **Issue #495** builds [ADR 0125](0125-add-cards-from-an-xlsx-or-csv-file-by-choosing-columns-and-reviewing-before-save.md)'s spreadsheet import on the phone. ADR 0125 states behaviour for both platforms, and three of its decisions rest on what the web has and the phone does not.
-- **SSF is JavaScript.** ADR 0125 §Cells draws a number "by SSF 0.11.2". pub.dev's two spreadsheet readers do not replace it, and cannot be installed here: `excel` 4.0.6, last published 2024-08-20, and `spreadsheet_decoder` 2.3.0, last published 2024-09-09, require `archive` ^3.6.1 and an `xml` below 7, and `app/pubspec.lock` holds `archive` 4.5.2 and `xml` 7.0.1 through `image`.
+- **SSF is JavaScript.** ADR 0125 §Cells draws a number "by SSF 0.11.2". pub.dev's longest-standing spreadsheet readers do not replace it, and cannot be installed here: `excel` 4.0.6, last published 2024-08-20, and `spreadsheet_decoder` 2.3.0, last published 2024-09-09, require `archive` ^3.6.1 and an `xml` below 7, and `app/pubspec.lock` holds `archive` 4.5.2 and `xml` 7.0.1 through `image`.
 - **The phone makes no requests.** ADR 0125 §Duplicates and §Writes save in requests of at most 100 cards, each with a stable id, because a request can fail after it wrote. A write on the phone is a local transaction, which commits or leaves nothing.
 - **A file picker is not a file input.** The platform's picker greys out what the filter excludes.
 - **The rule ADR 0125's body is under.** `docs/architecture/README.md` §Rules, "ADRs are append-only", keeps a changed decision out of the frozen body, so the issue's dated note in ADR 0125 is this ADR.
 - **Alternatives considered:**
+  - **`excel_community` 2.6.2**, published 2026-10-25, a fork first published 2026-03, with `archive` <=5.0.0 and `xml` ^7. It installs against the lock, but `Excel.decodeBytes` unpacks with `ZipDecoder` under no size limit and parses the whole workbook, so neither ADR 0125's 50 MB part limit nor the stop at row 1,001 can hold, and a 20,000-line dependency would sit on an untrusted file boundary.
   - **Run SSF in a JavaScript engine on the phone.** A runtime in the app for one package, which draws a number in a word list.
   - **Port SSF line by line.** About 900 lines of regular-expression dispatch that exist for its quirks, such as cutting `000-0000` to its width, which Excel does not do.
   - **Draw every number as General.** A date would read as 46324.
