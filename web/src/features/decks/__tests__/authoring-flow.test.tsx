@@ -254,7 +254,7 @@ describe("photo request", () => {
     valid.set("photo", upload());
     expect(await readPhoto(valid)).toMatchObject({
       cards: [{ topic: "도시", selected: null }],
-      partial: false,
+      cursor: null,
     });
     expect(calls).toBe(1);
     setRequestCookies([]);
@@ -289,19 +289,46 @@ describe("photo request", () => {
       expect(calls).toBe(1);
     },
   );
-  it("reads a photo answered in part as read in part, and one without the field as read whole", async () => {
-    for (const [body, partial] of [
-      [{ cards: [card], partial: true }, true],
-      [{ cards: [card], partial: "yes" }, false],
-      [{ cards: [card] }, false],
+  it("reads a cursor only beside partial true, and none from an answer read whole", async () => {
+    for (const [body, cursor] of [
+      [{ cards: [card], partial: true, cursor: "next" }, "next"],
+      [{ cards: [card], partial: "yes", cursor: "next" }, null],
+      [{ cards: [card], partial: true }, null],
+      [{ cards: [card] }, null],
     ] as const) {
       server.use(
         http.post(`${supabaseUrl}/functions/v1/extract-cards`, () => HttpResponse.json(body)),
       );
       const form = new FormData();
       form.set("photo", upload());
-      expect(await readPhoto(form)).toMatchObject({ partial });
+      expect(await readPhoto(form)).toMatchObject({ cursor });
     }
+  });
+  it("sends a cursor back with the photo, takes a resumed answer of no card, and reads a 410 as the retryable service failure", async () => {
+    const bodies: unknown[] = [];
+    const answers = [
+      HttpResponse.json({ cards: [], partial: false }),
+      HttpResponse.json({ error: "cursor_expired" }, { status: 410 }),
+    ];
+    server.use(
+      http.post(`${supabaseUrl}/functions/v1/extract-cards`, async ({ request }) => {
+        bodies.push(await request.json());
+        return answers[bodies.length - 1];
+      }),
+    );
+    const form = new FormData();
+    form.set("photo", upload());
+    form.set("cursor", "next");
+    expect(await readPhoto(form)).toEqual({ cards: [], cursor: null });
+    expect(await readPhoto(form)).toEqual({ failure: { kind: "service" } });
+    expect(bodies).toEqual([
+      { image: Buffer.from(jpegBytes).toString("base64"), cursor: "next" },
+      { image: Buffer.from(jpegBytes).toString("base64"), cursor: "next" },
+    ]);
+    // A cursor past the function's bound is refused before any call.
+    form.set("cursor", "x".repeat(24 * 1024 + 1));
+    expect(await readPhoto(form)).toEqual({ failure: { kind: "refused" } });
+    expect(bodies).toHaveLength(2);
   });
   it("sends a photo once more after no response, and logs one line with the status and latency, never the image or token", async () => {
     const log = vi.spyOn(console, "info").mockImplementation(() => undefined);
@@ -765,26 +792,65 @@ describe("photo import", () => {
       await userEvent.click(screen.getByRole("radio", { name: "단어장" }));
       expect(screen.getByRole("button", { name: "과일 카드 모양, 앞면에 뜻" })).toBeInTheDocument();
     });
-    it("says a photo was read only in part above its cards, and nothing for a photo read whole", async () => {
-      answer({ status: 200, body: { cards: [card], partial: true } });
-      await choose(1);
-      expect(await screen.findByText("사진의 일부만 읽었어요")).toBeInTheDocument();
-      expect(screen.getByRole("checkbox", { name: "수도 선택" })).toBeInTheDocument();
-      cleanup();
-      // Several photos: only the partial one's group says it.
-      answer(
-        { status: 200, body: { cards: [card], partial: false } },
-        { status: 200, body: { cards: [{ ...card, front: "강", answer: "한강" }], partial: true } },
+    it("reads a page left unread on through two cursors with the same photo while it shows reading, appending its cards without repeats and counting the photo once", async () => {
+      const river = { ...card, front: "강", answer: "한강" };
+      const bodies: unknown[] = [];
+      let release: () => void = () => undefined;
+      const held = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const answers = [
+        { cards: [card], partial: true, cursor: "first" },
+        { cards: [{ ...card, front: " 수도" }, river], partial: true, cursor: "second" },
+        { cards: [], partial: false },
+      ];
+      server.use(
+        http.post(`${supabaseUrl}/functions/v1/extract-cards`, async ({ request }) => {
+          const body: unknown = await request.json();
+          bodies.push(body);
+          if (bodies.length === 2) await held;
+          return HttpResponse.json(answers[bodies.length - 1]);
+        }),
       );
-      await choose(2);
-      await screen.findByRole("button", { name: "사진 2, 카드 1장" });
-      expect(screen.getAllByText("사진의 일부만 읽었어요")).toHaveLength(1);
-      cleanup();
-      // Control: a photo read whole says nothing of the kind.
-      answer({ status: 200, body: { cards: [card], partial: false } });
       await choose(1);
-      await screen.findByRole("checkbox", { name: "수도 선택" });
+      await waitFor(() => {
+        expect(bodies).toHaveLength(2);
+      });
+      expect(screen.getByRole("heading", { name: "카드를 찾고 있어요" })).toBeInTheDocument();
+      release();
+      expect(
+        await screen.findByRole("heading", { name: "카드 2장을 만들었어요" }),
+      ).toBeInTheDocument();
+      expect(screen.getAllByRole("checkbox", { name: "수도 선택" })).toHaveLength(1);
+      expect(screen.getByRole("checkbox", { name: "강 선택" })).toBeInTheDocument();
+      expect(bodies.map((body) => field(body, "cursor"))).toEqual([undefined, "first", "second"]);
+      expect(new Set(bodies.map((body) => field(body, "image"))).size).toBe(1);
+      expect(bodies.filter((body) => field(body, "cursor") === undefined)).toHaveLength(1);
       expect(screen.queryByText("사진의 일부만 읽었어요")).not.toBeInTheDocument();
+    });
+    it("ends a page's reading at a 410 with the retryable service failure, and a retry reads it from the start, keeping the cards read so far", async () => {
+      const bodies: unknown[] = [];
+      const answers = [
+        HttpResponse.json({ cards: [card], partial: true, cursor: "stale" }),
+        HttpResponse.json({ error: "cursor_expired" }, { status: 410 }),
+        HttpResponse.json({ cards: [{ ...card, front: "강", answer: "한강" }] }),
+      ];
+      server.use(
+        http.post(`${supabaseUrl}/functions/v1/extract-cards`, async ({ request }) => {
+          bodies.push(await request.json());
+          return answers[bodies.length - 1];
+        }),
+      );
+      await choose(1);
+      expect(await screen.findByText(describeFailure({ kind: "service" }))).toBeInTheDocument();
+      expect(bodies).toHaveLength(2);
+      await userEvent.click(screen.getByRole("button", { name: "다시 시도" }));
+      expect(
+        await screen.findByRole("heading", { name: "카드 2장을 만들었어요" }),
+      ).toBeInTheDocument();
+      expect(bodies.map((body) => field(body, "cursor"))).toEqual([undefined, "stale", undefined]);
+      expect(screen.getByRole("checkbox", { name: "수도 선택" })).toBeInTheDocument();
+      expect(screen.getByRole("checkbox", { name: "강 선택" })).toBeInTheDocument();
     });
     it("collapses and expands each photo's group from its header, leaving the other photos' rows", async () => {
       answer(read, { status: 200, body: { cards: [{ ...card, front: "강", answer: "한강" }] } });
