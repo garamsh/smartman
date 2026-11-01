@@ -1,6 +1,6 @@
 # ADR 0038: Lay the web out as a responsive shell with a side menu from 1024 px and a tab bar below it
 
-> Status: accepted; creation restriction partially superseded by ADR 0122
+> Status: accepted; creation restriction partially superseded by ADR 0122; the row click superseded by ADR 0143
 > Date: 2026-10-17
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.
