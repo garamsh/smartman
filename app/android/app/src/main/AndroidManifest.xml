@@ -2,7 +2,7 @@
     <!-- Records a sound added to a card, asked for on first use. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <application
-        android:label="smartman"
+        android:label="@string/app_name"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

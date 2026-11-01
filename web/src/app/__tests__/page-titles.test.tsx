@@ -33,12 +33,12 @@ describe("the signed-in pages' titles", () => {
   });
 
   it("names 오늘 and the study page", () => {
-    expect(todayMetadata.title).toBe("오늘 · smartman");
-    expect(studyMetadata.title).toBe("학습 · smartman");
+    expect(todayMetadata.title).toBe("오늘 · 알아몰라");
+    expect(studyMetadata.title).toBe("학습 · 알아몰라");
   });
 
   it("names a deck's page by the deck, and is not found for a deleted deck or an id that is no uuid", async () => {
-    expect(await deckTitle(uuidOf("d-fr"))).toBe("French · smartman");
+    expect(await deckTitle(uuidOf("d-fr"))).toBe("French · 알아몰라");
     await expect(deckTitle(uuidOf("d-old"))).rejects.toMatchObject(notFound);
     await expect(deckTitle("d-fr")).rejects.toMatchObject(notFound);
   });

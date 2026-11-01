@@ -1,3 +1,5 @@
+/* The app's name under its icon. */
+"CFBundleDisplayName" = "knowno";
 /* Shown when photo import first opens the system camera. */
 "NSCameraUsageDescription" = "The camera takes a photo of a vocabulary page to make cards from it.";
 /* Shown if the photo library is asked for; the picker itself needs no permission. */

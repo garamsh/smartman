@@ -1,6 +1,6 @@
 {
-  "name": "smartman",
-  "short_name": "smartman",
+  "name": "알아몰라",
+  "short_name": "알아몰라",
   "description": "카드로 외우는 암기 앱",
   "start_url": "/",
   "display": "standalone",

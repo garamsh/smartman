@@ -1,6 +1,6 @@
 {
   "@@locale": "ko",
-  "appTitle": "smartman",
+  "appTitle": "알아몰라",
   "@appTitle": {"description": "The app's name, shown by the operating system."},
   "newDeck": "새 덱",
   "@newDeck": {"description": "Title of the new-deck sheet and of the sheet that names a new deck, and the deck choosers' new deck."},

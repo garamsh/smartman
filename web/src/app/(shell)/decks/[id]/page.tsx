@@ -16,10 +16,10 @@ export async function generateMetadata({ params }: PageProps<"/decks/[id]">): Pr
   const deckId = parseDeckId((await params).id);
   if (!deckId) notFound();
   const read = await readDeck(deckId);
-  if ("failure" in read) return { title: "덱 · smartman" };
+  if ("failure" in read) return { title: "덱 · 알아몰라" };
   const deck = read.library.decks.find((candidate) => candidate.id === deckId);
   if (!deck) notFound();
-  return { title: `${deck.name} · smartman` };
+  return { title: `${deck.name} · 알아몰라` };
 }
 
 /** One deck: where it sits, its header, today's card for it with its progress, and its cards. */
