@@ -52,19 +52,22 @@ export type HandlerDeps = IdSource & {
 const INSTRUCTIONS =
   "Smartman is a flashcard app. These tools read the signed-in user's decks and cards and add new decks and cards; they never change or delete anything. Find a deck's id with list_decks, read a deck with list_cards, find cards with search_cards, make a deck with create_deck and add cards with add_cards. New cards reach the user's phone and the web at their next sync.";
 
-/** The origin the client used: the gateway names it in the X-Forwarded headers. */
-function origin(request: Request): string {
-  const url = new URL(request.url);
-  const host = request.headers.get("X-Forwarded-Host") ?? url.host;
-  const proto =
-    (request.headers.get("X-Forwarded-Proto") ?? url.protocol.slice(0, -1))
-      .toLowerCase();
-  const port = host.includes(":")
-    ? ""
-    : request.headers.get("X-Forwarded-Port") ?? "";
-  const standard = (proto === "https" && port === "443") ||
-    (proto === "http" && port === "80");
-  return `${proto}://${host}${port !== "" && !standard ? `:${port}` : ""}`;
+/**
+ * The project's custom domains, served over HTTPS beside `SUPABASE_URL`'s own host (ADR 0133).
+ * A new one is added here.
+ */
+export const CUSTOM_DOMAINS: readonly string[] = ["api.knowno.app"];
+
+/**
+ * The function's URL at the custom domain the gateway names as the client's host, or at the
+ * project's own origin for any other host, which is never named.
+ */
+function resourceUrl(request: Request, projectOrigin: string): string {
+  const forwarded = request.headers.get("X-Forwarded-Host")?.toLowerCase();
+  const origin = forwarded !== undefined && CUSTOM_DOMAINS.includes(forwarded)
+    ? `https://${forwarded}`
+    : projectOrigin;
+  return `${origin}${FUNCTION_PATH}`;
 }
 
 type Exchange = {
@@ -96,7 +99,19 @@ export function createHandler(
 
 async function handle(request: Request, deps: HandlerDeps): Promise<Exchange> {
   const path = new URL(request.url).pathname.replace(/\/$/, "");
-  const resource = `${origin(request)}${FUNCTION_PATH}`;
+  const config = deps.config;
+  if (config.kind === "not_configured") {
+    return {
+      response: Response.json(
+        rpcError(null, -32603, "The server is not configured"),
+        {
+          status: 503,
+        },
+      ),
+      entry: { ...empty, outcome: "not_configured" },
+    };
+  }
+  const resource = resourceUrl(request, config.projectOrigin);
   if (path === `/mcp${METADATA_SUFFIX}`) {
     if (request.method !== "GET") {
       return {
@@ -110,7 +125,8 @@ async function handle(request: Request, deps: HandlerDeps): Promise<Exchange> {
     return {
       response: Response.json({
         resource,
-        authorization_servers: [`${origin(request)}/auth/v1`],
+        // Auth's issuer, which RFC 8414 requires this to equal, stays on the project's host.
+        authorization_servers: [`${config.projectOrigin}/auth/v1`],
         bearer_methods_supported: ["header"],
         resource_name: "smartman",
       }),
@@ -136,18 +152,6 @@ async function handle(request: Request, deps: HandlerDeps): Promise<Exchange> {
     return {
       response: new Response(null, { status: 405, headers: { Allow: "POST" } }),
       entry: { ...empty, outcome: "method_not_allowed" },
-    };
-  }
-  const config = deps.config;
-  if (config.kind === "not_configured") {
-    return {
-      response: Response.json(
-        rpcError(null, -32603, "The server is not configured"),
-        {
-          status: 503,
-        },
-      ),
-      entry: { ...empty, outcome: "not_configured" },
     };
   }
   let caller;

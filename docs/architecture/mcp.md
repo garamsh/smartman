@@ -14,7 +14,12 @@ The `mcp` Edge Function, Smartman's remote MCP server for Claude and ChatGPT: it
 ### Authorization
 
 - The project's Supabase Auth is the authorization server, through its OAuth 2.1 server (beta, on every plan), with dynamic client registration on. Claude and ChatGPT register themselves by DCR, since it advertises no Client ID Metadata Document support. The verification is #496's comment of 2026-10-29.
-- `/functions/v1/mcp/oauth-protected-resource` is the protected resource metadata: the function's URL as `resource`, the project's `/auth/v1` as its one authorization server, and `header` as the bearer method. Both URLs are built from the gateway's `X-Forwarded-Host`, `-Proto` and `-Port`, which name the origin the client used, since `SUPABASE_URL` inside the runtime is the gateway's own.
+- The server's address is `https://api.knowno.app/functions/v1/mcp`, on the project's Supabase custom domain; the project's own `https://jaxltcczmioxrineznfu.supabase.co/functions/v1/mcp` serves it too ([ADR 0133](adr/0133-serve-the-mcp-server-at-api-knowno-app-name-a-listed-host-as-its-resource-and-auth-s-issuer-as-its-authorization-server.md)).
+- `/functions/v1/mcp/oauth-protected-resource` is the protected resource metadata: the function's URL at the host the client used as `resource`, Supabase Auth's issuer as its one authorization server, and `header` as the bearer method.
+  - The project's origin is `SUPABASE_URL`'s, which `config.ts` parses once as an http(s) URL; any other value leaves the function unconfigured, every request answered 503.
+  - The host is the gateway's `X-Forwarded-Host` when it is in `CUSTOM_DOMAINS` (`supabase/functions/mcp/handler.ts`), holding `api.knowno.app`. Any other host falls back to the project's origin and is never named. A new custom domain is added there.
+  - The issuer is `<project origin>/auth/v1`: Auth keeps it on the project's host under the custom domain, and RFC 8414 requires the advertised authorization server to equal it.
+  - A local stack names its runtime's `SUPABASE_URL`.
 - Any other request without a token the function accepts is answered 401 with `WWW-Authenticate: Bearer resource_metadata="…"`, and with `error="invalid_token"` and a description when a token was sent. `config.toml` sets `verify_jwt = false` for the function so these answers reach the client.
 - A token is accepted when its payload carries a `client_id` claim, which only the OAuth server issues, and Supabase Auth's `/auth/v1/user`, asked with the anon key, accepts it for a non-anonymous user whose id is the token's `sub`. The phone's and the web's sessions carry no `client_id` and are refused before Auth is asked. Every Supabase token has `aud: authenticated` and the `resource` parameter is not reflected in it, so the claim stands for the audience the MCP specification asks for; it holds while every OAuth client of the project is an AI connector.
 - The consent page is the web's `/oauth/consent` (§Consent page). Approving binds an authorization code to the user; the client exchanges it with its PKCE verifier for an access token and a refresh token.
@@ -48,17 +53,18 @@ The `mcp` Edge Function, Smartman's remote MCP server for Claude and ChatGPT: it
 
 ### Settings entry
 
-- 설정 holds "AI 연결" between 학습 and 화면, drawn in the signed-in and the unreachable states, since it needs no server: one group with "서버 주소", the project's URL with `/functions/v1/mcp`, then "Claude" and "ChatGPT", each with how to add it, and under the group what a connection may do and that each service's plan limits it ([`web-account.md`](web-account.md)).
+- 설정 holds "AI 연결" between 학습 and 화면, drawn in the signed-in and the unreachable states, since it needs no server: one group with "서버 주소", `https://api.knowno.app/functions/v1/mcp` in every environment ([ADR 0133](adr/0133-serve-the-mcp-server-at-api-knowno-app-name-a-listed-host-as-its-resource-and-auth-s-issuer-as-its-authorization-server.md)), then "Claude" and "ChatGPT", each with how to add it, and under the group what a connection may do and that each service's plan limits it ([`web-account.md`](web-account.md)).
 
 ### Tests
 
-- `supabase/functions/mcp/handler_test.ts` — the server end to end with Auth and PostgREST replaced by a fake applying row-level security's owner rule: the 401 challenges, a web session refused before Auth is asked, the metadata, `initialize`, notifications, GET, `Origin`, the protocol version header, each tool, the 100-card cap, duplicates in the deck and in the call and `allow_duplicates`, refused cards, the rows' blocks, labels, key and template, another user's public deck refused for reading and writing, a call's order, and an unreachable database.
+- `supabase/functions/mcp/handler_test.ts` — the server end to end with Auth and PostgREST replaced by a fake applying row-level security's owner rule: the 401 challenges, a web session refused before Auth is asked, the metadata of a local-style `SUPABASE_URL`, the custom domain's challenge and metadata with Auth's issuer, a forwarded host outside `CUSTOM_DOMAINS` falling back to the project's host, a `SUPABASE_URL` that is not an http(s) URL, `initialize`, notifications, GET, `Origin`, the protocol version header, each tool, the 100-card cap, duplicates in the deck and in the call and `allow_duplicates`, refused cards, the rows' blocks, labels, key and template, another user's public deck refused for reading and writing, a call's order, and an unreachable database.
 
 Each line names a file and what it covers; the file holds the cases. The consent page's, the settings entry's and the proxy's tests are listed in [`web-account.md`](web-account.md) and [`web.md`](web.md).
 
 ## Rationale
 
 - [ADR 0126](adr/0126-connect-claude-and-chatgpt-through-one-remote-mcp-server-acting-as-the-signed-in-user.md) records the transport, the `client_id` check in place of an audience, the tools, the rows and the consent flow.
+- [ADR 0133](adr/0133-serve-the-mcp-server-at-api-knowno-app-name-a-listed-host-as-its-resource-and-auth-s-issuer-as-its-authorization-server.md) records the custom domain, why the authorization server is a constant issuer, and the list of hosts named as the resource.
 - [ADR 0122](adr/0122-create-decks-and-reviewed-cards-on-the-web.md) records direct entry, whose rows and duplicate rule the tools follow.
 - [ADR 0114](adr/0114-write-every-card-as-a-free-block-list-remove-the-flip-cloze-and-table-forms-and-migrate-every-card-to-free.md) records the free template every new card takes.
 
