@@ -5,25 +5,22 @@ import '../../design/theme.dart';
 import '../../design/word_break.dart';
 
 /// How to start, where there is nothing to study yet: the mascot in its
-/// [mascot] expression, [title] read as a heading, one [body] line, and the
+/// [mascot] expression, [title], the one sentence, read as a heading, and the
 /// [actions] that start, stacked.
 class FirstRun extends StatelessWidget {
   const FirstRun({
     super.key,
     required this.title,
-    required this.body,
     required this.actions,
     required this.mascot,
   });
 
   final String title;
-  final String body;
   final List<Widget> actions;
   final MascotExpression mascot;
 
   @override
   Widget build(BuildContext context) {
-    final colors = AppColors.of(context);
     return ListView(
       padding: const EdgeInsets.fromLTRB(
         AppSpace.gutter,
@@ -44,13 +41,6 @@ class FirstRun extends StatelessWidget {
             textAlign: TextAlign.center,
             style: AppType.title,
           ),
-        ),
-        const SizedBox(height: AppSpace.s8),
-        Text(
-          keepWords(body),
-          semanticsLabel: body,
-          textAlign: TextAlign.center,
-          style: AppType.secondary.copyWith(color: colors.muted),
         ),
         const SizedBox(height: AppSpace.s32),
         Column(

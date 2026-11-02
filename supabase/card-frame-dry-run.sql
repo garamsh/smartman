@@ -22,8 +22,9 @@
 --                        text, on an import or a copy, which the migration keeps as a 글's back
 --                        (ADR 0140).
 --   o2                   a blanked front with any other back, which O2 shows after the answer.
---   o2_back_blank        the O2 cards whose back holds a blank, which the migration moves as a
---                        question.
+--   o2_back_blank        the O2 cards whose back holds a blank, which the migration shows after
+--                        the answer: a cloze or table as a 글's back of its filled text, a boxed
+--                        image on the back without its boxes (ADR 0140).
 --   o3                   a blank on the back alone beside a back text block, which O3 shows after
 --                        the answer.
 --

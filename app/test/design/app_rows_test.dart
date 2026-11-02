@@ -101,7 +101,7 @@ void main() {
       },
     );
 
-    testWidgets('in ${mode.name} every chip is one style: radius 6, the '
+    testWidgets('in ${mode.name} every chip is one style: fully round, the '
         'section type, in its tone, a selected one in the brand tint', (
       tester,
     ) async {
@@ -143,7 +143,7 @@ void main() {
       }
 
       RoundedRectangleBorder shape(Color side) => RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(AppRadius.chip),
         side: BorderSide(color: side),
       );
       for (final (label, fill) in [

@@ -93,15 +93,16 @@ class DeckRepository {
     );
   });
 
-  /// Stores [icon] and [color] as the deck's appearance.
-  Future<void> setAppearance(DeckId id, DeckIcon icon, DeckColor color) =>
+  /// Stores [icon] and [color] as the deck's appearance, no colour leaving
+  /// the deck with none chosen.
+  Future<void> setAppearance(DeckId id, DeckIcon icon, DeckColor? color) =>
       _guard(() async {
         await (_db.update(
           _db.decks,
         )..where((deck) => deck.id.equals(id.value))).write(
           DecksCompanion(
             icon: Value(icon.key),
-            color: Value(color.key),
+            color: Value(color?.key),
             updatedAt: Value(_clock()),
             dirty: const Value(true),
           ),

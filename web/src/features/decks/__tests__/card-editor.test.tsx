@@ -110,7 +110,7 @@ describe("a new card", () => {
       "글",
       "단어단어와 뜻을 함께 적어요",
       "빈칸 문장문장 속 단어를 가려요",
-      "표칸을 골라 가려요",
+      "표가릴 부분을 골라요",
     ]);
     await userEvent.click(within(sheet).getByRole("button", { name: "표" }));
     expect(screen.getByRole("heading", { name: "표" })).toBeInTheDocument();

@@ -175,31 +175,37 @@ void main() {
     ], isEmpty);
   });
 
-  test('the radii are one scale: group 14, button 18, chip and label 6, '
-      'sheet 22, and the theme draws buttons and sheets in them', () {
-    expect(AppRadius.group, 14);
-    expect(AppRadius.button, 18);
-    expect(AppRadius.chip, 6);
-    expect(AppRadius.sheet, 22);
-    for (final theme in [lightTheme, darkTheme]) {
-      expect(
-        theme.bottomSheetTheme.shape,
-        const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
-        ),
-      );
-      for (final style in [
-        theme.filledButtonTheme.style,
-        theme.outlinedButtonTheme.style,
-        theme.textButtonTheme.style,
-      ]) {
+  test(
+    'the radii are one scale: group and card 24, button 20, chip and label '
+    'fully round, sheet 28, and the theme draws buttons and sheets in them',
+    () {
+      expect(AppRadius.group, 24);
+      expect(AppRadius.card, 24);
+      expect(AppRadius.button, 20);
+      expect(AppRadius.chip, greaterThanOrEqualTo(999));
+      expect(AppRadius.sheet, 28);
+      expect(AppSize.button, 56);
+      expect(AppSize.cta, 56);
+      for (final theme in [lightTheme, darkTheme]) {
         expect(
-          style?.shape?.resolve({}),
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          theme.bottomSheetTheme.shape,
+          const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
         );
+        for (final style in [
+          theme.filledButtonTheme.style,
+          theme.outlinedButtonTheme.style,
+          theme.textButtonTheme.style,
+        ]) {
+          expect(
+            style?.shape?.resolve({}),
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          );
+        }
       }
-    }
-  });
+    },
+  );
 
   test('the type scale gives a screen three sizes: a title, the body and a '
       'caption, a button in the body size', () {

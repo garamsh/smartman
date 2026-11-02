@@ -224,7 +224,7 @@ function cssType(): Map<string, TypeStyle> {
 describe("the web theme's type tokens", () => {
   it("are the styles of app/lib/design/theme.dart's AppType: size, line height, weight and tracking", () => {
     // Control: both sides read every style, the front's tracking among them.
-    expect(dartType().size).toBe(15);
+    expect(dartType().size).toBe(17);
     expect(dartType().get("front")).toEqual({
       size: 30,
       lineHeight: 38,
@@ -287,7 +287,7 @@ describe("the web theme's size tokens", () => {
     );
     const web = [...withoutGoogle(cssSpacing)].filter(([name]) => !namedGaps.includes(name));
     // Control: both sides read their sizes, the button's height among them.
-    expect(sizes.get("button")).toBe(54);
+    expect(sizes.get("button")).toBe(56);
     expect(web.length).toBe(15);
 
     for (const [name, value] of web) {

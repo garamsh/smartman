@@ -160,17 +160,15 @@ void main() {
         ),
       );
       expect(order(tester), ['Title', 'apple', 'The capital is Paris today']);
-      expect(styleOf(tester, 'Title').fontSize, AppType.headline.fontSize);
+      expect(styleOf(tester, 'Title').fontSize, AppType.wholeFront.fontSize);
       expect(blanksUnder(find.byType(WholeCardView)), {'Paris': false});
       expect(find.text('Added'), findsNothing);
       expect(find.textContaining('사과'), findsNothing);
     });
 
     for (final MapEntry(key: themeMode, value: colors) in themeModes.entries) {
-      testWidgets('after it each added part is under its first part at the '
-          "back's size in ink2, the blank filled, in ${themeMode.name}", (
-        tester,
-      ) async {
+      testWidgets('after it each added part is under its larger first part '
+          'in ink2, the blank filled, in ${themeMode.name}', (tester) async {
         await pumpComponent(
           tester,
           const WholeCardView.cells(
@@ -188,8 +186,9 @@ void main() {
           'The capital is Paris today',
         ]);
         final added = styleOf(tester, 'Added');
-        expect(added.fontSize, AppType.back.fontSize);
-        expect(added.fontWeight, AppType.back.fontWeight);
+        expect(added.fontSize, 18);
+        expect(added.fontWeight, AppType.wholeAdded.fontWeight);
+        expect(styleOf(tester, 'Title').fontSize, 20);
         expect(added.color, colors.ink2);
         expect(blanksUnder(find.byType(WholeCardView)), {'Paris': true});
       });

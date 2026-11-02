@@ -193,13 +193,15 @@ describe("the deck page", () => {
     await open("d-empty");
 
     const empty = screen.getByRole("region", { name: "아직 카드가 없어요" });
-    expect(empty).toHaveTextContent("카드를 추가해 시작해 보세요.");
+    // Its one action is the page's coral fill.
+    expect(screen.getByRole("button", { name: "카드 추가" })).toHaveClass("bg-primary");
     expect(screen.queryByRole("searchbox", { name: "카드 검색" })).not.toBeInTheDocument();
     // The sleepy mascot over the words (ADR 0141).
     expect(empty.querySelector('img[src*="knowno-sleepy"]')).not.toBeNull();
     // Control: a deck with cards lists them instead, with no mascot.
     cleanup();
     await open("d-fr");
+    expect(screen.getByRole("button", { name: "카드 추가" })).not.toHaveClass("bg-primary");
     expect(document.querySelector('img[src*="knowno-sleepy"]')).toBeNull();
     expect(screen.queryByRole("region", { name: "아직 카드가 없어요" })).not.toBeInTheDocument();
   });
@@ -256,12 +258,12 @@ describe("the deck page", () => {
     expect(screen.queryByRole("region", { name: "오늘 학습" })).not.toBeInTheDocument();
   });
 
-  it("draws the tile the server's icon and colour keys name, and layers on the id's colour for keys it does not know", async () => {
+  it("draws the tile the server's icon and colour keys name, and layers on the brand tint for keys it does not know", async () => {
     /** The header tile's fill and its icon's Lucide name. */
     const tile = () => {
       const box = screen.getByRole("banner").querySelector("[aria-hidden]");
       return {
-        fill: box?.className.split(" ").find((name) => name.startsWith("bg-deck-")),
+        fill: box?.className.split(" ").find((name) => name.startsWith("bg-")),
         icon: box
           ?.querySelector("svg")
           ?.getAttribute("class")
@@ -283,14 +285,8 @@ describe("the deck page", () => {
     );
     cleanup();
     await open("d-newer");
-    // The colour the id selects, as a deck with no keys takes it: its UTF-16 code units' sum,
-    // modulo the six, in the app's order.
-    const id = uuidOf("d-newer");
-    const sum = Array.from(id).reduce((total, unit) => total + unit.charCodeAt(0), 0);
-    const selected = ["blue", "sky", "violet", "amber", "slate", "sand"][sum % 6];
-    expect(tile()).toEqual({ icon: "lucide-layers", fill: `bg-deck-${String(selected)}` });
-    // Control: that colour is not the stored key's, which no fill names.
-    expect(selected).not.toBe("teal");
+    // A key this version does not know is no choice, so the tile is the brand tint.
+    expect(tile()).toEqual({ icon: "lucide-layers", fill: "bg-brand-tint" });
   });
 
   it("marks a deck its owner published with 공개 under its name", async () => {

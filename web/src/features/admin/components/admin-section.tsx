@@ -23,7 +23,7 @@ export const button = {
 
 /** A field inside a group: no border until it is focused, then a 1.5 px ink outline. */
 export const field =
-  "min-w-0 rounded-chip bg-transparent text-body text-ink placeholder:text-muted focus:outline-[1.5px] focus:outline-ink";
+  "min-w-0 rounded-field bg-transparent text-body text-ink placeholder:text-muted focus:outline-[1.5px] focus:outline-ink";
 
 /** A section of an admin page: its label, muted above, and what it holds. */
 export function AdminSection({

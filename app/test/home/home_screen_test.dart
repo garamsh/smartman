@@ -371,12 +371,19 @@ void main() {
         final list = await _open(tester, decks: ['Alpha']);
 
         expect(shownText('Make your first card?'), findsOneWidget);
-        expect(shownText('Add cards to a deck to start.'), findsOneWidget);
+        expect(shownText('Add cards to a deck to start.'), findsNothing);
         expect(find.text("You've done today's cards"), findsNothing);
         AppButton button(String label) =>
             tester.widget<AppButton>(find.widgetWithText(AppButton, label));
         expect(button('Add card').variant, AppButtonVariant.primary);
-        expect(button('Open deck').variant, AppButtonVariant.text);
+        // The one action that leads out.
+        expect(
+          find.descendant(
+            of: find.byType(TodayTab),
+            matching: find.byType(AppButton),
+          ),
+          findsOneWidget,
+        );
 
         // "Add card" opens the deck and its add sheet.
         await list.tap('Add card');
@@ -743,6 +750,63 @@ void main() {
     );
 
     testWidgets(
+      'the current tab has a coral-tinted pill behind its icon, and moves with the tab',
+      (tester) async {
+        final list = await _open(tester, fresh: {'Alpha': 1});
+        final colors = AppColors.of(tester.element(find.byType(TodayTab)));
+        Color? pillUnder(IconData icon) {
+          final pill = find.ancestor(
+            of: find.byWidgetPredicate(
+              (widget) => widget is Icon && widget.icon == icon,
+            ),
+            matching: find.byWidgetPredicate(
+              (widget) =>
+                  widget is Container &&
+                  widget.constraints?.maxWidth == AppSize.tabPill.width,
+            ),
+          );
+          final decoration =
+              tester.widget<Container>(pill.first).decoration as BoxDecoration;
+          return decoration.color;
+        }
+
+        expect(pillUnder(LucideIcons.sun), colors.brandTint);
+        expect(pillUnder(LucideIcons.layers), isNull);
+        await list.tap('Decks');
+        expect(pillUnder(LucideIcons.sun), isNull);
+        expect(pillUnder(LucideIcons.layers), colors.brandTint);
+        await list.close();
+      },
+    );
+
+    testWidgets(
+      'the last seven days draw today coral and the other days the brand tint, and the catch-up the same, with no amber',
+      (tester) async {
+        Finder bars(Color fill) => find.descendant(
+          of: find.byType(TodayTab),
+          matching: find.byWidgetPredicate(
+            (widget) =>
+                widget is Container &&
+                widget.constraints?.maxWidth == AppSpace.s24 - 2 &&
+                (widget.decoration as BoxDecoration).color == fill,
+          ),
+        );
+        var list = await _open(tester, fresh: {'Alpha': 3});
+        final colors = AppColors.of(tester.element(find.byType(TodayTab)));
+        expect(bars(colors.primary), findsOneWidget);
+        expect(bars(colors.brandTint), findsNWidgets(6));
+        await list.close();
+
+        list = await _open(tester, due: {'Alpha': 4, 'Beta': 3}, dueDays: 30);
+        expect(find.text('Pick up where you left off'), findsOneWidget);
+        expect(bars(colors.primary), findsOneWidget);
+        expect(bars(colors.brandTint), findsNWidgets(6));
+        expect(bars(colors.streak), findsNothing);
+        await list.close();
+      },
+    );
+
+    testWidgets(
       'once today\'s cards are done the done card names the next review and the goal reached, and Study studies every deck',
       (tester) async {
         final list = await _open(tester, answeredToday: {'Alpha': 2});
@@ -763,6 +827,49 @@ void main() {
         final doneCard = find.ancestor(
           of: find.text("You've done today's cards"),
           matching: find.byType(DecoratedBox),
+        );
+        // On the surface, so the coral button stands alone on the screen.
+        final colors = AppColors.of(tester.element(find.byType(TodayTab)));
+        expect(
+          find.descendant(
+            of: find.byType(TodayTab),
+            matching: find.byWidgetPredicate(
+              (widget) =>
+                  widget is DecoratedBox &&
+                  widget.decoration is BoxDecoration &&
+                  (widget.decoration as BoxDecoration).borderRadius != null &&
+                  (widget.decoration as BoxDecoration).color ==
+                      colors.brandTint &&
+                  find
+                      .descendant(
+                        of: find.byWidget(widget),
+                        matching: find.text("You've done today's cards"),
+                      )
+                      .evaluate()
+                      .isNotEmpty,
+            ),
+          ),
+          findsNothing,
+        );
+        expect(
+          find.descendant(
+            of: find.byType(TodayTab),
+            matching: find.byWidgetPredicate(
+              (widget) =>
+                  widget is DecoratedBox &&
+                  widget.decoration is BoxDecoration &&
+                  (widget.decoration as BoxDecoration).color ==
+                      colors.surface &&
+                  find
+                      .descendant(
+                        of: find.byWidget(widget),
+                        matching: find.text("You've done today's cards"),
+                      )
+                      .evaluate()
+                      .isNotEmpty,
+            ),
+          ),
+          findsOneWidget,
         );
         expect(
           find.descendant(

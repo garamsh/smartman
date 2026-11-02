@@ -63,7 +63,7 @@ function WholeParts({
   revealed: boolean;
   inRow: boolean;
 }) {
-  const addedStyle = inRow ? "font-normal text-ink-2" : "text-back text-ink-2";
+  const addedStyle = inRow ? "font-normal text-ink-2" : "text-whole-added text-ink-2";
   return (
     <span
       role="group"
@@ -80,7 +80,7 @@ function WholeParts({
               <span
                 key={index}
                 aria-hidden
-                className={added ? addedStyle : inRow ? "" : "text-headline"}
+                className={added ? addedStyle : inRow ? "" : "text-whole-front"}
               >
                 {block.text}
               </span>

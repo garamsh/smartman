@@ -7,7 +7,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/database/database.dart';
 import 'package:smartman/deck/deck.dart';
-import 'package:smartman/deck/src/deck_row.dart' show defaultDeckColor;
 import 'package:smartman/design/theme.dart';
 import 'package:smartman/l10n/app_localizations.dart';
 import 'package:smartman/media/media.dart';
@@ -70,11 +69,11 @@ void main() {
 
   /// Opens the sheet over [shown] from a button, and returns what it pops
   /// with once it closes, through [result].
-  Future<List<(DeckIcon, DeckColor)?>> open(
+  Future<List<(DeckIcon, DeckColor?)?>> open(
     WidgetTester tester,
     Deck shown,
   ) async {
-    final result = <(DeckIcon, DeckColor)?>[];
+    final result = <(DeckIcon, DeckColor?)?>[];
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -133,7 +132,7 @@ void main() {
 
       await tapAndFinish(tester, '저장');
 
-      expect(result, [(DeckIcon.fallback, defaultDeckColor(deck.id))]);
+      expect(result, [(DeckIcon.fallback, null)]);
       final stored = (await tester.runAsync(() => decks.getDeck(deck.id)))!;
       final uploads = (await tester.runAsync(
         () => db.select(db.mediaUploads).get(),

@@ -668,6 +668,8 @@ describe("the study page", () => {
 
       expect(screen.getByText("오늘은 학습할 카드가 없어요")).toBeInTheDocument();
       expect(document.querySelector('img[src*="knowno-sleepy"]')).not.toBeNull();
+      // Its way back is a button as well as the ✕, the screen's one coral fill.
+      expect(screen.getByRole("link", { name: "닫기" })).toHaveClass("bg-primary");
       expect(screen.queryByRole("progressbar", { name: "진행" })).not.toBeInTheDocument();
       expect(screen.queryByRole("region", { name: "오늘 학습 완료" })).not.toBeInTheDocument();
       expect(screen.queryByRole("group", { name: "앞면" })).not.toBeInTheDocument();
@@ -677,6 +679,7 @@ describe("the study page", () => {
       postgrest.seed("reviews", reviewRow("r-today", "later", start - hour, 1_000));
       await open("d1");
       expect(screen.getByRole("region", { name: "오늘 학습 완료" })).toBeInTheDocument();
+      expect(screen.queryByRole("link", { name: "닫기" })).not.toBeInTheDocument();
       expect(screen.queryByText("오늘은 학습할 카드가 없어요")).not.toBeInTheDocument();
       expect(document.querySelector('img[src*="knowno-sleepy"]')).toBeNull();
     });

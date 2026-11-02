@@ -79,7 +79,7 @@ function Field({
           <span className="absolute bottom-0 left-0 h-px w-8 bg-muted" />
         </span>
       ) : (
-        <span key={start} className="rounded-chip bg-brand-tint">
+        <span key={start} className="rounded-md bg-brand-tint">
           {value.slice(start, end)}
         </span>
       ),
@@ -106,7 +106,7 @@ function Field({
         onFocus={read}
         onSelect={read}
         onKeyDown={keyDown}
-        className={`absolute inset-0 size-full resize-none overflow-hidden rounded-chip bg-transparent ${fieldBox} placeholder:text-muted focus:outline-2 focus:-outline-offset-2 focus:outline-ink`}
+        className={`absolute inset-0 size-full resize-none overflow-hidden rounded-field bg-transparent ${fieldBox} placeholder:text-muted focus:outline-2 focus:-outline-offset-2 focus:outline-ink`}
       />
     </div>
   );
@@ -604,7 +604,7 @@ function TableGroup({
         )}
       </div>
       <div className="overflow-x-auto px-3 pb-3">
-        <table className="w-full border-collapse overflow-hidden rounded-chip">
+        <table className="w-full border-collapse overflow-hidden rounded-field">
           <thead>
             <tr>
               {draft.columns.map((header, column) => (

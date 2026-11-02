@@ -45,6 +45,29 @@ describe("the shell's menus", () => {
     expect(links(tabs ?? document.body)).toEqual(pages);
   });
 
+  it("draw the current page a coral-tinted pill behind its icon and a bold label, the others muted, on both menus", () => {
+    path = "/decks";
+    render(
+      <>
+        <SideMenu account={null} />
+        <TabBar />
+      </>,
+    );
+    const menus = screen.getAllByRole("navigation", { name: "주 메뉴" });
+    expect(menus).toHaveLength(2);
+    for (const menu of menus) {
+      const current = within(menu).getByRole("link", { name: "덱" });
+      expect(current).toHaveClass("text-ink");
+      expect(current.className).toMatch(/font-bold|text-label/);
+      expect(current.querySelector("svg")?.parentElement).toHaveClass("bg-brand-tint");
+      // Control: another page has the pill's place and no tint.
+      const other = within(menu).getByRole("link", { name: "기록" });
+      expect(other).toHaveClass("text-muted");
+      expect(other).not.toHaveClass("text-ink");
+      expect(other.querySelector("svg")?.parentElement).not.toHaveClass("bg-brand-tint");
+    }
+  });
+
   it("show the side menu from 1024 px wide and the tab bar below it", () => {
     path = "/";
     render(

@@ -91,7 +91,7 @@ export async function Deck({ params }: { params: Promise<{ id: string }> }) {
       )}
       <CardGrid deck={deck} cards={cards} />
       <div className="sticky bottom-[calc(64px+env(safe-area-inset-bottom))] z-[2] bg-ground py-3 lg:bottom-0">
-        <AuthoringButton deck={deck} />
+        <AuthoringButton deck={deck} primary={cards.length === 0} />
       </div>
     </>
   );
