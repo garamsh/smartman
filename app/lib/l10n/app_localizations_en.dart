@@ -111,7 +111,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deckNameRequired => 'Enter a name';
 
   @override
-  String get noCards => 'No cards yet. Add a card to start.';
+  String get noCards => 'No cards yet';
 
   @override
   String get newCard => 'Add card';
@@ -570,12 +570,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String currentCardSemantics(String front) {
     return 'Front: $front';
   }
-
-  @override
-  String get showBack => 'show the back';
-
-  @override
-  String get hideBack => 'hide the back';
 
   @override
   String previousCardSemantics(
@@ -1258,20 +1252,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noCardsTitle => 'Make your first card?';
 
   @override
-  String get noCardsBody => 'Add cards to a deck to start.';
-
-  @override
-  String get openDeck => 'Open deck';
-
-  @override
   String get addCardsInDecks => 'Add cards in a deck';
 
   @override
   String get emptyHomeTitle => 'Shall we make your first deck?';
-
-  @override
-  String get emptyHomeBody =>
-      'Take a photo of a vocabulary page and we\'ll make the cards for you. You can also type them in.';
 
   @override
   String get createManually => 'Enter by hand';

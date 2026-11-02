@@ -221,7 +221,7 @@ abstract class AppLocalizations {
   /// Shown when a deck has no card.
   ///
   /// In ko, this message translates to:
-  /// **'아직 카드가 없어요. 카드를 추가해 시작해 보세요.'**
+  /// **'아직 카드가 없어요'**
   String get noCards;
 
   /// Bottom-bar button for adding a card, and the title of the sheet of ways to add one.
@@ -991,18 +991,6 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'앞면: {front}'**
   String currentCardSemantics(String front);
-
-  /// Accessibility hint of tapping a card in the deck's card list while its back is hidden.
-  ///
-  /// In ko, this message translates to:
-  /// **'뒷면 보기'**
-  String get showBack;
-
-  /// Accessibility hint of tapping a card in the deck's card list while its back is shown.
-  ///
-  /// In ko, this message translates to:
-  /// **'뒷면 가리기'**
-  String get hideBack;
 
   /// Accessibility label of a card answered earlier in the session; changed is 'yes' when the answer differs from the one first given.
   ///
@@ -2041,18 +2029,6 @@ abstract class AppLocalizations {
   /// **'첫 카드를 만들어 볼까요?'**
   String get noCardsTitle;
 
-  /// 오늘 tab line under the no-cards heading.
-  ///
-  /// In ko, this message translates to:
-  /// **'덱에 카드를 추가해 시작해요.'**
-  String get noCardsBody;
-
-  /// Quiet button on the 오늘 tab's no-cards state that opens the user's one deck.
-  ///
-  /// In ko, this message translates to:
-  /// **'덱 열기'**
-  String get openDeck;
-
   /// Button on the 오늘 tab's no-cards state, with several decks, that shows the 덱 tab.
   ///
   /// In ko, this message translates to:
@@ -2064,12 +2040,6 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'첫 덱을 만들어 볼까요?'**
   String get emptyHomeTitle;
-
-  /// Home screen line under the first-deck heading.
-  ///
-  /// In ko, this message translates to:
-  /// **'단어장 사진을 찍으면 카드를 바로 만들어 드려요. 직접 입력해도 돼요.'**
-  String get emptyHomeBody;
 
   /// The new-deck and add-card sheets' row that starts by typing: a deck named by hand, or a card in the editor.
   ///

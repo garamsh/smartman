@@ -110,7 +110,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get deckNameRequired => '이름을 입력해 주세요';
 
   @override
-  String get noCards => '아직 카드가 없어요. 카드를 추가해 시작해 보세요.';
+  String get noCards => '아직 카드가 없어요';
 
   @override
   String get newCard => '카드 추가';
@@ -559,12 +559,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String currentCardSemantics(String front) {
     return '앞면: $front';
   }
-
-  @override
-  String get showBack => '뒷면 보기';
-
-  @override
-  String get hideBack => '뒷면 가리기';
 
   @override
   String previousCardSemantics(
@@ -1160,19 +1154,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get noCardsTitle => '첫 카드를 만들어 볼까요?';
 
   @override
-  String get noCardsBody => '덱에 카드를 추가해 시작해요.';
-
-  @override
-  String get openDeck => '덱 열기';
-
-  @override
   String get addCardsInDecks => '덱에서 카드 추가';
 
   @override
   String get emptyHomeTitle => '첫 덱을 만들어 볼까요?';
-
-  @override
-  String get emptyHomeBody => '단어장 사진을 찍으면 카드를 바로 만들어 드려요. 직접 입력해도 돼요.';
 
   @override
   String get createManually => '직접 입력';

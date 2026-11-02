@@ -68,7 +68,7 @@ void main() {
 
       screens = await DeckScreens.open(tester);
       await screens.push((deck) => DeckScreen(deck: deck));
-      expect(shownText('No cards yet. Add a card to start.'), findsOneWidget);
+      expect(shownText('No cards yet'), findsOneWidget);
       expect(find.widgetWithText(AppButton, 'Study'), findsNothing);
       expect(button('Add card').variant, AppButtonVariant.primary);
       await screens.close();
@@ -87,7 +87,7 @@ void main() {
 
       screens = await DeckScreens.open(tester);
       await screens.push((deck) => DeckScreen(deck: deck));
-      expect(shownText('No cards yet. Add a card to start.'), findsOneWidget);
+      expect(shownText('No cards yet'), findsOneWidget);
       expect(find.text('Study today'), findsNothing);
       expect(find.text('0 cards'), findsOneWidget);
       expect(find.textContaining('mastered'), findsNothing);
@@ -973,7 +973,7 @@ void main() {
 
   for (final scale in [1.0, 2.0]) {
     testWidgets(
-      "on a 390 wide phone at text scale $scale the empty deck's Korean line breaks only between words and is read as written",
+      "on a 390 wide phone at text scale $scale the empty deck's Korean line stays on one line and is read as written",
       (tester) async {
         tester.platformDispatcher.textScaleFactorTestValue = scale;
         addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
@@ -983,10 +983,12 @@ void main() {
         );
         await screens.push((deck) => DeckScreen(deck: deck));
 
-        const line = '아직 카드가 없어요. 카드를 추가해 시작해 보세요.';
-        expectBreaksBetweenWords(tester, line);
+        const line = '아직 카드가 없어요';
+        expect(lineEnds(tester, line).$1, hasLength(1));
         // A screen reader reads it as written, without the joiners.
         expect(find.bySemanticsLabel(line), findsOneWidget);
+        // Adding a card is the screen's one action, said by its button alone.
+        expect(find.text('카드 추가'), findsOneWidget);
         // The mascot dozes over it, above the words.
         final mascot = find.byType(Mascot);
         expect(
