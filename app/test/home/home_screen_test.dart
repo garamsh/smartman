@@ -1327,7 +1327,7 @@ void main() {
           findsOneWidget,
         );
         expect(find.text('Delta'), findsOneWidget);
-        expect(shownText('No cards yet. Add a card to start.'), findsOneWidget);
+        expect(shownText('No cards yet'), findsOneWidget);
         await tester.pageBack();
         await tester.pumpAndSettle();
         expect(find.text('My decks 4'), findsOneWidget);
