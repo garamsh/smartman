@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:smartman/account/account.dart';
+import 'package:knowno/account/account.dart';
 
 /// Stands in for the account service at the auth boundary. [signIn] signs in
 /// as [email], or throws [failure] when one is set; [cancelSignIn] makes it

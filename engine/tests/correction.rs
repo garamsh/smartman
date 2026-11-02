@@ -1,6 +1,6 @@
 //! Correcting the last answer by replaying the history with that rating changed.
 
-use smartman_engine::{Answer, Rating, Review, Timestamp, replay, review};
+use knowno_engine::{Answer, Rating, Review, Timestamp, replay, review};
 
 const DAY: i64 = 86_400;
 

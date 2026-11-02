@@ -3,11 +3,11 @@
 //! The surface takes the app's two answers, so the sequences checked are those whose every
 //! rating is Again or Good; the Hard and Easy sequences are checked by `engine/tests/reference.rs`.
 
-use serde::Deserialize;
-use smartman_engine_wasm::{
+use knowno_engine_wasm::{
     Answer, MemoryStateParts, Outcome, ReviewRecord, Scheduled, replay, retrievability,
     review_card, review_new_card,
 };
+use serde::Deserialize;
 use tsify::{Ts, Tsify};
 use wasm_bindgen_test::{console_log, wasm_bindgen_test};
 

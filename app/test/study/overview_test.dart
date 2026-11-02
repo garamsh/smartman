@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/deck/deck.dart';
-import 'package:smartman/study/src/model.dart';
-import 'package:smartman/study/src/overview.dart';
-import 'package:smartman/study/src/queue.dart';
-import 'package:smartman/study/src/rust/api/engine.dart';
-import 'package:smartman/study/src/today.dart';
+import 'package:knowno/deck/deck.dart';
+import 'package:knowno/study/src/model.dart';
+import 'package:knowno/study/src/overview.dart';
+import 'package:knowno/study/src/queue.dart';
+import 'package:knowno/study/src/rust/api/engine.dart';
+import 'package:knowno/study/src/today.dart';
 
 import 'fixtures.dart';
 

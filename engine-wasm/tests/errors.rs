@@ -1,6 +1,6 @@
 //! A refused input reaches JavaScript as a returned `EngineError` it can switch on, not a throw.
 
-use smartman_engine_wasm::{Answer, MemoryStateParts, review_card};
+use knowno_engine_wasm::{Answer, MemoryStateParts, review_card};
 use tsify::Tsify;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_test::wasm_bindgen_test;

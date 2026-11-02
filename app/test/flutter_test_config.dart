@@ -1,7 +1,7 @@
 import 'dart:async';
 
-import 'package:smartman/design/streak_flame.dart';
-import 'package:smartman/study/study.dart';
+import 'package:knowno/design/streak_flame.dart';
+import 'package:knowno/study/study.dart';
 
 /// Loads the engine library once before every test file, as the composition
 /// site does before `runApp`: a study session places its cards through the

@@ -5,12 +5,12 @@ import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:drift_dev/api/migrations_native.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/account/account.dart';
-import 'package:smartman/database/database.dart';
-import 'package:smartman/deck/deck.dart'
+import 'package:knowno/account/account.dart';
+import 'package:knowno/database/database.dart';
+import 'package:knowno/deck/deck.dart'
     show cellsFromSides, decodeCells, decodeContent;
-import 'package:smartman/study/study.dart';
-import 'package:smartman/sync/sync.dart';
+import 'package:knowno/study/study.dart';
+import 'package:knowno/sync/sync.dart';
 
 import '../../sync/fake_sync_server.dart';
 import 'generated/schema.dart';

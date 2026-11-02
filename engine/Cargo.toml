@@ -1,9 +1,9 @@
 [package]
-name = "smartman_engine"
+name = "knowno_engine"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.99"
-description = "FSRS-6 memory state and review scheduling for smartman, as pure functions."
+description = "FSRS-6 memory state and review scheduling for knowno, as pure functions."
 publish = false
 
 [dev-dependencies]

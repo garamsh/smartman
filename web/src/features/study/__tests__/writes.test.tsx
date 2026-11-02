@@ -13,7 +13,7 @@ import { signedInCookies } from "@/testing/session";
 import { StudyScreen } from "../components/study-screen";
 import { recordAnswer } from "../record-answer";
 import { loadEngine } from "../engine";
-import init, { reviewCard, reviewNewCard } from "../engine-wasm/smartman_engine_wasm.js";
+import init, { reviewCard, reviewNewCard } from "../engine-wasm/knowno_engine_wasm.js";
 import type { CardState } from "../queue";
 import type { StudyCard } from "../session";
 import { unknownPace } from "../study-time";

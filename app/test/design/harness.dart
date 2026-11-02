@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/design/theme.dart';
-import 'package:smartman/l10n/app_localizations.dart';
+import 'package:knowno/design/theme.dart';
+import 'package:knowno/l10n/app_localizations.dart';
 
 /// The light and dark themes, with the tokens each must draw in.
 const themeModes = {

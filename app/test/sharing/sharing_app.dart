@@ -3,12 +3,12 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/database/database.dart';
-import 'package:smartman/deck/deck.dart';
-import 'package:smartman/design/theme.dart';
-import 'package:smartman/home/home.dart';
-import 'package:smartman/l10n/app_localizations.dart';
-import 'package:smartman/sharing/sharing.dart';
+import 'package:knowno/database/database.dart';
+import 'package:knowno/deck/deck.dart';
+import 'package:knowno/design/theme.dart';
+import 'package:knowno/home/home.dart';
+import 'package:knowno/l10n/app_localizations.dart';
+import 'package:knowno/sharing/sharing.dart';
 
 import '../home/home_data.dart';
 import 'fakes.dart';

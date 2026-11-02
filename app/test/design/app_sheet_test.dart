@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/design/app_button.dart';
-import 'package:smartman/design/app_sheet.dart';
-import 'package:smartman/design/theme.dart';
+import 'package:knowno/design/app_button.dart';
+import 'package:knowno/design/app_sheet.dart';
+import 'package:knowno/design/theme.dart';
 
 import '../contrast.dart';
 import 'harness.dart';

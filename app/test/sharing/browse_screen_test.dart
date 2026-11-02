@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/sharing/sharing.dart';
+import 'package:knowno/sharing/sharing.dart';
 
 import '../word_breaks.dart';
 import 'fakes.dart';

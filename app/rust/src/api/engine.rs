@@ -11,7 +11,7 @@
     clippy::indexing_slicing
 )]
 
-use smartman_engine as engine;
+use knowno_engine as engine;
 
 /// The two answers a card is given, by a swipe or a screen reader's action.
 pub enum Answer {

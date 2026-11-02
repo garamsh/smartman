@@ -7,10 +7,10 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:google_sign_in_platform_interface/google_sign_in_platform_interface.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:smartman/account/account.dart';
-import 'package:smartman/account/src/account_service.dart';
-import 'package:smartman/account/src/failure_message.dart';
-import 'package:smartman/l10n/app_localizations.dart';
+import 'package:knowno/account/account.dart';
+import 'package:knowno/account/src/account_service.dart';
+import 'package:knowno/account/src/failure_message.dart';
+import 'package:knowno/l10n/app_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'fake_google_sign_in.dart';

@@ -6,11 +6,11 @@ library;
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/account/account.dart';
-import 'package:smartman/deck/deck.dart';
-import 'package:smartman/sharing/sharing.dart';
-import 'package:smartman/study/study.dart';
-import 'package:smartman/sync/sync.dart';
+import 'package:knowno/account/account.dart';
+import 'package:knowno/deck/deck.dart';
+import 'package:knowno/sharing/sharing.dart';
+import 'package:knowno/study/study.dart';
+import 'package:knowno/sync/sync.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../sync/bounded_auth.dart';
@@ -19,8 +19,8 @@ import 'fakes.dart';
 
 /// The local Supabase stack `supabase/test-sync.sh` starts, named by the
 /// environment it runs this file in.
-const _urlVariable = 'SMARTMAN_SYNC_TEST_URL';
-const _keyVariable = 'SMARTMAN_SYNC_TEST_KEY';
+const _urlVariable = 'KNOWNO_SYNC_TEST_URL';
+const _keyVariable = 'KNOWNO_SYNC_TEST_KEY';
 
 /// One signed-in user: a device that syncs, and sharing over the same
 /// session.

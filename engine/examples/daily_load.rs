@@ -24,7 +24,7 @@
 //!   of the time the answer took: what the stored `duration_ms` holds once background time no
 //!   longer counts, while the screen stays in the foreground.
 
-use smartman_engine::{FuzzFactor, MemoryState, Rating, Timestamp, review};
+use knowno_engine::{FuzzFactor, MemoryState, Rating, Timestamp, review};
 
 const DAY: i64 = 86_400;
 /// When each day's session starts: 09:00, so the study day (from 04:00) holds it.

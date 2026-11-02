@@ -2,11 +2,11 @@ import 'dart:io';
 
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/account/account.dart';
-import 'package:smartman/database/database.dart';
-import 'package:smartman/deck/deck.dart';
-import 'package:smartman/media/media.dart';
-import 'package:smartman/sharing/sharing.dart';
+import 'package:knowno/account/account.dart';
+import 'package:knowno/database/database.dart';
+import 'package:knowno/deck/deck.dart';
+import 'package:knowno/media/media.dart';
+import 'package:knowno/sharing/sharing.dart';
 
 import '../media/fakes.dart';
 import 'fakes.dart';

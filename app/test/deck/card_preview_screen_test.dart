@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/deck/deck.dart';
-import 'package:smartman/deck/src/card_preview_screen.dart';
-import 'package:smartman/design/theme.dart';
-import 'package:smartman/l10n/app_localizations.dart';
+import 'package:knowno/deck/deck.dart';
+import 'package:knowno/deck/src/card_preview_screen.dart';
+import 'package:knowno/design/theme.dart';
+import 'package:knowno/l10n/app_localizations.dart';
 
 /// [words] Korean words of four syllables, a space apart.
 String _korean(int words) => List.filled(words, '광합성은').join(' ');

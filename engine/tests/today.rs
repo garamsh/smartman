@@ -1,6 +1,6 @@
 //! Today's list: a card failed today stays until it is passed today, from the day's reviews.
 
-use smartman_engine::{Answer, Rating, Review, StudyDay, Timestamp, Today, today};
+use knowno_engine::{Answer, Rating, Review, StudyDay, Timestamp, Today, today};
 
 const HOUR: i64 = 3_600;
 

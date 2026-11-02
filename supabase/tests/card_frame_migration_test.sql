@@ -1,6 +1,6 @@
 -- The migration to the 칸 frame (#549, ADR 0137 as amended by ADR 0140) on the shared fixtures,
 -- supabase/fixtures/card-frame/conversion.json, which supabase/test-db.sh hands this test as the
--- database setting `smartman.card_frame_fixtures`: each placement converts as its expected list,
+-- database setting `knowno.card_frame_fixtures`: each placement converts as its expected list,
 -- what it leaves stays, the backup holds every changed row and no client reads it, a second run
 -- changes nothing, the revert restores an untouched row exactly and projects an edited one with
 -- nothing lost, and the whole runs at production's volume inside what a writer waits for.
@@ -11,7 +11,7 @@ begin;
 create temp table fixtures as
 select each.number::int as n, each.fixture->>'name' as name, each.fixture->'front' as front,
   each.fixture->'back' as back, nullif(each.fixture->'cells', 'null') as cells
-from jsonb_array_elements(current_setting('smartman.card_frame_fixtures')::jsonb)
+from jsonb_array_elements(current_setting('knowno.card_frame_fixtures')::jsonb)
   with ordinality as each (fixture, number);
 
 select plan(54 + (select count(*)::int from fixtures));

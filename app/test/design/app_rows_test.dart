@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/design/app_chip.dart';
-import 'package:smartman/design/app_list_row.dart';
-import 'package:smartman/design/app_section_label.dart';
-import 'package:smartman/design/theme.dart';
+import 'package:knowno/design/app_chip.dart';
+import 'package:knowno/design/app_list_row.dart';
+import 'package:knowno/design/app_section_label.dart';
+import 'package:knowno/design/theme.dart';
 
 import '../contrast.dart';
 import '../word_breaks.dart';

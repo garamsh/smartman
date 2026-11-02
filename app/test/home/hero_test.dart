@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/design/theme.dart';
+import 'package:knowno/design/theme.dart';
 
 import '../contrast.dart';
 

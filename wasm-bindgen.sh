@@ -23,9 +23,9 @@ case "${1:-}" in
 generate)
 	# Absolute paths reach the module in panic locations; mapping them makes it the same on every host.
 	cargo_home=${CARGO_HOME:-$HOME/.cargo}
-	RUSTFLAGS="--remap-path-prefix=$cargo_home=/cargo --remap-path-prefix=$root=/smartman" \
+	RUSTFLAGS="--remap-path-prefix=$cargo_home=/cargo --remap-path-prefix=$root=/knowno" \
 		cargo build --locked --release --target-dir target/generate
-	wasm-bindgen --target web --out-dir pkg target/generate/wasm32-unknown-unknown/release/smartman_engine_wasm.wasm
+	wasm-bindgen --target web --out-dir pkg target/generate/wasm32-unknown-unknown/release/knowno_engine_wasm.wasm
 	echo "generated engine-wasm/pkg/ with wasm-bindgen $version, --target web"
 	;;
 test)

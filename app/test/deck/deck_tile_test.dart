@@ -6,11 +6,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:smartman/database/database.dart';
-import 'package:smartman/deck/deck.dart';
-import 'package:smartman/deck/src/deck_row.dart';
-import 'package:smartman/design/theme.dart';
-import 'package:smartman/media/media.dart';
+import 'package:knowno/database/database.dart';
+import 'package:knowno/deck/deck.dart';
+import 'package:knowno/deck/src/deck_row.dart';
+import 'package:knowno/design/theme.dart';
+import 'package:knowno/media/media.dart';
 import 'package:uuid/uuid.dart';
 
 import '../media/fakes.dart';

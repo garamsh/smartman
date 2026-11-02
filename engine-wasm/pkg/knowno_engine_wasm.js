@@ -1,4 +1,4 @@
-/* @ts-self-types="./smartman_engine_wasm.d.ts" */
+/* @ts-self-types="./knowno_engine_wasm.d.ts" */
 
 /**
  * Replays a history, in the order the reviews happened, into the card's state; `null` when empty.
@@ -327,7 +327,7 @@ function __wbg_get_imports() {
     };
     return {
         __proto__: null,
-        "./smartman_engine_wasm_bg.js": import0,
+        "./knowno_engine_wasm_bg.js": import0,
     };
 }
 
@@ -629,7 +629,7 @@ async function __wbg_init(module_or_path) {
     }
 
     if (module_or_path === undefined) {
-        module_or_path = new URL('smartman_engine_wasm_bg.wasm', import.meta.url);
+        module_or_path = new URL('knowno_engine_wasm_bg.wasm', import.meta.url);
     }
     const imports = __wbg_get_imports();
 

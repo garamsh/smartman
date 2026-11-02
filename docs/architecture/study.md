@@ -149,7 +149,7 @@ How the setting the day's new cards fill is changed: in the first-run step, and 
 ### The bridge to the engine
 
 - The app calls the engine ([`engine.md`](engine.md)) through flutter_rust_bridge 2.13.0, built with its native-assets backend ([ADR 0004](adr/0004-flutter-rust-bridge.md)).
-- The bridge crate is `rust_lib_smartman` in `app/rust/`. It depends on `engine/` by path and declares the Dart surface in `app/rust/src/api/engine.rs`:
+- The bridge crate is `rust_lib_knowno` in `app/rust/`. It depends on `engine/` by path and declares the Dart surface in `app/rust/src/api/engine.rs`:
   - `review_new_card` — a new card's first review, with an optional fuzz factor;
   - `review_card` — a review of a card from its persisted state parts, with an optional fuzz factor;
   - `replay` — a history folded into a state;

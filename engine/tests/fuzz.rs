@@ -1,6 +1,6 @@
 //! A fuzz factor moves the due time of a review, never its state.
 
-use smartman_engine::{FuzzFactor, Rating, Timestamp, review};
+use knowno_engine::{FuzzFactor, Rating, Timestamp, review};
 
 const DAY: i64 = 86_400;
 

@@ -3,10 +3,10 @@ import 'dart:io';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/database/database.dart';
-import 'package:smartman/deck/deck.dart';
-import 'package:smartman/deck/src/card_template.dart';
-import 'package:smartman/media/media.dart';
+import 'package:knowno/database/database.dart';
+import 'package:knowno/deck/deck.dart';
+import 'package:knowno/deck/src/card_template.dart';
+import 'package:knowno/media/media.dart';
 
 import '../media/fakes.dart';
 
@@ -930,9 +930,9 @@ void main() {
   test(
     'data written before closing the database is read after reopening',
     () async {
-      final dir = await Directory.systemTemp.createTemp('smartman_db');
+      final dir = await Directory.systemTemp.createTemp('knowno_db');
       addTearDown(() => dir.delete(recursive: true));
-      final file = File('${dir.path}/smartman.sqlite');
+      final file = File('${dir.path}/knowno.sqlite');
 
       final before = AppDatabase(NativeDatabase(file));
       final writer = _repository(before);

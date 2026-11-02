@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/deck/deck.dart';
-import 'package:smartman/deck/src/card_preview.dart';
-import 'package:smartman/design/theme.dart';
-import 'package:smartman/design/word_break.dart';
-import 'package:smartman/l10n/app_localizations.dart';
+import 'package:knowno/deck/deck.dart';
+import 'package:knowno/deck/src/card_preview.dart';
+import 'package:knowno/design/theme.dart';
+import 'package:knowno/design/word_break.dart';
+import 'package:knowno/l10n/app_localizations.dart';
 
 void main() {
   testWidgets('a short side sits vertically centred in its half', (

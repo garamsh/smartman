@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/deck/deck.dart';
-import 'package:smartman/design/app_text_field.dart';
-import 'package:smartman/sharing/sharing.dart';
+import 'package:knowno/deck/deck.dart';
+import 'package:knowno/design/app_text_field.dart';
+import 'package:knowno/sharing/sharing.dart';
 
 import 'fakes.dart';
 import 'sharing_app.dart';
