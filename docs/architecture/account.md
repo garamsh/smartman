@@ -53,7 +53,7 @@ The `account` domain: signing in with Google through Supabase Auth, the session 
 ### Configuration
 
 - `app/config/dev.json` holds the Supabase URL, `https://api.knowno.app`, the project's custom domain, the Supabase publishable key, the Google web client ID (passed as the server client ID) and the iOS client ID. The values are public. The Android client is matched by package name, `app.knowno`, and signing certificate, so no Android client ID is configured ([ADR 0134](adr/0134-name-the-app-knowno-serve-it-at-knowno-app-identify-it-as-app-knowno-and-reach-the-backend-at-api-knowno-app.md)).
-- The iOS client is the one created for `sh.garam.knowno`, its bundle ID changed by the owner to `app.knowno`, so the old app's install can no longer sign in with Google.
+- The iOS client is the one created for `sh.garam.smartman`, its bundle ID changed by the owner to `app.knowno`, so the old app's install can no longer sign in with Google.
 - `make test`, `make build` and the README's `flutter run` pass the file with `--dart-define-from-file`; no Dart source holds a value.
 - The values are parsed once at start. A missing or malformed value, or a key that is not a publishable key, makes the state `AccountUnavailable`, with the reasons in its `AccountMisconfigured`; the gate then shows the message and no app.
 - The terms of service and the privacy policy are the web's pages, `https://knowno.app/terms` and `https://knowno.app/privacy` ([`web-legal.md`](web-legal.md)), constants in `app/lib/account/src/legal.dart` that no configuration changes. Each link opens its page in the platform's browser through `url_launcher`, with a snack bar when it does not open ([ADR 0032](adr/0032-publish-the-legal-documents-on-the-web-and-link-both-clients-to-them.md)).
