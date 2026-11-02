@@ -3,9 +3,9 @@ import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
-import 'package:smartman/media/media.dart';
-import 'package:smartman/media/src/image.dart';
-import 'package:smartman/media/src/model.dart';
+import 'package:knowno/media/media.dart';
+import 'package:knowno/media/src/image.dart';
+import 'package:knowno/media/src/model.dart';
 
 /// A PNG [width] by [height], white but for a red band 17 px wide at its
 /// horizontal centre and a blue one at its left edge, wide enough to keep

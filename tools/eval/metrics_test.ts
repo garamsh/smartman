@@ -11,6 +11,7 @@ import {
   entryOf,
   type FieldCounts,
   isBareException,
+  isNumberedFront,
   listedItems,
   normalize,
   type NotesRow,
@@ -23,6 +24,7 @@ import {
 } from "./metrics.ts";
 
 const NO_SENSES = { returned: 0, page: 0, matched: 0 };
+const NO_FRONTS = { returned: 0, numbered: 0 };
 
 const NO_FIELDS: FieldCounts = {
   labels: 0,
@@ -88,6 +90,7 @@ Deno.test("a candidate matches only when both sides match after normalization", 
       f1: 1,
       fields: { ...NO_FIELDS, unlabelledSenses: 2 },
       senses: { returned: 2, page: 2, matched: 2 },
+      fronts: { returned: 2, numbered: 0 },
     },
   );
   const wrongBack = score([entry("apple", "배"), entry("river", "강")], truth);
@@ -110,7 +113,51 @@ Deno.test("an image with no candidates scores zero", () => {
     f1: 0,
     fields: NO_FIELDS,
     senses: NO_SENSES,
+    fronts: NO_FRONTS,
   });
+});
+
+Deno.test("a front holding a list's number is counted, and the card matches nothing", () => {
+  const truth = [entry("abandon", "버리다"), entry("ability", "능력")];
+  const numbered = score(
+    [entry("1. abandon", "버리다"), entry("ability", "능력")],
+    truth,
+  );
+  assert.deepEqual(numbered.fronts, { returned: 2, numbered: 1 });
+  assert.equal(numbered.recall, 0.5, "1. abandon is not abandon");
+  assert.deepEqual(
+    score([entry("abandon", "버리다"), entry("ability", "능력")], truth).fronts,
+    { returned: 2, numbered: 0 },
+    "control: the same words without their numbers",
+  );
+});
+
+Deno.test("a list's number is a numeral alone, or one opening a front before a dot or a bracket, or in brackets", () => {
+  for (
+    const front of [
+      "1. abandon",
+      "12) ability",
+      "(3) absorb",
+      " 4.accurate",
+      "5",
+      "１. abandon",
+    ]
+  ) {
+    assert.ok(isNumberedFront(front), front);
+  }
+  // Control: a front that opens with a number that places no entry.
+  for (
+    const front of [
+      "abandon",
+      "3D printer",
+      "3.5 inch",
+      "24 hours",
+      "a.m.",
+      "1990s",
+    ]
+  ) {
+    assert.ok(!isNumberedFront(front), front);
+  }
 });
 
 Deno.test("percentile takes the nearest rank", () => {
@@ -137,6 +184,7 @@ Deno.test("summarize averages per-image scores, pools the field counts, keeps ea
           fields: 2,
         },
         senses: NO_SENSES,
+        fronts: { returned: 2, numbered: 1 },
       },
       notes: null,
       latencyMs: 1000,
@@ -151,6 +199,7 @@ Deno.test("summarize averages per-image scores, pools the field counts, keeps ea
         f1: 0,
         fields: { ...NO_FIELDS, unlabelledSenses: 4, unprintedLabels: 1 },
         senses: NO_SENSES,
+        fronts: { returned: 2, numbered: 0 },
       },
       notes: null,
       latencyMs: 3000,
@@ -167,14 +216,16 @@ Deno.test("summarize averages per-image scores, pools the field counts, keeps ea
   assert.equal(row.examplesPrecision, null, "no examples were returned");
   assert.equal(row.extrasRecall, null, "the pages print no extras");
   assert.equal(row.inventedRate, 0);
+  assert.equal(row.numberedFrontRate, 0.25);
   assert.deepEqual(
     row.vocabularyPages.map((page) => [
       page.name,
       page.f1,
       page.labelPrecision,
       page.unprintedLabelRate,
+      page.numberedFrontRate,
     ]),
-    [["01", 2 / 3, 0.5, null], ["02", 0, null, 0.25]],
+    [["01", 2 / 3, 0.5, null, 0.5], ["02", 0, null, 0.25, 0]],
   );
   assert.equal(row.p50Ms, 1000);
   assert.equal(row.p90Ms, 3000);
@@ -203,6 +254,7 @@ const row = (
   inventedRate: null,
   sensePrecision: null,
   senseRecall: null,
+  numberedFrontRate: null,
   vocabularyPages: [],
   notes,
   p50Ms: 0,
@@ -537,6 +589,7 @@ Deno.test("summarize averages notes coverage over the notes images and pools the
       f1: 1,
       fields: NO_FIELDS,
       senses: NO_SENSES,
+      fronts: NO_FRONTS,
     },
     notes: null,
     latencyMs: 1000,

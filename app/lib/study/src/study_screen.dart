@@ -9,6 +9,8 @@ import '../../deck/deck.dart';
 import 'daily_minutes_sheet.dart';
 import 'study_coach.dart';
 import '../../design/app_chip.dart';
+import '../../design/app_button.dart';
+import '../../design/mascot.dart';
 import '../../design/theme.dart';
 import '../../design/word_break.dart';
 import '../../l10n/app_localizations.dart';
@@ -276,10 +278,31 @@ class _StudyScreenState extends ConsumerState<StudyScreen>
         Center(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpace.s20),
-            child: Text(
-              l10n.nothingToStudyToday,
-              textAlign: TextAlign.center,
-              style: AppType.body.copyWith(color: AppColors.of(context).muted),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              spacing: AppSpace.s16,
+              children: [
+                const Center(
+                  child: Mascot(
+                    expression: MascotExpression.sleepy,
+                    size: AppSize.mascotMedium,
+                  ),
+                ),
+                Text(
+                  l10n.nothingToStudyToday,
+                  textAlign: TextAlign.center,
+                  style: AppType.body.copyWith(
+                    color: AppColors.of(context).muted,
+                  ),
+                ),
+                const SizedBox(height: AppSpace.s4),
+                AppButton(
+                  label: l10n.close,
+                  size: AppButtonSize.cta,
+                  onPressed: () => Navigator.of(context).maybePop(),
+                ),
+              ],
             ),
           ),
         ),
@@ -538,7 +561,7 @@ class _TopBar extends StatelessWidget {
   }
 }
 
-/// The notice that the session goes on with the day, [text], on the navy
+/// The notice that the session goes on with the day, [text], on the hero
 /// surface in the top bar's row while it is not null, clear of the cards and
 /// announced to a screen reader as it appears; [otherwise], the progress bar,
 /// in its place. It slides in and out, or fades under reduce motion.

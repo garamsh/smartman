@@ -27,38 +27,39 @@ abstract final class AppSpace {
   static const sectionGap = s28;
 }
 
-/// The corner radii of the app's rounded surfaces, on one scale: group 14,
-/// button 12, chip and label 6, sheet 22 (#454).
+/// The corner radii of the app's rounded surfaces, on one scale: group and
+/// card 24, button 20, sheet 28, and a chip and a label fully round
+/// (ADR 0145).
 abstract final class AppRadius {
   /// The bottom corners of the sign-in screen's brand panel.
   static const panel = 40.0;
 
   /// A sheet's top corners.
-  static const sheet = 22.0;
+  static const sheet = 28.0;
 
   /// A card: a study card, the today card, or a card preview.
   static const card = 24.0;
 
   /// A previous card in the study stack.
-  static const previous = 20.0;
+  static const previous = 24.0;
 
   /// A row in a list that stands alone on the ground.
-  static const row = 18.0;
+  static const row = 24.0;
 
   /// A group of rows split by hairlines: a settings section, a deck's cards.
-  static const group = 14.0;
+  static const group = 24.0;
 
   /// A button.
-  static const button = 12.0;
+  static const button = 20.0;
 
-  /// A chip, and a label before a meaning.
-  static const chip = 6.0;
+  /// A chip, and a label before a meaning: fully round at any height.
+  static const chip = 999.0;
 
   /// A field.
-  static const field = 14.0;
+  static const field = 16.0;
 
   /// A pull-down menu, such as a photo import section's form menu.
-  static const menu = 13.0;
+  static const menu = 16.0;
 }
 
 /// The heights and sizes of the app's controls and brand marks.
@@ -67,7 +68,7 @@ abstract final class AppSize {
   static const cta = 56.0;
 
   /// Every other button.
-  static const button = 52.0;
+  static const button = 56.0;
 
   /// A one-line field.
   static const field = 52.0;
@@ -117,24 +118,23 @@ abstract final class AppSize {
   /// The stacked lockup's width on the sign-in screen.
   static const stackedLockupWidth = 200.0;
 
-  /// The mascot's circle on the empty home screen.
+  /// The mascot where it heads the first-run home or a cardless 오늘 tab.
   static const mascotLarge = 128.0;
 
-  /// The mascot's circle on the study completion card.
-  static const mascotMedium = 84.0;
+  /// The mascot over a card's or a screen's words.
+  static const mascotMedium = 96.0;
 
-  /// The mascot on the 오늘 tab's backlog card.
+  /// The mascot beside words: the backlog card's, or a photo being read.
   static const mascotGuide = 64.0;
-
-  /// A small mascot. No app screen draws it; the web's sizes mirror this
-  /// set.
-  static const mascotSmall = 28.0;
 
   /// The symbol in the today card's corner.
   static const heroSymbol = 120.0;
 
   /// The study progress bar's thickness.
   static const progress = 8.0;
+
+  /// The coral-tinted pill behind the current tab's icon.
+  static const tabPill = Size(56, 32);
 }
 
 /// Digits of one width, so a figure keeps its place as it changes. Kept out
@@ -264,6 +264,31 @@ abstract final class AppType {
     fontWeight: FontWeight.w600,
   );
 
+  /// A 글's front on a whole card: 20/28, bold, above its added part.
+  static const wholeFront = TextStyle(
+    fontFamily: appFontFamily,
+    fontSize: 20,
+    height: 28 / 20,
+    fontWeight: FontWeight.w700,
+  );
+
+  /// The part the reveal adds to a whole card: 18/26, semibold (ADR 0145).
+  static const wholeAdded = TextStyle(
+    fontFamily: appFontFamily,
+    fontSize: 18,
+    height: 26 / 18,
+    fontWeight: FontWeight.w600,
+  );
+
+  /// A study card's text too long for [back]: 17/27, medium, read as a
+  /// paragraph (ADR 0123).
+  static const cardBody = TextStyle(
+    fontFamily: appFontFamily,
+    fontSize: 17,
+    height: 27 / 17,
+    fontWeight: FontWeight.w500,
+  );
+
   /// The smallest a card's front and back shrink to so they fit their
   /// half.
   static const frontFloor = 18.0;
@@ -289,20 +314,21 @@ abstract final class AppType {
   );
 }
 
-/// The brand's marks, drawn from the files under `assets/brand/`, each in a
-/// light-ground and a dark-ground version.
+/// The brand's marks, drawn from the files under `assets/brand/`.
 abstract final class AppBrand {
-  /// The symbol and the wordmark side by side.
+  /// The mark on its circle, 알아몰라 and knowno side by side, in a
+  /// light-ground or a dark-ground version.
   static String lockup(Brightness brightness) =>
-      'assets/brand/smartman-lockup-${brightness.name}.png';
+      'assets/brand/knowno-lockup-${brightness.name}.png';
 
-  /// The symbol over the wordmark.
+  /// The mark on its circle over 알아몰라 and knowno, in a light-ground or a
+  /// dark-ground version.
   static String stacked(Brightness brightness) =>
-      'assets/brand/smartman-stacked-${brightness.name}.png';
+      'assets/brand/knowno-stacked-${brightness.name}.png';
 
-  /// The mascot alone, navy for a light ground and white for a dark one.
-  static String symbol(Brightness brightness) =>
-      'assets/brand/smartman-symbol-${brightness.name}.png';
+  /// The mascot in its [expression], the same on either ground.
+  static String mascot(String expression) =>
+      'assets/brand/knowno-$expression.png';
 }
 
 /// The shadows the app draws, in the theme's [AppColors.shadow].
@@ -341,6 +367,8 @@ final class AppColors extends ThemeExtension<AppColors> {
     required this.surface,
     required this.raised,
     required this.ink,
+    required this.onInk,
+    required this.primary,
     required this.onPrimary,
     required this.ink2,
     required this.muted,
@@ -374,36 +402,39 @@ final class AppColors extends ThemeExtension<AppColors> {
     required this.deckSand,
   });
 
-  /// Light tokens: navy ink on white surfaces over a pale blue-grey ground.
+  /// Light tokens: warm cocoa ink on warm white surfaces over a cream ground,
+  /// the mascot's coral in [brandTint] and [onHero].
   static const light = AppColors(
-    ground: Color(0xFFF4F6FA),
-    surface: Color(0xFFFFFFFF),
+    ground: Color(0xFFFFF6E8),
+    surface: Color(0xFFFFFCF7),
     raised: Color(0xFFFFFFFF),
-    ink: Color(0xFF1F2A44),
-    onPrimary: Color(0xFFFFFFFF),
-    ink2: Color(0xFF4A5470),
-    muted: Color(0xFF687187),
-    hairline: Color(0xFFE3E7EF),
-    outline: Color(0xFFD5DBE7),
-    brandTint: Color(0xFFE8ECF5),
-    hero: Color(0xFF1F2A44),
-    onHero: Color(0xFFFFFFFF),
-    brand: Color(0xFF1F2A44),
+    ink: Color(0xFF3B2118),
+    onInk: Color(0xFFFFFFFF),
+    primary: Color(0xFFFB7262),
+    onPrimary: Color(0xFF3B2118),
+    ink2: Color(0xFF64483D),
+    muted: Color(0xFF80695E),
+    hairline: Color(0xFFF2E6D6),
+    outline: Color(0xFFE8D8C5),
+    brandTint: Color(0xFFFFE3D0),
+    hero: Color(0xFF3B2118),
+    onHero: Color(0xFFFB7262),
+    brand: Color(0xFF3B2118),
     know: Color(0xFF1D8054),
     onKnow: Color(0xFFFFFFFF),
-    dontKnow: Color(0xFFE2574A),
-    dontKnowText: Color(0xFFC2402F),
+    dontKnow: Color(0xFFD6335F),
+    dontKnowText: Color(0xFFB3123F),
     onDontKnowText: Color(0xFFFFFFFF),
-    shadow: Color(0xFF1F2A44),
+    shadow: Color(0xFF3B2118),
     tintAmber: Color(0xFFFFF1D6),
     tintGreen: Color(0xFFE3F4EC),
-    tintRed: Color(0xFFFCE8E6),
+    tintRed: Color(0xFFFCE4EB),
     knowCard: Color(0xFFEAF6EF),
     knowLine: Color(0xFF9ED3B6),
     onKnowTint: Color(0xFF1D6B47),
-    dontKnowCard: Color(0xFFFCEEEC),
-    dontKnowLine: Color(0xFFEBB3AA),
-    onDontKnowTint: Color(0xFFB03A2B),
+    dontKnowCard: Color(0xFFFCE9EE),
+    dontKnowLine: Color(0xFFEDB0C0),
+    onDontKnowTint: Color(0xFFA81238),
     streak: Color(0xFFC26A0A),
     deckBlue: Color(0xFFE8ECF5),
     deckSky: Color(0xFFE0F0FA),
@@ -413,37 +444,39 @@ final class AppColors extends ThemeExtension<AppColors> {
     deckSand: Color(0xFFF4ECDF),
   );
 
-  /// Dark tokens: pale ink on navy surfaces, the primary fill inverted, and
-  /// the greens and reds lightened to meet WCAG AA on [surface].
+  /// Dark tokens: cream ink on warm espresso surfaces, the primary fill
+  /// inverted, and the greens and reds lightened to meet WCAG AA on [surface].
   static const dark = AppColors(
-    ground: Color(0xFF0E1424),
-    surface: Color(0xFF18203A),
-    raised: Color(0xFF232D4D),
-    ink: Color(0xFFEEF1F7),
-    onPrimary: Color(0xFF1F2A44),
-    ink2: Color(0xFFB5BED3),
-    muted: Color(0xFF9AA3BA),
-    hairline: Color(0xFF2A3352),
-    outline: Color(0xFF2E3858),
-    brandTint: Color(0xFF2A3560),
-    hero: Color(0xFF232D4D),
-    onHero: Color(0xFFFFFFFF),
-    brand: Color(0xFF1F2A44),
+    ground: Color(0xFF1F1512),
+    surface: Color(0xFF2B1E1A),
+    raised: Color(0xFF382823),
+    ink: Color(0xFFFFF1E3),
+    onInk: Color(0xFF3B2118),
+    primary: Color(0xFFFB7262),
+    onPrimary: Color(0xFF3B2118),
+    ink2: Color(0xFFDCCABB),
+    muted: Color(0xFFBDA89A),
+    hairline: Color(0xFF3D2C26),
+    outline: Color(0xFF4A372F),
+    brandTint: Color(0xFF57342A),
+    hero: Color(0xFF382823),
+    onHero: Color(0xFFFB7262),
+    brand: Color(0xFF3B2118),
     know: Color(0xFF5ED39A),
-    onKnow: Color(0xFF0E1424),
-    dontKnow: Color(0xFFFF8577),
-    dontKnowText: Color(0xFFFF8577),
-    onDontKnowText: Color(0xFF0E1424),
+    onKnow: Color(0xFF1F1512),
+    dontKnow: Color(0xFFFF8FB0),
+    dontKnowText: Color(0xFFFF8FB0),
+    onDontKnowText: Color(0xFF1F1512),
     shadow: Color(0xFF000000),
     tintAmber: Color(0xFF4A3B1E),
     tintGreen: Color(0xFF1E3F33),
-    tintRed: Color(0xFF4A2624),
+    tintRed: Color(0xFF4C2233),
     knowCard: Color(0xFF17302A),
     knowLine: Color(0xFF2E6B50),
     onKnowTint: Color(0xFF5ED39A),
-    dontKnowCard: Color(0xFF3A1F24),
-    dontKnowLine: Color(0xFF7A3A36),
-    onDontKnowTint: Color(0xFFFF8577),
+    dontKnowCard: Color(0xFF3D1C2A),
+    dontKnowLine: Color(0xFF7E3350),
+    onDontKnowTint: Color(0xFFFF8FB0),
     streak: Color(0xFFF5A623),
     deckBlue: Color(0xFF2A3560),
     deckSky: Color(0xFF1D3A50),
@@ -462,10 +495,16 @@ final class AppColors extends ThemeExtension<AppColors> {
   /// A surface raised over [surface], such as a study card in the dark theme.
   final Color raised;
 
-  /// Primary text, and the primary fill.
+  /// Primary text, and the quiet fills: a bar, a selection, an avatar.
   final Color ink;
 
-  /// Text and icons on the primary fill, [ink].
+  /// Text and icons on an [ink] fill.
+  final Color onInk;
+
+  /// The primary action's fill: the mascot's coral, in both themes.
+  final Color primary;
+
+  /// A primary action's label, the brand's cocoa, on [primary].
   final Color onPrimary;
 
   /// Text one step quieter than [ink], such as a card's back in a list.
@@ -480,16 +519,18 @@ final class AppColors extends ThemeExtension<AppColors> {
   /// The outline of a secondary button and a field.
   final Color outline;
 
-  /// A quiet brand fill: a chip, an avatar's circle, a mascot's circle.
+  /// A quiet tint of the mascot's coral: a chip, an avatar's circle, a filled
+  /// blank.
   final Color brandTint;
 
   /// The study coach's fill and the study screen's notice.
   final Color hero;
 
-  /// Text and the button fill on [hero].
+  /// The mascot's coral: text and the button fill on [hero]; never on a light
+  /// ground, where it falls short of AA.
   final Color onHero;
 
-  /// The brand navy in both themes: the label of a button on [hero].
+  /// The brand's cocoa in both themes: the label of a button on [hero].
   final Color brand;
 
   /// "Know", as text and icons on [surface] or [ground], and as a fill under [onKnow].
@@ -542,8 +583,8 @@ final class AppColors extends ThemeExtension<AppColors> {
   Color get flameOutline => muted;
 
   /// The streak flame's warm core, from its fourth stage: [streak] halfway
-  /// toward [onHero], so the web's token set needs no flame of its own.
-  Color get flameCore => Color.lerp(streak, onHero, 0.5)!;
+  /// toward white, so the web's token set needs no flame of its own.
+  Color get flameCore => Color.lerp(streak, const Color(0xFFFFFFFF), 0.5)!;
 
   /// The streak flame's glow, from its fourth stage.
   Color get flameGlow => streak.withValues(alpha: 0.35);
@@ -573,6 +614,8 @@ final class AppColors extends ThemeExtension<AppColors> {
     Color? surface,
     Color? raised,
     Color? ink,
+    Color? onInk,
+    Color? primary,
     Color? onPrimary,
     Color? ink2,
     Color? muted,
@@ -609,6 +652,8 @@ final class AppColors extends ThemeExtension<AppColors> {
     surface: surface ?? this.surface,
     raised: raised ?? this.raised,
     ink: ink ?? this.ink,
+    onInk: onInk ?? this.onInk,
+    primary: primary ?? this.primary,
     onPrimary: onPrimary ?? this.onPrimary,
     ink2: ink2 ?? this.ink2,
     muted: muted ?? this.muted,
@@ -651,6 +696,8 @@ final class AppColors extends ThemeExtension<AppColors> {
       surface: mix(surface, other.surface),
       raised: mix(raised, other.raised),
       ink: mix(ink, other.ink),
+      onInk: mix(onInk, other.onInk),
+      primary: mix(primary, other.primary),
       onPrimary: mix(onPrimary, other.onPrimary),
       ink2: mix(ink2, other.ink2),
       muted: mix(muted, other.muted),
@@ -696,7 +743,7 @@ ThemeData _theme(Brightness brightness, AppColors colors) {
   final scheme = ColorScheme(
     brightness: brightness,
     primary: colors.ink,
-    onPrimary: colors.onPrimary,
+    onPrimary: colors.onInk,
     secondary: colors.ink2,
     onSecondary: colors.surface,
     error: colors.dontKnowText,
@@ -713,7 +760,7 @@ ThemeData _theme(Brightness brightness, AppColors colors) {
     outlineVariant: colors.hairline,
     shadow: colors.shadow,
     inverseSurface: colors.ink,
-    onInverseSurface: colors.onPrimary,
+    onInverseSurface: colors.onInk,
   );
   final control = RoundedRectangleBorder(
     borderRadius: BorderRadius.circular(AppRadius.button),
@@ -805,20 +852,19 @@ ThemeData _theme(Brightness brightness, AppColors colors) {
         minimumSize: const Size(AppSize.tapTarget, AppSize.button),
         textStyle: AppType.label,
         foregroundColor: colors.ink,
-        selectedForegroundColor: colors.onPrimary,
+        selectedForegroundColor: colors.onInk,
         selectedBackgroundColor: colors.ink,
         backgroundColor: colors.surface,
         side: BorderSide(color: colors.outline),
         shape: control,
       ),
     ),
-    // On, the navy track; off, a muted thumb and outline, each at least 3:1
+    // On, the ink track; off, a muted thumb and outline, each at least 3:1
     // on the ground.
     switchTheme: SwitchThemeData(
       thumbColor: WidgetStateProperty.resolveWith(
-        (states) => states.contains(WidgetState.selected)
-            ? colors.onPrimary
-            : colors.muted,
+        (states) =>
+            states.contains(WidgetState.selected) ? colors.onInk : colors.muted,
       ),
       trackColor: WidgetStateProperty.resolveWith(
         (states) =>
@@ -832,7 +878,7 @@ ThemeData _theme(Brightness brightness, AppColors colors) {
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
       shape: control,
-      contentTextStyle: AppType.secondary.copyWith(color: colors.onPrimary),
+      contentTextStyle: AppType.secondary.copyWith(color: colors.onInk),
     ),
     popupMenuTheme: PopupMenuThemeData(
       color: colors.surface,

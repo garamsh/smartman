@@ -10,19 +10,19 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
-import 'package:smartman/account/account.dart';
-import 'package:smartman/deck/deck.dart'
+import 'package:knowno/account/account.dart';
+import 'package:knowno/deck/deck.dart'
     show deckRepositoryProvider, deckStorageKeys;
-import 'package:smartman/design/app_chip.dart';
-import 'package:smartman/design/app_text_field.dart';
-import 'package:smartman/design/theme_choice.dart';
-import 'package:smartman/home/home.dart';
-import 'package:smartman/main.dart';
-import 'package:smartman/media/media.dart';
-import 'package:smartman/photo_import/photo_import.dart';
-import 'package:smartman/sharing/sharing.dart';
-import 'package:smartman/study/study.dart';
-import 'package:smartman/sync/sync.dart';
+import 'package:knowno/design/app_chip.dart';
+import 'package:knowno/design/app_text_field.dart';
+import 'package:knowno/design/theme_choice.dart';
+import 'package:knowno/home/home.dart';
+import 'package:knowno/main.dart';
+import 'package:knowno/media/media.dart';
+import 'package:knowno/photo_import/photo_import.dart';
+import 'package:knowno/sharing/sharing.dart';
+import 'package:knowno/study/study.dart';
+import 'package:knowno/sync/sync.dart';
 
 import 'contrast.dart';
 import 'account/fake_account_service.dart';
@@ -38,8 +38,9 @@ const _ada = UserId('00000000-0000-4000-8000-00000000000a');
 /// An extraction client the test never calls.
 final class _NoExtraction implements ExtractionClient {
   @override
-  Future<List<CandidateCard>?> extract(
+  Future<Extracted?> extract(
     JpegPhoto photo, {
+    String? cursor,
     required Future<void> cancel,
   }) => throw UnimplementedError('not called');
 
@@ -168,6 +169,8 @@ void main() {
 
   Future<void> addCard(WidgetTester tester, String front, String back) async {
     await tester.tap(find.text('Add card'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Enter by hand'));
     await tester.pumpAndSettle();
     await enterFront(tester, front);
     await enterBack(tester, back);
@@ -309,15 +312,9 @@ void main() {
     (tester) async {
       await pumpApp(tester);
 
-      expect(find.bySemanticsLabel('smartman'), findsOneWidget);
+      expect(find.bySemanticsLabel('knowno'), findsOneWidget);
       expect(shownText('Shall we make your first deck?'), findsOneWidget);
-      expect(
-        shownText(
-          "Take a photo of a vocabulary page and we'll make the cards for you. You can also type them in.",
-        ),
-        findsOneWidget,
-      );
-      // One primary, which opens the new-deck sheet with every way to start.
+      // One sentence and one primary, which opens the new-deck sheet with every way to start.
       // The decks tab's way to a new deck, of the same name, waits for the
       // first deck.
       expect(find.text('Create a deck'), findsOneWidget);
@@ -386,7 +383,7 @@ void main() {
 
     await addCard(tester, 'Chat', '');
 
-    expect(find.text('Write something'), findsOneWidget);
+    expect(find.bySemanticsLabel('Add a back or a blank'), findsOneWidget);
     expect(find.text('Edit card'), findsNothing);
     expect(find.widgetWithText(AppBar, 'New card'), findsOneWidget);
     await unmountApp(tester);
@@ -403,16 +400,17 @@ void main() {
       await createDeckAndOpen(tester, 'French');
       await tester.tap(find.text('Add card'));
       await tester.pumpAndSettle();
+      await tester.tap(find.text('Enter by hand'));
+      await tester.pumpAndSettle();
     }
 
-    /// Adds a Meanings block to the back, whose one meaning has a label
-    /// field.
+    /// Adds a Word, whose one meaning has a label field.
     Future<void> addMeanings(WidgetTester tester) async {
-      await tester.ensureVisible(find.bySemanticsLabel('Add to back'));
+      await tester.ensureVisible(find.bySemanticsLabel('Add block'));
       await tester.pumpAndSettle();
-      await tester.tap(find.bySemanticsLabel('Add to back'));
+      await tester.tap(find.bySemanticsLabel('Add block'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Meanings').last);
+      await tester.tap(find.text('Word').last);
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.widgetWithText(TextField, 'Label'));
       await tester.pumpAndSettle();
@@ -449,10 +447,10 @@ void main() {
         );
         expect(tester.testTextInput.isVisible, isTrue);
 
-        await tester.tap(find.bySemanticsLabel('Add to back'));
+        await tester.tap(find.bySemanticsLabel('Add block'));
         await tester.pumpAndSettle();
-        expect(find.text('Meanings'), findsOneWidget, reason: 'its sheet');
-        await tester.tap(find.text('Meanings'));
+        expect(find.text('Word'), findsOneWidget, reason: 'its sheet');
+        await tester.tap(find.text('Word'));
         await tester.pumpAndSettle();
 
         await tester.tap(back);
@@ -484,7 +482,7 @@ void main() {
         await tester.pumpAndSettle();
         expect(tester.testTextInput.isVisible, isTrue);
 
-        // From the Meanings block's heading, which handles no drag.
+        // From the Word's heading, which handles no drag.
         // The keyboard's 336 over the form, which then holds more than fits.
         tester.view.viewInsets = const FakeViewPadding(bottom: 336);
         addTearDown(tester.view.resetViewInsets);
@@ -492,13 +490,13 @@ void main() {
         final form = tester.state<ScrollableState>(
           find
               .ancestor(
-                of: find.text('Meanings'),
+                of: find.text('Word').first,
                 matching: find.byType(Scrollable),
               )
               .first,
         );
         expect(form.position.maxScrollExtent, greaterThan(0), reason: 'setup');
-        await tester.drag(find.text('Meanings'), const Offset(0, 200));
+        await tester.drag(find.text('Word').first, const Offset(0, 200));
         await tester.pumpAndSettle();
         expect(tester.testTextInput.isVisible, isFalse);
         await unmountApp(tester);
@@ -552,7 +550,7 @@ void main() {
     await tester.tap(find.text('Study'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Chat'), findsOneWidget);
+    expect(shownText('Chat'), findsOneWidget);
     expect(find.byTooltip('Close'), findsOneWidget);
     expect(find.text('0/1'), findsOneWidget);
     await unmountApp(tester);
@@ -597,6 +595,8 @@ void main() {
       // Its one primary opens the deck's card editor; with a card added, the
       // tab shows the day.
       await tester.tap(find.text('Add card'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Enter by hand'));
       await tester.pumpAndSettle();
       await enterFront(tester, 'Chat');
       await enterBack(tester, 'cat');
@@ -651,7 +651,7 @@ void main() {
       await tester.pumpAndSettle();
       // Answered "Know" by a swipe of the current card.
       await tester.timedDrag(
-        find.text('Chat'),
+        shownText('Chat'),
         const Offset(200, 0),
         const Duration(seconds: 1),
       );
@@ -885,6 +885,8 @@ void main() {
         await tester.pumpAndSettle();
 
         await tester.tap(find.text('Add card'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Enter by hand'));
         await tester.pumpAndSettle();
         await enterFront(tester, 'Chien');
         await meetsGuidelines();

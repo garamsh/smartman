@@ -1,6 +1,6 @@
 //! An empty history replays to `null` as JavaScript reads it, as the declared type says.
 
-use smartman_engine_wasm::replay;
+use knowno_engine_wasm::replay;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_test::wasm_bindgen_test;
 

@@ -103,6 +103,7 @@ class SharingService {
           IncomingCard(
             front: card.front,
             back: card.back,
+            cells: card.cells,
             onDuplicate: onDuplicate,
           ),
       ],

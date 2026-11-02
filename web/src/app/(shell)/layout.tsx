@@ -30,7 +30,7 @@ export default function ShellLayout({ children }: LayoutProps<"/">) {
       </Suspense>
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex min-h-14 items-center justify-between pr-2 pl-4 lg:hidden">
-          <BrandMark mark="lockup" alt="smartman" className="h-6.5 w-auto" />
+          <BrandMark mark="lockup" alt="알아몰라" className="h-6.5 w-auto" />
           <Suspense fallback={<span className="size-tap-target" />}>
             <AccountLink />
           </Suspense>

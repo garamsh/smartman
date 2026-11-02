@@ -137,9 +137,17 @@ select usage.id, case when usage.user_id = '5eed0000-0000-4000-8000-0000000000a2
 from usage;
 insert into private.extraction_calls_before_versions (usage_id)
 select min(usage_id) from private.extraction_calls;
+insert into private.extraction_cursors (token, usage_id, expires_at)
+select '5eed0000-0000-4000-8000-0000000000e1', max(usage_id), now() + interval '10 minutes'
+from private.extraction_calls;
 
 insert into private.revision_marks (taken_at, revision)
 select now() - interval '1 day', coalesce(max(revision), 0) from public.cards;
+
+insert into private.card_frame_backup (card_id, user_id, front, back, template, template_version, written, migrated_at) values
+  ('5eed0000-0000-4000-8000-0000000000c2', '5eed0000-0000-4000-8000-0000000000a1',
+   '[{"type":"text","v":1,"payload":{"text":"run"}}]', '[{"type":"text","v":1,"payload":{"text":"[동] 달리다"}}]',
+   null, null, '[{"type":"text","v":2,"payload":{"front":"run","back":"[동] 달리다"}}]', now() - interval '1 day');
 
 insert into private.senses_migration_backup (card_id, back, migrated_at) values
   ('5eed0000-0000-4000-8000-0000000000c1', '[{"type":"text","v":1,"payload":{"text":"[명] 사과"}}]', now() - interval '8 days');

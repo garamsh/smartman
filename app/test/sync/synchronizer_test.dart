@@ -1,10 +1,10 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/account/account.dart';
-import 'package:smartman/database/database.dart';
-import 'package:smartman/deck/deck.dart';
-import 'package:smartman/study/study.dart';
-import 'package:smartman/sync/sync.dart';
+import 'package:knowno/account/account.dart';
+import 'package:knowno/database/database.dart';
+import 'package:knowno/deck/deck.dart';
+import 'package:knowno/study/study.dart';
+import 'package:knowno/sync/sync.dart';
 
 import '../media/fakes.dart';
 import 'device.dart';
@@ -663,6 +663,28 @@ void main() {
         (onB.template, onB.templateVersion, onB.front),
         ('image_occlusion', 2, front),
       );
+    });
+
+    test('a card added from a file reaches the server and the other device as a free v1 import', () async {
+      final deck = await a.deck.createDeck('French');
+      await a.deck.addCards(AddToDeck(deck.id), source: const FromFile(), [
+        const IncomingCard(
+          front: [TextContent('chat')],
+          back: [TextContent('a cat')],
+          onDuplicate: DuplicateChoice.addNew,
+        ),
+      ]);
+      await a.sync(_ada);
+      await b.sync(_ada);
+
+      final onServer = server.cards.values.single.row;
+      expect(
+        (onServer.template, onServer.templateVersion, onServer.source),
+        ('free', 1, 'import'),
+      );
+      final onB = (await b.deck.listCards(deck.id)).single;
+      expect(plainText(onB.front), 'chat');
+      expect(onB.source, CardSource.import);
     });
 
     test('a template set on one device reaches the other', () async {

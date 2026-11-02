@@ -1,0 +1,215 @@
+{
+  "image": "89-numbered-list-en-ko-harsh.jpg",
+  "layout": "numbered-list",
+  "languages": {
+    "front": "en",
+    "back": "ko"
+  },
+  "hand": "print",
+  "distortion": "harsh",
+  "fonts": [
+    "NanumGothic-Regular.ttf"
+  ],
+  "cards": [
+    {
+      "front": "abandon",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "버리다",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "ability",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "능력",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "absorb",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "흡수하다",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "accurate",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "정확한",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "achieve",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "성취하다",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "acquire",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "얻다",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "adapt",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "적응하다",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "admire",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "존경하다",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "advantage",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "이점",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "afford",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "여유가 있다",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "agriculture",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "농업",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "alternative",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "대안",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "ancient",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "고대의",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "anxious",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "불안한",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "apparent",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "명백한",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "appreciate",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "감사하다",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "approach",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "접근하다",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "arrange",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "정리하다",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "attempt",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "시도하다",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "avoid",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "피하다",
+          "examples": []
+        }
+      ]
+    }
+  ]
+}

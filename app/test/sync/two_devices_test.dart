@@ -9,11 +9,11 @@ import 'dart:io';
 import 'package:drift/drift.dart' show Value;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/account/account.dart';
-import 'package:smartman/database/database.dart';
-import 'package:smartman/deck/deck.dart';
-import 'package:smartman/study/study.dart';
-import 'package:smartman/sync/sync.dart';
+import 'package:knowno/account/account.dart';
+import 'package:knowno/database/database.dart';
+import 'package:knowno/deck/deck.dart';
+import 'package:knowno/study/study.dart';
+import 'package:knowno/sync/sync.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
@@ -23,9 +23,9 @@ import 'device.dart';
 
 /// The local Supabase stack `scripts/test-sync.sh` starts, named by the
 /// environment it runs this file in.
-const _urlVariable = 'SMARTMAN_SYNC_TEST_URL';
-const _keyVariable = 'SMARTMAN_SYNC_TEST_KEY';
-const _dbVariable = 'SMARTMAN_SYNC_TEST_DB_CONTAINER';
+const _urlVariable = 'KNOWNO_SYNC_TEST_URL';
+const _keyVariable = 'KNOWNO_SYNC_TEST_KEY';
+const _dbVariable = 'KNOWNO_SYNC_TEST_DB_CONTAINER';
 
 List<Content> _text(String text) => [TextContent(text)];
 

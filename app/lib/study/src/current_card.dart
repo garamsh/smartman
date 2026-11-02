@@ -15,8 +15,8 @@ import 'stop_sound.dart';
 import 'study_style.dart';
 
 /// The card under study, filling the height it is given less the guide's
-/// row under it: its front alone, centred; its back shows once answered, on
-/// the previous card. Swiped right it answers "Know", left "Don't know"; a
+/// row under it: what shows before the reveal alone, centred; the rest shows
+/// once answered, on the previous card. Swiped right it answers "Know", left "Don't know"; a
 /// screen reader has both as actions. "안내 다시 보기", alone in the row,
 /// calls [onGuide].
 ///
@@ -158,7 +158,7 @@ class _CurrentCardState extends State<CurrentCard>
           child: Semantics(
             container: true,
             label: l10n.currentCardSemantics(
-              spokenContent(l10n, widget.card.front, revealed: false),
+              spokenCells(l10n, drawnCellsOf(widget.card), revealed: false),
             ),
             customSemanticsActions: {
               CustomSemanticsAction(label: l10n.know): () =>
@@ -381,8 +381,9 @@ class _DragFeedback extends StatelessWidget {
   }
 }
 
-/// The card itself: its front alone, centred, scrolling inside where it is
-/// taller than the card; a whole card's with its blanks empty.
+/// The card itself: its front alone, centred, in the largest of the card's
+/// three sizes at which it fits, scrolling inside where it is taller than
+/// the card at the last (ADR 0123); a whole card's 칸 in place, unrevealed.
 class _CardFace extends StatelessWidget {
   const _CardFace({required this.card});
 
@@ -391,6 +392,7 @@ class _CardFace extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
+    final cells = drawnCellsOf(card);
     return DecoratedBox(
       decoration: BoxDecoration(
         color: colors.surface,
@@ -400,36 +402,21 @@ class _CardFace extends StatelessWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(StudyStyle.cardRadius),
         child: SizedBox.expand(
-          child: LayoutBuilder(
-            builder: (context, constraints) => Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(StudyStyle.cardPadding),
-                child: SizedBox(
-                  width: double.infinity,
-                  // One face when the card holds a blank anywhere
-                  // (ADR 0106).
-                  child: switch (oneFaceOf(card.front, card.back)) {
-                    final face? => WholeCardView(
-                      face,
-                      revealed: false,
-                      style: AppType.front,
-                      minFontSize: AppType.frontFloor,
-                      width: constraints.maxWidth - 2 * StudyStyle.cardPadding,
-                    ),
-                    null => ContentView(
-                      card.front,
-                      style: AppType.front,
-                      fit: (
-                        minFontSize: AppType.frontFloor,
-                        width:
-                            constraints.maxWidth - 2 * StudyStyle.cardPadding,
-                        height: null,
-                      ),
-                    ),
-                  },
-                ),
-              ),
-            ),
+          child: CardScroll(
+            padding: StudyStyle.cardPadding,
+            builder: (context, width, height) => isDrawnWhole(cells)
+                ? SteppedWholeCardView(
+                    cells,
+                    revealed: false,
+                    style: AppType.front,
+                    width: width,
+                    height: height,
+                  )
+                : ContentView(
+                    card.front,
+                    style: AppType.front,
+                    fit: StepFit(width: width, height: height),
+                  ),
           ),
         ),
       ),

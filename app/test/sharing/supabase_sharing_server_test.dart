@@ -3,8 +3,8 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:smartman/deck/deck.dart';
-import 'package:smartman/sharing/sharing.dart';
+import 'package:knowno/deck/deck.dart';
+import 'package:knowno/sharing/sharing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 void main() {
@@ -52,4 +52,69 @@ void main() {
       );
     },
   );
+
+  test('a card is read from its 칸 list when free v2 and from its sides '
+      'otherwise', () async {
+    final asked = <Uri>[];
+    final client = SupabaseClient(
+      'https://example.test',
+      'anon-key',
+      httpClient: MockClient((request) async {
+        asked.add(request.url);
+        return http.Response(
+          jsonEncode([
+            {
+              'front': [
+                {
+                  'type': 'text',
+                  'v': 2,
+                  'id': 'a',
+                  'payload': {'front': 'one', 'back': 'two'},
+                },
+              ],
+              'back': <Object>[],
+              'template': 'free',
+              'template_version': 2,
+            },
+            {
+              'front': [
+                {
+                  'type': 'text',
+                  'v': 1,
+                  'payload': {'text': 'three'},
+                },
+              ],
+              'back': [
+                {
+                  'type': 'text',
+                  'v': 1,
+                  'payload': {'text': 'four'},
+                },
+              ],
+              'template': null,
+              'template_version': null,
+            },
+          ]),
+          200,
+          request: request,
+          headers: {'content-type': 'application/json'},
+        );
+      }),
+    );
+    addTearDown(client.dispose);
+
+    final [framed, earlier] = await SupabaseSharingServer(client)
+        .listCards(const DeckId('deck'), limit: 2);
+
+    expect(
+      asked.single.queryParameters['select'],
+      contains('template_version'),
+    );
+    expect(framed.cells, const [TextCell(front: 'one', back: 'two')]);
+    expect(framed.front, const [TextContent('one')]);
+    expect(framed.back, const [TextContent('two')]);
+    expect(earlier.cells, isNull);
+    expect(earlier.front, const [TextContent('three')]);
+    expect(earlier.back, const [TextContent('four')]);
+  });
 }

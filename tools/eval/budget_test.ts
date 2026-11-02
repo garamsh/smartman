@@ -40,6 +40,7 @@ async function counted(usage: unknown): Promise<number> {
     {
       apiKey: "key",
       now: () => 0,
+      timeoutMs: 1000,
       fetch: () =>
         Promise.resolve(Response.json({
           choices: [{

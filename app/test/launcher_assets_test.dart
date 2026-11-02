@@ -15,8 +15,8 @@ const _splashDark = 'assets/brand/splash/splash-dark.png';
 const _android12Light = 'assets/brand/splash/android12-light.png';
 const _android12Dark = 'assets/brand/splash/android12-dark.png';
 
-final _groundLight = img.ColorRgb8(0xF4, 0xF6, 0xFA);
-final _groundDark = img.ColorRgb8(0x0E, 0x14, 0x24);
+final _groundLight = img.ColorRgb8(0xFF, 0xF6, 0xE8);
+final _groundDark = img.ColorRgb8(0x1F, 0x15, 0x12);
 final _white = img.ColorRgb8(0xFF, 0xFF, 0xFF);
 
 img.Image _read(String path) =>
@@ -148,7 +148,35 @@ void main() {
     }
   });
 
-  test('the iOS splash draws the symbol on the light and the dark ground', () {
+  test(
+    'Android 8 and later draw the adaptive icon: the mark over the cream',
+    () {
+      const res = 'android/app/src/main/res';
+      final adaptive = File('$res/mipmap-anydpi-v26/ic_launcher.xml')
+          .readAsStringSync();
+      expect(adaptive, contains('@color/ic_launcher_background'));
+      expect(adaptive, contains('@drawable/ic_launcher_foreground'));
+      expect(
+        File('$res/values/colors.xml').readAsStringSync(),
+        contains('<color name="ic_launcher_background">#FCEBD5</color>'),
+      );
+      for (final (density, size) in [
+        ('mdpi', 108),
+        ('hdpi', 162),
+        ('xhdpi', 216),
+        ('xxhdpi', 324),
+        ('xxxhdpi', 432),
+      ]) {
+        _expectDrawn(
+          '$res/drawable-$density/ic_launcher_foreground.png',
+          _iconDark,
+          size,
+        );
+      }
+    },
+  );
+
+  test('the iOS splash draws the mark on the light and the dark ground', () {
     const folder = 'ios/Runner/Assets.xcassets';
     for (final (suffix, size) in [('', 160), ('@2x', 320), ('@3x', 480)]) {
       _expectDrawn(
@@ -175,7 +203,7 @@ void main() {
   });
 
   test(
-    'the Android splash draws the symbol on the light and the dark ground',
+    'the Android splash draws the mark on the light and the dark ground',
     () {
       const res = 'android/app/src/main/res';
       _expectDrawn(
@@ -206,11 +234,11 @@ void main() {
       expect(_pixel('$res/drawable-night/background.png'), _groundDark);
       expect(
         File('$res/values-v31/styles.xml').readAsStringSync(),
-        contains('<item name="android:windowSplashScreenBackground">#F4F6FA'),
+        contains('<item name="android:windowSplashScreenBackground">#FFF6E8'),
       );
       expect(
         File('$res/values-night-v31/styles.xml').readAsStringSync(),
-        contains('<item name="android:windowSplashScreenBackground">#0E1424'),
+        contains('<item name="android:windowSplashScreenBackground">#1F1512'),
       );
     },
   );

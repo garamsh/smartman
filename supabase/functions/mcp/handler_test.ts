@@ -1,0 +1,1359 @@
+// The MCP server end to end, with Supabase Auth and PostgREST replaced by an in-memory fake that
+// applies row-level security's owner rule. The suite runs without write or network permission.
+import assert from "node:assert/strict";
+import validity from "../../fixtures/card-frame/validity.json" with {
+  type: "json",
+};
+import type { IdSource } from "./cards.ts";
+import { readConfig } from "./config.ts";
+import { createHandler, type LogEntry } from "./handler.ts";
+
+const SUPABASE_URL = "http://kong:8000";
+const ANON_KEY = "anon-key";
+const ADA = "00000000-0000-4000-8000-00000000000a";
+const GRACE = "00000000-0000-4000-8000-00000000000b";
+const ADA_DECK = "00000000-0000-7000-8000-0000000000d1";
+const ADA_OTHER_DECK = "00000000-0000-7000-8000-0000000000d2";
+const ADA_DELETED_DECK = "00000000-0000-7000-8000-0000000000d3";
+const GRACE_PUBLIC_DECK = "00000000-0000-7000-8000-0000000000e1";
+
+/** A JWT whose payload holds [claims]; the fake Auth server decides whether it is valid. */
+function jwt(claims: Record<string, unknown>): string {
+  const part = (value: unknown) =>
+    btoa(JSON.stringify(value)).replace(/=+$/, "").replace(/\+/g, "-").replace(
+      /\//g,
+      "_",
+    );
+  return `${part({ alg: "ES256" })}.${part(claims)}.signature`;
+}
+
+const ADA_TOKEN = jwt({ sub: ADA, client_id: "claude", aud: "authenticated" });
+const GRACE_TOKEN = jwt({
+  sub: GRACE,
+  client_id: "chatgpt",
+  aud: "authenticated",
+});
+/** A session the web or the phone holds: Auth accepts it, and it carries no client_id. */
+const ADA_SESSION = jwt({ sub: ADA, aud: "authenticated" });
+const EXPIRED = jwt({ sub: ADA, client_id: "claude", exp: 1 });
+
+type Row = Record<string, unknown>;
+
+type Fake = {
+  decks: Row[];
+  cards: Row[];
+  media: Row[];
+  /** The bucket's files by path, as the Storage API received them. */
+  objects: Map<string, { bytes: Uint8Array; type: string | null }>;
+  /** "refusing" makes the Storage API answer every upload 400. */
+  storage: "up" | "refusing";
+  /** The replies of the internet, by URL. */
+  web: Record<string, () => Response>;
+  /** Each host's addresses; a host absent here has one public address. */
+  dns: Record<string, string[]>;
+  /** "offline" makes every request to PostgREST fail to arrive. */
+  rest: "up" | "offline";
+  calls: { url: string; method: string; headers: Headers }[];
+};
+
+function block(type: string, payload: Row) {
+  return { type, v: 1, id: crypto.randomUUID(), payload };
+}
+
+function card(
+  id: string,
+  deck: string,
+  user: string,
+  front: unknown[],
+  back: unknown[],
+  extra = {},
+) {
+  return {
+    id,
+    deck_id: deck,
+    user_id: user,
+    front,
+    back,
+    card_key: String(
+      (front[0] as { payload: { text?: string } }).payload.text ?? "",
+    ).toLowerCase(),
+    deleted_at: null,
+    created_at: `2026-10-0${id.slice(-1)}T00:00:00.000Z`,
+    ...extra,
+  };
+}
+
+function seed(): Fake {
+  return {
+    rest: "up",
+    calls: [],
+    media: [],
+    objects: new Map(),
+    storage: "up",
+    web: {},
+    dns: {},
+    decks: [
+      {
+        id: ADA_DECK,
+        user_id: ADA,
+        name: "영단어",
+        visibility: "private",
+        deleted_at: null,
+        created_at: "2026-10-01",
+      },
+      {
+        id: ADA_OTHER_DECK,
+        user_id: ADA,
+        name: "Biology",
+        visibility: "private",
+        deleted_at: null,
+        created_at: "2026-10-02",
+      },
+      {
+        id: ADA_DELETED_DECK,
+        user_id: ADA,
+        name: "Gone",
+        visibility: "private",
+        deleted_at: "2026-10-03",
+        created_at: "2026-10-03",
+      },
+      {
+        id: GRACE_PUBLIC_DECK,
+        user_id: GRACE,
+        name: "Grace's",
+        visibility: "public",
+        deleted_at: null,
+        created_at: "2026-10-01",
+      },
+    ],
+    cards: [
+      card("00000000-0000-7000-8000-000000000c01", ADA_DECK, ADA, [
+        block("text", { text: "apple" }),
+      ], [
+        block("senses", {
+          senses: [{
+            labels: [{ kind: "part_of_speech", category: "noun", text: "명" }],
+            meaning: "사과",
+            examples: ["An apple a day."],
+          }],
+        }),
+      ]),
+      card("00000000-0000-7000-8000-000000000c02", ADA_DECK, ADA, [
+        block("text", { text: "Banana" }),
+      ], [
+        block("text", { text: "바나나" }),
+      ]),
+      card(
+        "00000000-0000-7000-8000-000000000c03",
+        ADA_DECK,
+        ADA,
+        [block("cloze", { text: "The ___ is red", answers: ["cherry"] })],
+        [block("text", { text: "stale back" })],
+        { card_key: "the cherry is red" },
+      ),
+      card(
+        "00000000-0000-7000-8000-000000000c04",
+        ADA_DECK,
+        ADA,
+        [block("text", { text: "deleted" })],
+        [],
+        {
+          deleted_at: "2026-10-05",
+        },
+      ),
+      card("00000000-0000-7000-8000-000000000c05", ADA_OTHER_DECK, ADA, [
+        block("text", { text: "cell" }),
+      ], [
+        block("text", { text: "세포 apple" }),
+      ]),
+      card("00000000-0000-7000-8000-000000000c06", GRACE_PUBLIC_DECK, GRACE, [
+        block("text", { text: "apple pie" }),
+      ], [
+        block("text", { text: "grace's" }),
+      ]),
+    ],
+  };
+}
+
+/** The user a token signs in, as Supabase Auth answers `/auth/v1/user`. */
+function authUser(token: string | undefined): string | null {
+  if (token === ADA_TOKEN || token === ADA_SESSION) return ADA;
+  if (token === GRACE_TOKEN) return GRACE;
+  return null;
+}
+
+/** A filter PostgREST reads from the query: `column=eq.value` and `column=is.null`. */
+function matches(row: Row, params: URLSearchParams, prefix = ""): boolean {
+  for (const [key, value] of params) {
+    if (
+      !key.startsWith(prefix) ||
+      ["select", "order", "limit", "offset"].includes(key)
+    ) continue;
+    const column = key.slice(prefix.length);
+    if (column.includes(".")) continue;
+    if (value === "is.null" && row[column] !== null) return false;
+    if (value.startsWith("eq.") && String(row[column]) !== value.slice(3)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/** PostgREST over [fake], with row-level security's rules for [user]. */
+function rest(
+  fake: Fake,
+  url: URL,
+  method: string,
+  headers: Headers,
+  body: unknown,
+) {
+  const user = authUser(headers.get("Authorization")?.slice(7));
+  if (user === null || headers.get("apikey") !== ANON_KEY) {
+    return Response.json({ code: "PGRST301" }, { status: 401 });
+  }
+  const table = url.pathname.split("/").at(-1);
+  const rows = table === "decks"
+    ? fake.decks
+    : table === "cards"
+    ? fake.cards
+    : table === "media"
+    ? fake.media
+    : null;
+  if (rows === null) return Response.json({}, { status: 404 });
+  if (method === "POST") {
+    const inserted = body as Row[];
+    for (const row of inserted) {
+      // The insert policy, and the composite foreign key from a card to its owner's deck.
+      if (row.user_id !== user) {
+        return Response.json({ code: "42501" }, { status: 403 });
+      }
+      if (
+        table === "cards" &&
+        !fake.decks.some((deck) =>
+          deck.id === row.deck_id && deck.user_id === user
+        )
+      ) return Response.json({ code: "23503" }, { status: 409 });
+    }
+    rows.push(...inserted.map((row) => ({ deleted_at: null, ...row })));
+    return new Response(null, { status: 201 });
+  }
+  if (method === "DELETE") {
+    const params = url.searchParams;
+    fake.media = fake.media.filter((row) =>
+      row.user_id !== user || !matches(row, params)
+    );
+    return new Response(null, { status: 204 });
+  }
+  // The select policy: the user's own rows, and a visibly public deck and its live cards.
+  const visible = rows.filter((row) =>
+    row.user_id === user ||
+    (table === "decks"
+      ? row.visibility === "public" && row.deleted_at === null
+      : fake.decks.some((deck) =>
+        deck.id === row.deck_id && deck.visibility === "public" &&
+        deck.deleted_at === null
+      ))
+  );
+  const params = url.searchParams;
+  let found = visible.filter((row) => matches(row, params));
+  // `order=created_at.asc,id.asc`, the order every listing names.
+  found.sort((a, b) =>
+    String(a.created_at).localeCompare(String(b.created_at)) ||
+    String(a.id).localeCompare(String(b.id))
+  );
+  const total = found.length;
+  const offset = Number(params.get("offset") ?? 0);
+  const limit = Number(params.get("limit") ?? 1000);
+  found = found.slice(offset, offset + limit);
+  const select = params.get("select") ?? "";
+  const shaped = found.map((row) => {
+    const out: Row = {};
+    for (const column of select.split(",")) {
+      if (column === "cards(count)") {
+        out.cards = [{
+          count: fake.cards.filter((c) =>
+            c.deck_id === row.id && matches(c, params, "cards.")
+          )
+            .length,
+        }];
+      } else out[column] = row[column];
+    }
+    return out;
+  });
+  const range = headers.get("Prefer") === "count=exact"
+    ? { "Content-Range": `${offset}-${offset + shaped.length - 1}/${total}` }
+    : undefined;
+  return Response.json(shaped, { headers: range });
+}
+
+function fakeFetch(fake: Fake): typeof fetch {
+  return async (input, init) => {
+    const url = new URL(String(input));
+    const method = init?.method ?? "GET";
+    const headers = new Headers(init?.headers);
+    fake.calls.push({ url: url.href, method, headers });
+    if (url.href === `${SUPABASE_URL}/auth/v1/user`) {
+      const user = authUser(headers.get("Authorization")?.slice(7));
+      return user === null
+        ? Response.json({ code: 403, error_code: "bad_jwt" }, { status: 403 })
+        : Response.json({ id: user, role: "authenticated" });
+    }
+    if (url.href.startsWith(`${SUPABASE_URL}/rest/v1/`)) {
+      if (fake.rest === "offline") throw new TypeError("error sending request");
+      const body = typeof init?.body === "string"
+        ? JSON.parse(init.body)
+        : undefined;
+      return await rest(fake, url, method, headers, body);
+    }
+    const object = url.href.match(/\/storage\/v1\/object\/media\/(.+)$/);
+    if (object !== null && url.href.startsWith(SUPABASE_URL)) {
+      const path = object[1]!;
+      const owned = fake.media.some((row) =>
+        `${row.user_id}/${row.id}` === path &&
+        row.user_id === authUser(headers.get("Authorization")?.slice(7))
+      );
+      if (fake.storage === "refusing" || !owned) {
+        return Response.json({ error: "refused" }, { status: 400 });
+      }
+      fake.objects.set(path, {
+        bytes: init?.body as Uint8Array,
+        type: headers.get("Content-Type"),
+      });
+      return Response.json({ Key: path });
+    }
+    const reply = fake.web[url.href];
+    if (reply !== undefined) return reply();
+    throw new Error(`unexpected request to ${url.href}`);
+  };
+}
+
+type Run = {
+  status: number;
+  headers: Headers;
+  json: unknown;
+  logs: LogEntry[];
+  fake: Fake;
+};
+
+let clock = Date.UTC(2026, 9, 29);
+
+async function send(
+  options: {
+    token?: string | null;
+    method?: string;
+    path?: string;
+    body?: unknown;
+    headers?: Record<string, string>;
+    fake?: Fake;
+    ids?: IdSource;
+    supabaseUrl?: string;
+    publicUrl?: string;
+  } = {},
+): Promise<Run> {
+  const fake = options.fake ?? seed();
+  const logs: LogEntry[] = [];
+  const handler = createHandler({
+    config: readConfig((name) =>
+      ({
+        SUPABASE_URL: options.supabaseUrl ?? SUPABASE_URL,
+        SUPABASE_ANON_KEY: ANON_KEY,
+        MCP_PUBLIC_URL: options.publicUrl,
+      })[name]
+    ),
+    fetch: fakeFetch(fake),
+    log: (entry) => logs.push(entry),
+    ...(options.ids ?? {
+      now: () => clock++,
+      random: (bytes: number) => crypto.getRandomValues(new Uint8Array(bytes)),
+    }),
+    resolve: (host) => Promise.resolve(fake.dns[host] ?? ["93.184.216.34"]),
+    timeout: () => new AbortController().signal,
+  });
+  const headers = new Headers({
+    "X-Forwarded-Host": "127.0.0.1:54321",
+    "Content-Type": "application/json",
+    ...options.headers,
+  });
+  const token = options.token === undefined ? ADA_TOKEN : options.token;
+  if (token !== null) headers.set("Authorization", `Bearer ${token}`);
+  const method = options.method ?? "POST";
+  const response = await handler(
+    new Request(`http://localhost:9000${options.path ?? "/mcp"}`, {
+      method,
+      headers,
+      body: method === "POST" ? JSON.stringify(options.body ?? {}) : undefined,
+    }),
+  );
+  const text = await response.text();
+  return {
+    status: response.status,
+    headers: response.headers,
+    json: text === "" ? null : JSON.parse(text),
+    logs,
+    fake,
+  };
+}
+
+/** Calls the tool [name] and returns its result object. */
+async function call(
+  name: string,
+  args: unknown,
+  fake = seed(),
+  token: string = ADA_TOKEN,
+  ids?: IdSource,
+) {
+  const run = await send({
+    token,
+    fake,
+    ids,
+    body: {
+      jsonrpc: "2.0",
+      id: 7,
+      method: "tools/call",
+      params: { name, arguments: args },
+    },
+  });
+  assert.equal(run.status, 200);
+  const { result } = run.json as {
+    result: {
+      isError?: boolean;
+      structuredContent?: Row;
+      content: { text: string }[];
+    };
+  };
+  return { result, fake, logs: run.logs };
+}
+
+const METADATA = `${SUPABASE_URL}/functions/v1/mcp/oauth-protected-resource`;
+/** A hosted project's `SUPABASE_URL`. */
+const PROJECT = "https://abcdefghijklmnopqrst.supabase.co";
+
+Deno.test("a request without a token is answered 401 with the resource metadata's address, and one with a connector's token is served", async () => {
+  const missing = await send({
+    token: null,
+    body: { jsonrpc: "2.0", id: 1, method: "ping" },
+  });
+  assert.equal(missing.status, 401);
+  assert.equal(
+    missing.headers.get("WWW-Authenticate"),
+    `Bearer resource_metadata="${METADATA}"`,
+  );
+  const served = await send({
+    body: { jsonrpc: "2.0", id: 1, method: "ping" },
+  });
+  assert.equal(served.status, 200);
+  assert.deepEqual(served.json, { jsonrpc: "2.0", id: 1, result: {} });
+});
+
+Deno.test("an expired token is answered 401 with invalid_token and the resource metadata", async () => {
+  const run = await send({
+    token: EXPIRED,
+    body: { jsonrpc: "2.0", id: 1, method: "ping" },
+  });
+  assert.equal(run.status, 401);
+  const challenge = run.headers.get("WWW-Authenticate") ?? "";
+  assert.match(
+    challenge,
+    /^Bearer error="invalid_token", error_description="[^"]+"/,
+  );
+  assert.match(challenge, new RegExp(`resource_metadata="${METADATA}"$`));
+  assert.equal(run.fake.calls[0]?.url, `${SUPABASE_URL}/auth/v1/user`);
+  assert.equal(run.fake.calls[0]?.headers.get("apikey"), ANON_KEY);
+});
+
+Deno.test("a session Supabase Auth accepts but the OAuth server did not issue is refused before Auth is asked", async () => {
+  const run = await send({
+    token: ADA_SESSION,
+    body: { jsonrpc: "2.0", id: 1, method: "ping" },
+  });
+  assert.equal(run.status, 401);
+  assert.equal(run.fake.calls.length, 0);
+});
+
+Deno.test("a local stack's metadata names its own SUPABASE_URL as the resource's origin and Auth's issuer", async () => {
+  const run = await send({
+    token: null,
+    method: "GET",
+    path: "/mcp/oauth-protected-resource",
+  });
+  assert.equal(run.status, 200);
+  assert.deepEqual(run.json, {
+    resource: "http://kong:8000/functions/v1/mcp",
+    authorization_servers: ["http://kong:8000/auth/v1"],
+    bearer_methods_supported: ["header"],
+    resource_name: "knowno",
+  });
+});
+
+const PUBLIC_URL = "https://api.knowno.app/functions/v1/mcp";
+
+Deno.test("with MCP_PUBLIC_URL set the 401 and the metadata name it as the resource, the authorization server staying Auth's issuer", async () => {
+  const challenge = await send({
+    token: null,
+    publicUrl: PUBLIC_URL,
+    supabaseUrl: PROJECT,
+    body: { jsonrpc: "2.0", id: 1, method: "ping" },
+  });
+  assert.equal(challenge.status, 401);
+  assert.equal(
+    challenge.headers.get("WWW-Authenticate"),
+    'Bearer resource_metadata="https://api.knowno.app/functions/v1/mcp/oauth-protected-resource"',
+  );
+  const metadata = await send({
+    token: null,
+    publicUrl: PUBLIC_URL,
+    supabaseUrl: PROJECT,
+    method: "GET",
+    path: "/mcp/oauth-protected-resource",
+  });
+  assert.deepEqual(metadata.json, {
+    resource: PUBLIC_URL,
+    authorization_servers: [`${PROJECT}/auth/v1`],
+    bearer_methods_supported: ["header"],
+    resource_name: "knowno",
+  });
+});
+
+Deno.test("without MCP_PUBLIC_URL the resource is SUPABASE_URL's origin whatever host the request names", async () => {
+  for (
+    const host of ["api.knowno.app", "evil.example", "127.0.0.1:54321"]
+  ) {
+    const metadata = await send({
+      token: null,
+      headers: { "X-Forwarded-Host": host },
+      supabaseUrl: PROJECT,
+      method: "GET",
+      path: "/mcp/oauth-protected-resource",
+    });
+    assert.equal(
+      (metadata.json as Row).resource,
+      `${PROJECT}/functions/v1/mcp`,
+      host,
+    );
+    const challenge = await send({
+      token: null,
+      headers: { "X-Forwarded-Host": host },
+      supabaseUrl: PROJECT,
+    });
+    assert.equal(
+      challenge.headers.get("WWW-Authenticate"),
+      `Bearer resource_metadata="${PROJECT}/functions/v1/mcp/oauth-protected-resource"`,
+      host,
+    );
+  }
+});
+
+Deno.test("an MCP_PUBLIC_URL that is not an https URL ending in /functions/v1/mcp leaves the function unconfigured, as a valid one configures it", async () => {
+  for (
+    const publicUrl of [
+      "not a url",
+      "http://api.knowno.app/functions/v1/mcp",
+      "https://api.knowno.app",
+      "https://api.knowno.app/functions/v1/mcp/",
+      "https://api.knowno.app/functions/v1/mcp?x=1",
+    ]
+  ) {
+    const run = await send({
+      token: null,
+      publicUrl,
+      supabaseUrl: PROJECT,
+      method: "GET",
+      path: "/mcp/oauth-protected-resource",
+    });
+    assert.equal(run.status, 503, publicUrl);
+  }
+  const configured = await send({
+    token: null,
+    publicUrl: PUBLIC_URL,
+    supabaseUrl: PROJECT,
+    method: "GET",
+    path: "/mcp/oauth-protected-resource",
+  });
+  assert.equal(configured.status, 200);
+});
+
+Deno.test("a SUPABASE_URL that is not an http(s) URL leaves the function unconfigured, as a valid one configures it", async () => {
+  for (
+    const supabaseUrl of ["not a url", "ftp://abcdefghijklmnopqrst.supabase.co"]
+  ) {
+    const run = await send({
+      token: null,
+      supabaseUrl,
+      method: "GET",
+      path: "/mcp/oauth-protected-resource",
+    });
+    assert.equal(run.status, 503, supabaseUrl);
+  }
+  const configured = await send({
+    token: null,
+    supabaseUrl: PROJECT,
+    method: "GET",
+    path: "/mcp/oauth-protected-resource",
+  });
+  assert.equal(configured.status, 200);
+});
+
+Deno.test("initialize names the server knowno", async () => {
+  const run = await send({
+    body: {
+      jsonrpc: "2.0",
+      id: 1,
+      method: "initialize",
+      params: { protocolVersion: "2025-11-25" },
+    },
+  });
+  const result = (run.json as { result: Row }).result;
+  assert.deepEqual(result.serverInfo, {
+    name: "knowno",
+    title: "knowno",
+    version: "1",
+  });
+  assert.match(String(result.instructions), /^knowno is a flashcard app\./);
+});
+
+Deno.test("initialize answers the offered version when served and the newest otherwise, with the tools capability", async () => {
+  const offered = await send({
+    body: {
+      jsonrpc: "2.0",
+      id: 1,
+      method: "initialize",
+      params: { protocolVersion: "2025-06-18" },
+    },
+  });
+  const result = (offered.json as { result: Row }).result;
+  assert.equal(result.protocolVersion, "2025-06-18");
+  assert.deepEqual(result.capabilities, {
+    tools: { listChanged: false },
+    resources: { listChanged: false },
+  });
+  assert.equal(offered.headers.get("Mcp-Session-Id"), null);
+  const unknown = await send({
+    body: {
+      jsonrpc: "2.0",
+      id: 1,
+      method: "initialize",
+      params: { protocolVersion: "2024-11-05" },
+    },
+  });
+  assert.equal(
+    (unknown.json as { result: Row }).result.protocolVersion,
+    "2025-11-25",
+  );
+});
+
+Deno.test("a notification is accepted with 202 and no body; a GET is 405", async () => {
+  const notification = await send({
+    body: { jsonrpc: "2.0", method: "notifications/initialized" },
+  });
+  assert.equal(notification.status, 202);
+  assert.equal(notification.json, null);
+  const get = await send({ method: "GET" });
+  assert.equal(get.status, 405);
+  assert.equal(get.headers.get("Allow"), "POST");
+});
+
+Deno.test("a request carrying an Origin is refused with 403, and one without is served", async () => {
+  const body = { jsonrpc: "2.0", id: 1, method: "ping" };
+  assert.equal(
+    (await send({ body, headers: { Origin: "https://evil.example" } })).status,
+    403,
+  );
+  assert.equal((await send({ body })).status, 200);
+});
+
+Deno.test("a protocol version header this server does not speak is refused with 400, and a served one is answered", async () => {
+  const body = { jsonrpc: "2.0", id: 1, method: "tools/list" };
+  const modern = await send({
+    body,
+    headers: { "MCP-Protocol-Version": "2026-07-28" },
+  });
+  assert.equal(modern.status, 400);
+  assert.equal((modern.json as { error: { code: number } }).error.code, -32600);
+  const served = await send({
+    body,
+    headers: { "MCP-Protocol-Version": "2025-11-25" },
+  });
+  assert.equal(served.status, 200);
+  const tools =
+    (served.json as { result: { tools: { name: string }[] } }).result.tools;
+  assert.deepEqual(tools.map((tool) => tool.name), [
+    "list_decks",
+    "list_cards",
+    "search_cards",
+    "create_deck",
+    "add_cards",
+  ]);
+});
+
+Deno.test("list_decks lists the caller's live decks with their live card counts, never another user's public deck", async () => {
+  const { result, fake } = await call("list_decks", {});
+  assert.deepEqual(result.structuredContent, {
+    decks: [
+      { id: ADA_DECK, name: "영단어", card_count: 3 },
+      { id: ADA_OTHER_DECK, name: "Biology", card_count: 1 },
+    ],
+  });
+  assert.deepEqual(
+    JSON.parse(result.content[0]!.text),
+    result.structuredContent,
+  );
+  assert.ok(
+    fake.calls.every((c) =>
+      !c.headers.get("Authorization")?.includes(ANON_KEY)
+    ),
+  );
+});
+
+Deno.test("list_cards pages a deck's live cards as blocks, a card of two sides read as its 칸", async () => {
+  const first = await call("list_cards", { deck_id: ADA_DECK, limit: 2 });
+  assert.deepEqual(first.result.structuredContent, {
+    deck: { id: ADA_DECK, name: "영단어" },
+    total: 3,
+    cards: [
+      {
+        id: "00000000-0000-7000-8000-000000000c01",
+        blocks: [{
+          type: "senses",
+          term: "apple",
+          ask: "term",
+          senses: [{
+            labels: ["명"],
+            meaning: "사과",
+            examples: ["An apple a day."],
+          }],
+        }],
+      },
+      {
+        id: "00000000-0000-7000-8000-000000000c02",
+        blocks: [{ type: "text", front: "Banana", back: "바나나" }],
+      },
+    ],
+    next_offset: 2,
+  });
+  const last = await call("list_cards", {
+    deck_id: ADA_DECK,
+    limit: 2,
+    offset: 2,
+  });
+  assert.deepEqual(last.result.structuredContent?.cards, [
+    {
+      id: "00000000-0000-7000-8000-000000000c03",
+      blocks: [
+        { type: "cloze", text: "The ___ is red", answers: ["cherry"] },
+        { type: "text", front: "", back: "stale back" },
+      ],
+    },
+  ]);
+  assert.equal(last.result.structuredContent?.next_offset, null);
+});
+
+Deno.test("list_cards says a card that does not parse is unreadable, and lists the rest", async () => {
+  const fake = seed();
+  fake.cards[1]!.front = [{ type: "cloze", v: 1, payload: { text: 7 } }];
+  const { result } = await call("list_cards", { deck_id: ADA_DECK }, fake);
+  const cards = result.structuredContent?.cards as Row[];
+  assert.deepEqual(cards[1]!.blocks, [{
+    type: "unknown",
+    stored_type: "unreadable",
+  }]);
+  assert.notDeepEqual(cards[0]!.blocks, cards[1]!.blocks);
+});
+
+Deno.test("list_cards refuses another user's public deck, which row-level security lets the caller read, and serves the caller's own", async () => {
+  const foreign = await call("list_cards", { deck_id: GRACE_PUBLIC_DECK });
+  assert.equal(foreign.result.isError, true);
+  assert.match(foreign.result.content[0]!.text, /list_decks/);
+  const own = await call("list_cards", { deck_id: ADA_OTHER_DECK });
+  assert.equal(own.result.isError, undefined);
+});
+
+Deno.test("search_cards matches every 칸 revealed ignoring case across the caller's decks, with its blocks", async () => {
+  const apple = await call("search_cards", { query: "APPLE" });
+  const cards = apple.result.structuredContent?.cards as Row[];
+  assert.deepEqual(cards.map((c) => c.id), [
+    "00000000-0000-7000-8000-000000000c01",
+    "00000000-0000-7000-8000-000000000c05",
+  ]);
+  assert.deepEqual(cards[1]?.deck, { id: ADA_OTHER_DECK, name: "Biology" });
+  assert.deepEqual(cards[1]?.blocks, [
+    { type: "text", front: "cell", back: "세포 apple" },
+  ]);
+  const back = await call("search_cards", { query: "stale back" });
+  assert.equal((back.result.structuredContent?.cards as Row[]).length, 1);
+  const answer = await call("search_cards", { query: "cherry" });
+  assert.equal((answer.result.structuredContent?.cards as Row[]).length, 1);
+  const absent = await call("search_cards", { query: "no such text" });
+  assert.deepEqual(absent.result.structuredContent, {
+    cards: [],
+    truncated: false,
+  });
+  const limited = await call("search_cards", { query: "a", limit: 1 });
+  assert.equal(limited.result.structuredContent?.truncated, true);
+});
+
+Deno.test("create_deck stores a private deck of the caller's under a version 7 id and returns it", async () => {
+  const { result, fake } = await call("create_deck", { name: "  Spanish  " });
+  const deck = result.structuredContent?.deck as { id: string; name: string };
+  assert.equal(deck.name, "Spanish");
+  assert.match(
+    deck.id,
+    /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+  );
+  const stored = fake.decks.find((row) => row.id === deck.id);
+  assert.equal(stored?.user_id, ADA);
+  assert.equal(stored?.visibility, "private");
+  assert.equal(stored?.created_at, stored?.updated_at);
+  const blank = await call("create_deck", { name: "   " });
+  assert.equal(blank.result.isError, true);
+});
+
+Deno.test("add_cards stores the plain form as free v2: one 글, or a 단어 with labels or examples, and the card key", async () => {
+  const { result, fake } = await call("add_cards", {
+    deck_id: ADA_DECK,
+    cards: [
+      {
+        front: "  Run  ",
+        back: "달리다",
+        labels: ["동", "informal"],
+        examples: ["I run."],
+      },
+      { front: "cat", back: "고양이" },
+    ],
+  });
+  const added = result.structuredContent?.added as {
+    index: number;
+    id: string;
+  }[];
+  assert.deepEqual(added.map((a) => a.index), [0, 1]);
+  const run = fake.cards.find((row) => row.id === added[0]!.id)!;
+  assert.deepEqual(run.back, []);
+  const [{ id: wordId, ...word }] = run.front as Row[];
+  assert.match(String(wordId), /^[0-9a-f-]{14}7/);
+  assert.deepEqual(word, {
+    type: "senses",
+    v: 2,
+    payload: {
+      term: "Run",
+      ask: "term",
+      senses: [{
+        labels: [
+          { kind: "part_of_speech", category: "verb", text: "동" },
+          { kind: "other", category: null, text: "informal" },
+        ],
+        meaning: "달리다",
+        examples: ["I run."],
+      }],
+    },
+  });
+  assert.equal(run.card_key, "run");
+  assert.equal(run.template, "free");
+  assert.equal(run.template_version, 2);
+  assert.equal(run.source, "import");
+  assert.equal(run.user_id, ADA);
+  assert.equal(run.deck_id, ADA_DECK);
+  assert.equal(run.created_at, run.updated_at);
+  assert.equal(run.revision, undefined);
+  const cat = fake.cards.find((row) => row.id === added[1]!.id)!;
+  const [{ id: _c, ...glue }] = cat.front as Row[];
+  assert.deepEqual(glue, {
+    type: "text",
+    v: 2,
+    payload: { front: "cat", back: "고양이" },
+  });
+  assert.deepEqual(cat.back, []);
+});
+
+/** [card]'s stored blocks without their ids. */
+const storedBlocks = (card: Row) =>
+  (card.front as Row[]).map(({ id: _id, ...block }) => block);
+
+Deno.test("add_cards stores each 칸 as the web's encodeCells writes it, a mixed card in order", async () => {
+  const table = {
+    type: "table",
+    columns: ["Organ", "Job"],
+    rows: [["Heart", "Pumps blood"]],
+    blanks: [{ row: 0, column: 1 }],
+    spans: [{ row: 0, column: 0, start: 0, end: 2 }],
+  };
+  const { result, fake } = await call("add_cards", {
+    deck_id: ADA_DECK,
+    cards: [
+      {
+        blocks: [
+          { type: "text", front: "Organs" },
+          table,
+          { type: "text", back: "see p. 3" },
+        ],
+      },
+      {
+        blocks: [{
+          type: "cloze",
+          text: "The capital is ___.",
+          answers: ["Paris"],
+        }],
+      },
+      {
+        blocks: [{
+          type: "senses",
+          term: "apple",
+          ask: "meaning",
+          senses: [{ labels: ["명"], meaning: "사과" }],
+        }],
+      },
+    ],
+  });
+  assert.deepEqual(result.structuredContent?.refused, []);
+  const [mixed, cloze, word] = (result.structuredContent?.added as Row[]).map(
+    (a) => fake.cards.find((row) => row.id === a.id)!,
+  );
+  assert.deepEqual(storedBlocks(mixed!), [
+    { type: "text", v: 2, payload: { front: "Organs", back: "" } },
+    {
+      type: "table",
+      v: 2,
+      payload: {
+        columns: table.columns,
+        rows: table.rows,
+        blanks: table.blanks,
+        spans: table.spans,
+      },
+    },
+    { type: "text", v: 2, payload: { front: "", back: "see p. 3" } },
+  ]);
+  assert.equal(mixed!.card_key, "organs organ | job heart | pumps blood");
+  assert.deepEqual(storedBlocks(cloze!), [{
+    type: "cloze",
+    v: 1,
+    payload: { text: "The capital is ___.", answers: ["Paris"] },
+  }]);
+  assert.equal(cloze!.card_key, "the capital is paris.");
+  assert.equal(cloze!.template_version, 2);
+  assert.deepEqual(cloze!.back, []);
+  assert.equal(word!.card_key, "[명] 사과");
+});
+
+Deno.test("add_cards refuses what the shared validity refuses, over the fixtures, and adds what it accepts", async () => {
+  const toInput = (block: { type: string; payload: Row }) => {
+    const { media: _m, width: _w, height: _h, ...payload } = block.payload;
+    return {
+      type: block.type,
+      ...payload,
+      ...(block.type === "image" && { url: PHOTO }),
+    };
+  };
+  for (const { name, blocks, problem } of validity) {
+    // A sound is not in the union; the frame's reader holds its fixtures in frame_test.ts.
+    if (blocks.some(({ type }) => type === "audio")) continue;
+    const fake = withPhoto();
+    const { result } = await call("add_cards", {
+      deck_id: ADA_OTHER_DECK,
+      cards: [{ blocks: blocks.map(toInput) }],
+    }, fake);
+    const content = result.structuredContent!;
+    assert.equal(
+      (content.refused as Row[]).length,
+      problem === null ? 0 : 1,
+      name,
+    );
+    assert.equal(
+      (content.added as Row[]).length,
+      problem === null ? 1 : 0,
+      name,
+    );
+  }
+});
+
+Deno.test("add_cards says how to fix each refused 칸, by its index, and adds the rest", async () => {
+  const cards = [
+    { blocks: [{ type: "cloze", text: "no blank", answers: ["x"] }] },
+    {
+      blocks: [{
+        type: "table",
+        columns: ["a"],
+        rows: [["b"]],
+        blanks: [{ row: 5, column: 0 }],
+      }],
+    },
+    { blocks: [{ type: "text", front: "fine" }] },
+    { blocks: [{ type: "text", back: "fine" }] },
+    { blocks: [{ type: "text", front: "a", back: "b" }, { type: "audio" }] },
+    { blocks: [{ type: "image", side: "front" }] },
+    { blocks: [{ type: "image", url: PHOTO }] },
+    {
+      blocks: [{ type: "text", front: "a", back: "b" }],
+      front: "c",
+      back: "d",
+    },
+    { blocks: [] },
+    "a card",
+    { blocks: [{ type: "text", front: "x".repeat(2001), back: "b" }] },
+    { blocks: [{ type: "text", front: "kept", back: "남김" }] },
+  ];
+  const fake = withPhoto();
+  const { result } = await call(
+    "add_cards",
+    { deck_id: ADA_DECK, cards },
+    fake,
+  );
+  const refused = result.structuredContent?.refused as {
+    index: number;
+    reason: string;
+  }[];
+  const reasons = Object.fromEntries(refused.map((r) => [r.index, r.reason]));
+  assert.match(reasons[0]!, /^block 0: a cloze needs text with one ___/);
+  assert.match(reasons[1]!, /^block 0: a table needs/);
+  assert.match(reasons[2]!, /adds nothing at the reveal/);
+  assert.match(reasons[3]!, /shows nothing before the reveal/);
+  assert.match(reasons[4]!, /^block 1: type must be text, senses/);
+  assert.match(reasons[5]!, /needs url/);
+  assert.match(reasons[6]!, /holds side, front or back, exactly while/);
+  assert.match(reasons[7]!, /not both/);
+  assert.match(reasons[8]!, /1 to 100 blocks/);
+  assert.match(reasons[9]!, /must be an object/);
+  assert.match(reasons[10]!, /at most 2000 characters/);
+  assert.equal(refused.length, 11);
+  assert.deepEqual(
+    (result.structuredContent?.added as Row[]).map((a) => a.index),
+    [11],
+  );
+  assert.equal(fake.calls.filter((c) => c.url === PHOTO).length, 0);
+});
+
+const PHOTO = "https://cdn.example/heart.png";
+
+/** The first bytes of a PNG of 640 by 480. */
+function pngBytes(): Uint8Array<ArrayBuffer> {
+  const bytes = new Uint8Array(33);
+  bytes.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a], 0);
+  bytes.set([...new TextEncoder().encode("IHDR")], 12);
+  new DataView(bytes.buffer).setUint32(16, 640);
+  new DataView(bytes.buffer).setUint32(20, 480);
+  return bytes;
+}
+
+/** A seed whose internet serves [PHOTO]. */
+function withPhoto(): Fake {
+  const fake = seed();
+  fake.web[PHOTO] = () =>
+    new Response(pngBytes(), { headers: { "Content-Type": "image/png" } });
+  return fake;
+}
+
+Deno.test("add_cards stores a photo as the phone does: its row, its file under the caller's folder, its size in the block", async () => {
+  const fake = withPhoto();
+  const { result } = await call("add_cards", {
+    deck_id: ADA_DECK,
+    cards: [{
+      blocks: [
+        { type: "image", url: PHOTO, side: "front" },
+        { type: "text", back: "A heart" },
+      ],
+    }, {
+      blocks: [{
+        type: "image",
+        url: PHOTO,
+        boxes: [{ x: 0.1, y: 0.2, w: 0.3, h: 0.4, answer: "Aorta" }],
+      }],
+    }],
+  }, fake);
+  assert.deepEqual(result.structuredContent?.refused, []);
+  const [placed, boxed] = (result.structuredContent?.added as Row[]).map(
+    (a) => fake.cards.find((row) => row.id === a.id)!,
+  );
+  const [image] = storedBlocks(placed!) as { v: number; payload: Row }[];
+  const media = String(image!.payload.media);
+  assert.deepEqual(image, {
+    type: "image",
+    v: 2,
+    payload: { media, width: 640, height: 480, boxes: [], side: "front" },
+  });
+  assert.equal(placed!.card_key, media);
+  const row = fake.media.find((r) => r.id === media)!;
+  assert.deepEqual(
+    [row.user_id, row.kind, row.mime_type, row.byte_size],
+    [ADA, "image", "image/png", 33],
+  );
+  assert.match(String(row.sha256), /^[0-9a-f]{64}$/);
+  const file = fake.objects.get(`${ADA}/${media}`)!;
+  assert.equal(file.type, "image/png");
+  assert.deepEqual(file.bytes, pngBytes());
+  const [{ payload }] = storedBlocks(boxed!) as { payload: Row }[];
+  const box = (payload.boxes as Row[])[0]!;
+  assert.equal(typeof box.id, "string");
+  assert.equal(box.answer, "Aorta");
+  assert.equal("side" in payload, false);
+  assert.equal(boxed!.card_key, `${payload.media} aorta`);
+  const photoCall = fake.calls.find((c) => c.url === PHOTO)!;
+  assert.equal(photoCall.headers.has("Authorization"), false);
+});
+
+Deno.test("list_cards reads a stored photo back in the union, by its media id", async () => {
+  const fake = withPhoto();
+  await call("add_cards", {
+    deck_id: ADA_OTHER_DECK,
+    cards: [{
+      blocks: [
+        { type: "text", front: "What is this?" },
+        { type: "image", url: PHOTO, side: "back" },
+      ],
+    }],
+  }, fake);
+  const { result } = await call(
+    "list_cards",
+    { deck_id: ADA_OTHER_DECK },
+    fake,
+  );
+  const cards = result.structuredContent?.cards as { blocks: Row[] }[];
+  const { blocks } = cards.at(-1)!;
+  assert.deepEqual(blocks[1], {
+    type: "image",
+    media: fake.media[0]!.id,
+    width: 640,
+    height: 480,
+    boxes: [],
+    side: "back",
+  });
+});
+
+Deno.test("a photo that cannot be fetched refuses its card alone, says why and stores nothing", async () => {
+  const fake = withPhoto();
+  fake.dns["inner.example"] = ["10.0.0.1"];
+  const { result } = await call("add_cards", {
+    deck_id: ADA_DECK,
+    cards: [
+      {
+        blocks: [
+          { type: "text", front: "private", back: "b" },
+          { type: "image", url: "https://inner.example/a.png", side: "back" },
+        ],
+      },
+      {
+        blocks: [
+          { type: "text", front: "public", back: "b" },
+          { type: "image", url: PHOTO, side: "back" },
+        ],
+      },
+    ],
+  }, fake);
+  const refused = result.structuredContent?.refused as Row[];
+  assert.equal(refused.length, 1);
+  assert.equal(refused[0]!.index, 0);
+  assert.match(String(refused[0]!.reason), /public https address/);
+  assert.deepEqual(
+    (result.structuredContent?.added as Row[]).map((a) => a.index),
+    [1],
+  );
+  assert.equal(fake.media.length, 1);
+  assert.equal(fake.objects.size, 1);
+});
+
+Deno.test("a file Storage refuses takes its media row back and refuses the card, the call answering", async () => {
+  const fake = withPhoto();
+  fake.storage = "refusing";
+  const { result } = await call("add_cards", {
+    deck_id: ADA_DECK,
+    cards: [
+      { blocks: [{ type: "image", url: PHOTO, boxes: [BOX] }] },
+      { blocks: [{ type: "text", front: "kept", back: "남김" }] },
+    ],
+  }, fake);
+  assert.match(
+    String((result.structuredContent?.refused as Row[])[0]!.reason),
+    /could not be stored/,
+  );
+  assert.equal(fake.media.length, 0);
+  assert.equal((result.structuredContent?.added as Row[]).length, 1);
+});
+
+const BOX = { x: 0, y: 0, w: 1, h: 1 };
+
+Deno.test("a duplicate card's back photo is never fetched, and a card with a new front's is", async () => {
+  const fake = withPhoto();
+  const photoBack = { type: "image", url: PHOTO, side: "back" };
+  const { result } = await call("add_cards", {
+    deck_id: ADA_DECK,
+    cards: [
+      { blocks: [{ type: "text", front: "apple" }, photoBack] },
+      { blocks: [{ type: "text", front: "new" }, photoBack] },
+    ],
+  }, fake);
+  assert.equal((result.structuredContent?.skipped as Row[]).length, 1);
+  assert.equal(fake.calls.filter((c) => c.url === PHOTO).length, 1);
+  assert.equal(fake.media.length, 1);
+});
+
+Deno.test("add_cards fetches ten photos a call, an eleventh card refused with what to do", async () => {
+  const fake = withPhoto();
+  const cards = Array.from({ length: 11 }, () => ({
+    blocks: [{ type: "image", url: PHOTO, boxes: [BOX] }],
+  }));
+  const { result } = await call(
+    "add_cards",
+    { deck_id: ADA_DECK, cards },
+    fake,
+  );
+  assert.equal((result.structuredContent?.added as Row[]).length, 10);
+  const refused = result.structuredContent?.refused as Row[];
+  assert.equal(refused[0]!.index, 10);
+  assert.match(String(refused[0]!.reason), /another call/);
+});
+
+Deno.test("the guide resource is listed and read, and another uri is refused", async () => {
+  const rpc = async (method: string, params: unknown) =>
+    (await send({ body: { jsonrpc: "2.0", id: 1, method, params } })).json as {
+      result: Record<string, { uri?: string; text?: string }[]>;
+      error?: { code: number };
+    };
+  const uri = (await rpc("resources/list", {})).result.resources[0]!.uri;
+  const read = await rpc("resources/read", { uri });
+  assert.match(read.result.contents[0]!.text!, /"type":"cloze"/);
+  assert.match(read.result.contents[0]!.text!, /"type":"table"/);
+  assert.equal(
+    (await rpc("resources/read", { uri: "knowno://other" })).error?.code,
+    -32002,
+  );
+});
+
+Deno.test("add_cards skips a front already in the deck or earlier in the call, ignoring case and width, and never overwrites", async () => {
+  const { result, fake } = await call("add_cards", {
+    deck_id: ADA_DECK,
+    cards: [
+      { front: "ＡＰＰＬＥ", back: "different" },
+      { front: "grape", back: "포도" },
+      { front: "Grape ", back: "포도 again" },
+    ],
+  });
+  assert.deepEqual(
+    (result.structuredContent?.added as Row[]).map((a) => a.index),
+    [1],
+  );
+  const skipped = result.structuredContent?.skipped as Row[];
+  assert.deepEqual(skipped.map((s) => [s.index, s.existing_card_id]), [
+    [0, "00000000-0000-7000-8000-000000000c01"],
+    [2, (result.structuredContent?.added as Row[])[0]!.id],
+  ]);
+  const apple = fake.cards.find((row) =>
+    row.id === "00000000-0000-7000-8000-000000000c01"
+  )!;
+  assert.equal(
+    ((apple.back as Row[])[0]!.payload as Row).senses !== undefined,
+    true,
+  );
+  assert.equal(fake.cards.filter((row) => row.deck_id === ADA_DECK).length, 5);
+});
+
+Deno.test("add_cards adds a duplicate front when allow_duplicates is true", async () => {
+  const { result } = await call("add_cards", {
+    deck_id: ADA_DECK,
+    cards: [{ front: "apple", back: "또 사과" }],
+    allow_duplicates: true,
+  });
+  assert.equal((result.structuredContent?.added as Row[]).length, 1);
+  assert.deepEqual(result.structuredContent?.skipped, []);
+});
+
+Deno.test("add_cards refuses a card with an empty back by its index and adds the rest", async () => {
+  const { result } = await call("add_cards", {
+    deck_id: ADA_DECK,
+    cards: [{ front: "empty", back: "  " }, { front: "kept", back: "남김" }],
+  });
+  assert.deepEqual(result.structuredContent?.refused, [
+    { index: 0, reason: "back must be text of 1 to 2000 characters." },
+  ]);
+  assert.deepEqual(
+    (result.structuredContent?.added as Row[]).map((a) => a.index),
+    [1],
+  );
+});
+
+Deno.test("add_cards refuses 101 cards and writes nothing, and adds 100", async () => {
+  const many = (count: number) =>
+    Array.from(
+      { length: count },
+      (_, index) => ({ front: `word ${index}`, back: "뜻" }),
+    );
+  const over = await call("add_cards", { deck_id: ADA_DECK, cards: many(101) });
+  assert.equal(over.result.isError, true);
+  assert.match(over.result.content[0]!.text, /at most 100 cards per call/);
+  assert.ok(over.fake.calls.every((c) => c.method !== "POST"));
+  const cap = await call("add_cards", { deck_id: ADA_DECK, cards: many(100) });
+  assert.equal((cap.result.structuredContent?.added as Row[]).length, 100);
+  assert.equal(cap.fake.calls.filter((c) => c.method === "POST").length, 1);
+});
+
+Deno.test("add_cards refuses another user's deck and writes nothing, as the same call adds to the caller's own", async () => {
+  const cards = [{ front: "pear", back: "배" }];
+  const foreign = await call("add_cards", {
+    deck_id: GRACE_PUBLIC_DECK,
+    cards,
+  });
+  assert.equal(foreign.result.isError, true);
+  assert.ok(foreign.fake.calls.every((c) => c.method !== "POST"));
+  assert.equal(
+    foreign.fake.cards.filter((row) => row.deck_id === GRACE_PUBLIC_DECK)
+      .length,
+    1,
+  );
+  const own = await call(
+    "add_cards",
+    { deck_id: GRACE_PUBLIC_DECK, cards },
+    seed(),
+    GRACE_TOKEN,
+  );
+  assert.equal((own.result.structuredContent?.added as Row[]).length, 1);
+});
+
+Deno.test("a tool whose database cannot be reached answers an error result the model can retry on", async () => {
+  const fake = seed();
+  fake.rest = "offline";
+  const { result, logs } = await call("list_decks", {}, fake);
+  assert.equal(result.isError, true);
+  assert.match(result.content[0]!.text, /try again/);
+  assert.deepEqual(logs, [{
+    user_id: ADA,
+    method: "tools/call",
+    tool: "list_decks",
+    outcome: "unavailable",
+  }]);
+});
+
+Deno.test("an unknown tool is refused with the names of the tools", async () => {
+  const { result } = await call("delete_deck", {});
+  assert.equal(result.isError, true);
+  assert.match(
+    result.content[0]!.text,
+    /list_decks, list_cards, search_cards, create_deck, add_cards/,
+  );
+});
+
+Deno.test("cards added in one call within one millisecond are listed in the call's order", async () => {
+  const fake = seed();
+  // A frozen clock, and random bits that fall with each id, so the ids sort against insertion.
+  let fall = 255;
+  const ids: IdSource = {
+    now: () => Date.UTC(2026, 9, 29),
+    random: (bytes) => new Uint8Array(bytes).fill(fall--),
+  };
+  const cards = ["first", "second", "third"].map((front) => ({
+    front,
+    back: "뜻",
+  }));
+  await call(
+    "add_cards",
+    { deck_id: ADA_OTHER_DECK, cards },
+    fake,
+    ADA_TOKEN,
+    ids,
+  );
+  const { result } = await call(
+    "list_cards",
+    { deck_id: ADA_OTHER_DECK },
+    fake,
+  );
+  assert.deepEqual(
+    (result.structuredContent?.cards as { blocks: Row[] }[]).map((card) =>
+      card.blocks[0]!.front
+    ),
+    ["cell", "first", "second", "third"],
+  );
+});

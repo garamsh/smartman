@@ -1,8 +1,22 @@
 // The handler end to end, with Supabase and OpenRouter replaced by a recording fake fetch.
 // The suite runs without write or network permission, so a write anywhere fails the run.
 import assert from "node:assert/strict";
+import { composeInstructions } from "./cards.ts";
 import { readConfig } from "./config.ts";
-import { createHandler, type LogEntry } from "./handler.ts";
+import {
+  askForMissing,
+  CONFIRM_AFTER_CARDS,
+  type CursorToken,
+  cursorToken,
+  decodeCursor,
+  encodeCursor,
+  MAX_CONTINUATIONS,
+} from "./continuation.ts";
+import {
+  createHandler,
+  type LogEntry,
+  RETRY_START_LIMIT_MS,
+} from "./handler.ts";
 import { OPENROUTER_URL } from "./openrouter.ts";
 import { SYSTEM_PROMPT } from "./prompt_v8.ts";
 import { MAX_IMAGE_BYTES } from "./request.ts";
@@ -10,6 +24,9 @@ import { MAX_IMAGE_BYTES } from "./request.ts";
 const SUPABASE_URL = "https://project.supabase.test";
 const USER_ID = "00000000-0000-4000-8000-00000000000a";
 const SIGNED_IN = "Bearer signed-in-token";
+const USAGE_ID = 41;
+const TOKEN = "00000000-0000-4000-8000-0000000000c1";
+const NEXT_TOKEN = "00000000-0000-4000-8000-0000000000c2";
 
 const ENV: Record<string, string> = {
   SUPABASE_URL,
@@ -17,8 +34,14 @@ const ENV: Record<string, string> = {
   OPENROUTER_API_KEY: "openrouter-key",
 };
 
-/** A model reply: the message text OpenRouter returns, or an HTTP failure. */
-type Reply = { content: string } | { status: number };
+/** A model reply: the message text OpenRouter returns, an HTTP failure, or none ever. */
+type Reply =
+  | { content: string; finish?: string }
+  | { status: number }
+  | { hang: true };
+
+/** The model timeout the handler is given in these tests. */
+const TIMEOUT_MS = 20;
 
 const cardsReply = (cards: unknown): Reply => ({
   content: JSON.stringify({ cards }),
@@ -36,6 +59,21 @@ type Fake = {
   /** The prompt version begin_extraction serves; the seed, prompt v8, unless a test names another. */
   prompt: { prompt_version_id: unknown; prompt: unknown };
   calls: { url: string; init: RequestInit | undefined }[];
+  /** The bodies finish_extraction was called with. */
+  finishes: Record<string, unknown>[];
+  /** The status finish_extraction answers with. */
+  finishStatus: number;
+  /**
+   * The row resume_extraction answers for `TOKEN`, the cards and continuing calls the photo has had,
+   * or none when the cursor is refused.
+   */
+  resume: { cards_read: number; continuations: number } | null;
+  /** The bodies resume_extraction and record_resumed_extraction were called with. */
+  resumes: Record<string, unknown>[];
+  resumedRecords: Record<string, unknown>[];
+  /** The clock the handler reads, advanced by `modelCallMs` at each model call. */
+  clock: number;
+  modelCallMs: number;
 };
 
 function fakeFetch(fake: Fake): typeof fetch {
@@ -62,15 +100,44 @@ function fakeFetch(fake: Fake): typeof fetch {
     if (url === `${SUPABASE_URL}/rest/v1/rpc/begin_extraction`) {
       return Promise.resolve(
         Response.json(
-          fake.plan === null
-            ? []
-            : [{ ...fake.plan, ...fake.prompt, allowed: fake.allowed }],
+          fake.plan === null ? [] : [{
+            ...fake.plan,
+            ...fake.prompt,
+            allowed: fake.allowed,
+            usage_id: fake.allowed ? USAGE_ID : null,
+          }],
         ),
       );
     }
+    if (url === `${SUPABASE_URL}/rest/v1/rpc/finish_extraction`) {
+      fake.finishes.push(JSON.parse(String(init?.body)));
+      return Promise.resolve(
+        new Response(null, { status: fake.finishStatus }),
+      );
+    }
+    if (url === `${SUPABASE_URL}/rest/v1/rpc/resume_extraction`) {
+      const body = JSON.parse(String(init?.body));
+      fake.resumes.push(body);
+      return Promise.resolve(Response.json(
+        fake.resume === null || body.cursor !== TOKEN ? [] : [{
+          usage_id: USAGE_ID,
+          plan: "free",
+          model: "vendor/primary-model",
+          ...fake.prompt,
+          ...fake.resume,
+        }],
+      ));
+    }
+    if (url === `${SUPABASE_URL}/rest/v1/rpc/record_resumed_extraction`) {
+      fake.resumedRecords.push(JSON.parse(String(init?.body)));
+      return Promise.resolve(new Response(null, { status: 204 }));
+    }
     if (url === OPENROUTER_URL) {
+      fake.clock += fake.modelCallMs;
       const reply = fake.replies.shift();
       if (reply === undefined) throw new Error("no scripted model reply left");
+      // A call that never answers, and ignores its abort signal.
+      if ("hang" in reply) return new Promise<Response>(() => {});
       if ("status" in reply) {
         return Promise.resolve(
           Response.json({ error: { code: reply.status } }, {
@@ -79,7 +146,10 @@ function fakeFetch(fake: Fake): typeof fetch {
         );
       }
       return Promise.resolve(Response.json({
-        choices: [{ message: { role: "assistant", content: reply.content } }],
+        choices: [{
+          finish_reason: reply.finish ?? "stop",
+          message: { role: "assistant", content: reply.content },
+        }],
         usage: { prompt_tokens: 1200, completion_tokens: 80, cost: 0.002 },
       }));
     }
@@ -119,7 +189,13 @@ type ModelCall = {
   model: string;
   messages: [
     { content: string },
-    { content: [{ text: string }, { image_url: { url: string } }] },
+    {
+      content: [
+        { text: string },
+        { image_url: { url: string } },
+        { text: string }?,
+      ];
+    },
   ];
   response_format: {
     type: string;
@@ -155,6 +231,10 @@ async function run(
     plan?: Fake["plan"];
     prompt?: Fake["prompt"];
     env?: Record<string, string | undefined>;
+    /** How far the clock moves at each model call; 0 unless a test needs time to pass. */
+    modelCallMs?: number;
+    finishStatus?: number;
+    resume?: Fake["resume"];
   } = {},
 ): Promise<Run> {
   const fake: Fake = {
@@ -171,6 +251,13 @@ async function run(
       : options.plan,
     prompt: options.prompt ?? { prompt_version_id: 1, prompt: SYSTEM_PROMPT },
     calls: [],
+    finishes: [],
+    finishStatus: options.finishStatus ?? 204,
+    resume: options.resume ?? null,
+    resumes: [],
+    resumedRecords: [],
+    clock: 0,
+    modelCallMs: options.modelCallMs ?? 0,
   };
   const env = { ...ENV, ...options.env };
   const logs: LogEntry[] = [];
@@ -178,7 +265,9 @@ async function run(
     config: readConfig((name) => env[name]),
     fetch: fakeFetch(fake),
     log: (entry) => logs.push(entry),
-    now: () => 0,
+    now: () => fake.clock,
+    modelTimeoutMs: TIMEOUT_MS,
+    newToken: () => token(NEXT_TOKEN),
   });
   const headers = new Headers({ "Content-Type": "application/json" });
   const authorization = options.authorization === undefined
@@ -306,7 +395,7 @@ Deno.test("the suite runs without write or network permission", () => {
 Deno.test("a signed-in user's photo returns each card's kind, type, answer and topic, and a vocabulary card's fields", async () => {
   const r = await run({ replies: [cardsReply(twoCards)] });
   assert.equal(r.status, 200);
-  assert.deepEqual(r.body, { cards: twoAnswered });
+  assert.deepEqual(r.body, { cards: twoAnswered, partial: false });
   const [, river, note] = r.body.cards as Record<string, unknown>[];
   assert.ok(
     !Object.hasOwn(river, "examples"),
@@ -358,7 +447,7 @@ Deno.test("a table card and a cloze card are answered with their table and blank
   }]);
 });
 
-Deno.test("a reply with a malformed table is invalid output, answered 502 after its one call", async () => {
+Deno.test("a reply with a malformed table is invalid output, answered 502 after its retry", async () => {
   const ragged = cardsReply([{
     ...twoCards[2],
     type: "table",
@@ -369,10 +458,10 @@ Deno.test("a reply with a malformed table is invalid output, answered 502 after 
       blanks: [{ row: 0, column: 1 }],
     },
   }]);
-  const r = await run({ replies: [ragged] });
+  const r = await run({ replies: [ragged, ragged] });
   assert.equal(r.status, 502);
   assert.deepEqual(r.body, { error: "model_error" });
-  assert.equal(r.modelCalls.length, 1);
+  assert.equal(r.modelCalls.length, 2);
   // Control: the same table with its rows as wide as its columns.
   const even = await run({
     replies: [cardsReply([{
@@ -387,6 +476,43 @@ Deno.test("a reply with a malformed table is invalid output, answered 502 after 
     }])],
   });
   assert.equal(even.status, 200);
+});
+
+Deno.test("a reply whose cards break a rule keeps the valid cards, drops the broken ones and logs how many", async () => {
+  // A vocabulary card with an answer, and a cloze whose front has fewer blanks than answers.
+  const broken = [{ ...twoCards[0], answer: "사과" }, {
+    ...twoCards[2],
+    type: "cloze",
+    front: "3인칭 재귀칭: ___",
+    answer: null,
+    examples: [],
+    cloze: { answers: ["자기", "저"] },
+  }];
+  const mixed = await run({
+    replies: [cardsReply([broken[0], ...twoCards, broken[1]])],
+  });
+  assert.equal(mixed.status, 200);
+  assert.deepEqual(mixed.body, { cards: twoAnswered, partial: false });
+  assert.equal(mixed.logs[0].dropped_cards, 2);
+  assert.equal(mixed.logs[0].outcome, "ok");
+
+  // Every card broken saves none, as invalid output, and logs the count too.
+  const none = await run({
+    replies: [cardsReply(broken), cardsReply(broken)],
+  });
+  assert.equal(none.status, 502);
+  assert.deepEqual(none.body, { error: "model_error" });
+  assert.equal(none.logs[0].dropped_cards, 2);
+
+  // A reply that is not the schema at all logs no count.
+  const notSchema = await run({ replies: [{ content: "{" }] });
+  assert.equal(notSchema.status, 502);
+  assert.equal(notSchema.logs[0].dropped_cards, null);
+
+  // Control: the valid cards alone drop none.
+  const valid = await run({ replies: [cardsReply(twoCards)] });
+  assert.deepEqual(valid.body, { cards: twoAnswered, partial: false });
+  assert.equal(valid.logs[0].dropped_cards, 0);
 });
 
 Deno.test("a request without a signed-in user is refused with 401 before any usage or model call", async () => {
@@ -494,7 +620,7 @@ Deno.test("a method other than POST is refused with 405", async () => {
   assert.equal(r.fake.calls.length, 0);
 });
 
-Deno.test("invalid output answers 502 after one call, with no retry", async () => {
+Deno.test("invalid output is retried once in the same request, and a valid retry is answered with one usage row", async () => {
   const card = twoCards[2];
   const tooLong = [{ ...card, answer: "a".repeat(1001) }];
   const sixExamples = [{ ...card, examples: ["a", "b", "c", "d", "e", "f"] }];
@@ -515,16 +641,410 @@ Deno.test("invalid output answers 502 after one call, with no retry", async () =
     ]
   ) {
     const r = await run({ replies: [reply, cardsReply(twoCards)] });
-    assert.equal(r.status, 502);
-    assert.deepEqual(r.body, { error: "model_error" });
-    assert.equal(
-      r.modelCalls.length,
-      1,
-      "the valid second reply is never asked for",
-    );
+    assert.equal(r.status, 200);
+    assert.deepEqual(r.body, { cards: twoAnswered, partial: false });
+    assert.equal(r.modelCalls.length, 2, "the retry is asked for");
+    assert.equal(usageCalls(r).length, 1, "the photo counts once");
+    assert.deepEqual(r.fake.finishes, [{
+      usage_id: USAGE_ID,
+      outcome: "ok",
+      attempts: 2,
+      latency_ms: 0,
+      cards_returned: 3,
+      cards_dropped: 0,
+      failures: ["invalid_output"],
+      truncated: false,
+      continuations: 0,
+      cursor: null,
+    }]);
+    assert.equal(r.logs[0].prompt_tokens, 2400, "both calls' tokens");
   }
-  const control = await run({ replies: [cardsReply(twoCards)] });
-  assert.equal(control.status, 200, "control: a valid first reply");
+  // Control: a valid first reply makes no second call.
+  const control = await run({
+    replies: [cardsReply(twoCards), cardsReply(twoCards)],
+  });
+  assert.equal(control.status, 200);
+  assert.equal(control.modelCalls.length, 1);
+  assert.deepEqual(control.fake.finishes[0].failures, []);
+  assert.equal(control.fake.finishes[0].attempts, 1);
+});
+
+Deno.test("a photo that fails twice is answered 502 after two calls, with one usage row and each failure recorded", async () => {
+  const r = await run({ replies: [{ status: 500 }, { content: "{" }] });
+  assert.equal(r.status, 502);
+  assert.deepEqual(r.body, { error: "model_error" });
+  assert.equal(r.modelCalls.length, 2);
+  assert.equal(usageCalls(r).length, 1, "the photo counts once");
+  assert.deepEqual(r.fake.finishes, [{
+    usage_id: USAGE_ID,
+    outcome: "invalid_output",
+    attempts: 2,
+    latency_ms: 0,
+    cards_returned: 0,
+    cards_dropped: 0,
+    failures: ["model_error", "invalid_output"],
+    truncated: false,
+    continuations: 0,
+    cursor: null,
+  }]);
+  assert.equal(r.logs[0].outcome, "model_error");
+  // Control: an HTTP failure retried into a valid reply is served.
+  const recovered = await run({
+    replies: [{ status: 500 }, cardsReply(twoCards)],
+  });
+  assert.equal(recovered.status, 200);
+  assert.deepEqual(recovered.fake.finishes[0].failures, ["model_error"]);
+});
+
+Deno.test("a model call that never answers is abandoned at its timeout and retried while the request is under the retry limit", async () => {
+  const hung = await run({
+    replies: [{ hang: true }, cardsReply(twoCards)],
+    modelCallMs: RETRY_START_LIMIT_MS - 1_000,
+  });
+  assert.equal(hung.status, 200);
+  assert.equal(hung.modelCalls.length, 2);
+  assert.deepEqual(hung.fake.finishes[0].failures, ["timeout"]);
+  assert.equal(hung.fake.finishes[0].outcome, "ok");
+  // Control: the same request with an answer is served at once.
+  const answered = await run({ replies: [cardsReply(twoCards)] });
+  assert.equal(answered.status, 200);
+  assert.equal(answered.modelCalls.length, 1);
+});
+
+Deno.test("a call that fails past the retry limit is answered 502 without a retry", async () => {
+  const late = await run({
+    replies: [{ hang: true }, cardsReply(twoCards)],
+    modelCallMs: RETRY_START_LIMIT_MS,
+  });
+  assert.equal(late.status, 502);
+  assert.deepEqual(late.body, { error: "model_error" });
+  assert.equal(
+    late.modelCalls.length,
+    1,
+    "the valid second reply is never asked for",
+  );
+  assert.equal(usageCalls(late).length, 1);
+  assert.deepEqual(late.fake.finishes, [{
+    usage_id: USAGE_ID,
+    outcome: "model_error",
+    attempts: 1,
+    latency_ms: RETRY_START_LIMIT_MS,
+    cards_returned: 0,
+    cards_dropped: 0,
+    failures: ["timeout"],
+    truncated: false,
+    continuations: 0,
+    cursor: null,
+  }]);
+  assert.equal(
+    late.logs[0].prompt_tokens,
+    null,
+    "a call abandoned reports no usage",
+  );
+  // Control: the same failure a millisecond earlier is retried.
+  const early = await run({
+    replies: [{ hang: true }, cardsReply(twoCards)],
+    modelCallMs: RETRY_START_LIMIT_MS - 1,
+  });
+  assert.equal(early.modelCalls.length, 2);
+});
+
+Deno.test("a photo whose outcome cannot be recorded is still answered with its cards, and the log says so", async () => {
+  const unrecorded = await run({
+    replies: [cardsReply(twoCards)],
+    finishStatus: 500,
+  });
+  assert.equal(unrecorded.status, 200);
+  assert.deepEqual(unrecorded.body, { cards: twoAnswered, partial: false });
+  assert.equal(unrecorded.fake.finishes.length, 1, "the record was tried");
+  assert.equal(unrecorded.logs[0].outcome, "ok");
+  assert.equal(unrecorded.logs[0].outcome_recorded, false);
+  // Control: a record that succeeds logs it.
+  const recorded = await run({ replies: [cardsReply(twoCards)] });
+  assert.equal(recorded.logs[0].outcome_recorded, true);
+});
+
+/** A reply cut at the output cap just after [cards], inside the next card. */
+const cutAfter = (cards: unknown[]): Reply => ({
+  content: JSON.stringify({ cards }).slice(0, -2) + ',{"kind":"vocab',
+  finish: "length",
+});
+
+/** The text a model call sent after the photo, or undefined when it sent none. */
+const followUp = (call: ModelCall): string | undefined =>
+  call.messages[1].content[2]?.text;
+
+function token(value: string): CursorToken {
+  const parsed = cursorToken(value);
+  assert.ok(parsed !== null);
+  return parsed;
+}
+
+/** A body that goes on reading the photo after the cards whose last fronts are [fronts]. */
+const resuming = (fronts: string[], cursor = TOKEN) => ({
+  image: image(PNG),
+  cursor: encodeCursor({ token: token(cursor), fronts }),
+});
+
+Deno.test("a reply cut twice is read on to the page's end in the same request, naming the entries read, with the photo counted once", async () => {
+  const [run1, river, note] = twoCards;
+  const r = await run({
+    replies: [cutAfter([run1]), cutAfter([run1, river]), cardsReply([note])],
+  });
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.body, { cards: twoAnswered, partial: false });
+  assert.equal(r.modelCalls.length, 3);
+  assert.equal(followUp(r.modelCalls[0]), undefined);
+  assert.equal(followUp(r.modelCalls[1]), askForMissing(1, ["run"]));
+  assert.equal(followUp(r.modelCalls[2]), askForMissing(2, ["run", "river"]));
+  assert.equal(usageCalls(r).length, 1, "the photo counts once");
+  assert.deepEqual(r.fake.finishes, [{
+    usage_id: USAGE_ID,
+    outcome: "ok",
+    attempts: 1,
+    latency_ms: 0,
+    cards_returned: 3,
+    cards_dropped: 0,
+    failures: [],
+    truncated: false,
+    continuations: 2,
+    cursor: null,
+  }]);
+  assert.equal(r.logs[0].prompt_tokens, 3600, "every call's tokens");
+  // Control: a whole first reply is not read on.
+  const whole = await run({ replies: [cardsReply(twoCards)] });
+  assert.equal(whole.modelCalls.length, 1);
+  assert.equal(whole.fake.finishes[0].continuations, 0);
+});
+
+/** [count] vocabulary cards as the model writes them, their fronts `[prefix]0`, `[prefix]1`... */
+const words = (prefix: string, count: number) =>
+  Array.from({ length: count }, (_, i) => ({
+    ...twoCards[1],
+    front: `${prefix}${i}`,
+  }));
+
+Deno.test("a whole reply of many cards is read on to confirm the page ends, while it adds cards, and an ordinary page is not", async () => {
+  const fronts = (r: Run) =>
+    (r.body.cards as { front: string }[]).map((card) => card.front);
+  const confirmed = await run({
+    replies: [cardsReply(words("a", CONFIRM_AFTER_CARDS)), cardsReply([])],
+  });
+  assert.equal(confirmed.status, 200);
+  assert.equal(confirmed.body.partial, false);
+  assert.deepEqual(fronts(confirmed), words("a", 40).map((w) => w.front));
+  assert.equal(confirmed.modelCalls.length, 2);
+  assert.equal(
+    followUp(confirmed.modelCalls[1]),
+    askForMissing(40, words("a", 40).map((w) => w.front)),
+  );
+  assert.equal(confirmed.fake.finishes[0].continuations, 1);
+  // A model that stopped early is read on while each reply adds many cards.
+  const early = await run({
+    replies: [
+      cardsReply(words("a", 40)),
+      cardsReply([...words("a", 2), ...words("b", 40)]),
+      cardsReply(words("c", 3)),
+    ],
+  });
+  assert.equal(early.modelCalls.length, 3);
+  assert.deepEqual(
+    fronts(early),
+    [
+      ...words("a", 40),
+      ...words("b", 40),
+      ...words("c", 3),
+    ].map((w) => w.front),
+  );
+  assert.equal(early.body.partial, false);
+  // Control: a page of one card fewer makes one call.
+  const ordinary = await run({
+    replies: [cardsReply(words("a", CONFIRM_AFTER_CARDS - 1)), cardsReply([])],
+  });
+  assert.equal(ordinary.modelCalls.length, 1);
+  assert.equal(ordinary.fake.finishes[0].continuations, 0);
+});
+
+Deno.test("a page the time budget ends before is answered with its cards so far, read in part, and a cursor the record keeps", async () => {
+  const [run1, river, note] = twoCards;
+  const replies = () => [
+    cutAfter([run1]),
+    cutAfter([river]),
+    cardsReply([note]),
+  ];
+  // The third call would start at 80 s, past the 75 s limit.
+  const r = await run({ replies: replies(), modelCallMs: 40_000 });
+  assert.equal(r.status, 200);
+  assert.deepEqual(Object.keys(r.body), ["cards", "partial", "cursor"]);
+  assert.deepEqual(r.body.cards, twoAnswered.slice(0, 2));
+  assert.equal(r.body.partial, true, "a client ignoring the cursor reads it");
+  assert.deepEqual(decodeCursor(String(r.body.cursor)), {
+    token: NEXT_TOKEN,
+    fronts: ["run", "river"],
+  });
+  assert.equal(r.modelCalls.length, 2);
+  assert.equal(r.fake.finishes[0].cursor, NEXT_TOKEN);
+  assert.equal(r.fake.finishes[0].continuations, 1);
+  assert.equal(r.fake.finishes[0].truncated, true);
+  // A cursor the record did not keep is not offered.
+  const unrecorded = await run({
+    replies: replies(),
+    modelCallMs: 40_000,
+    finishStatus: 500,
+  });
+  assert.deepEqual(unrecorded.body, {
+    cards: twoAnswered.slice(0, 2),
+    partial: true,
+  });
+  // Control: calls of 30 s leave time for the third, which ends the page.
+  const control = await run({ replies: replies(), modelCallMs: 30_000 });
+  assert.deepEqual(control.body, { cards: twoAnswered, partial: false });
+  assert.equal(control.fake.finishes[0].cursor, null);
+});
+
+Deno.test("a cursor sent back goes on reading the photo by its first read's model and prompt, without counting it again", async () => {
+  const note = twoCards[2];
+  const r = await run({
+    body: resuming(["run", "river"]),
+    resume: { cards_read: 2, continuations: 1 },
+    replies: [cardsReply([twoCards[1], note])],
+  });
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.body, { cards: [twoAnswered[2]], partial: false });
+  assert.equal(usageCalls(r).length, 0, "the photo is not counted again");
+  assert.deepEqual(r.fake.resumes, [{ user_id: USER_ID, cursor: TOKEN }]);
+  assert.equal(r.modelCalls.length, 1);
+  assert.equal(r.modelCalls[0].model, "vendor/primary-model");
+  assert.equal(
+    r.modelCalls[0].messages[0].content,
+    composeInstructions(SYSTEM_PROMPT),
+  );
+  assert.equal(followUp(r.modelCalls[0]), askForMissing(2, ["run", "river"]));
+  assert.deepEqual(r.fake.finishes, []);
+  assert.deepEqual(r.fake.resumedRecords, [{
+    usage_id: USAGE_ID,
+    continuations: 1,
+    cards_returned: 1,
+    truncated: false,
+    cursor: null,
+  }]);
+  assert.equal(r.logs[0].outcome, "ok");
+  // Control: the same photo without a cursor is counted.
+  const counted = await run({ replies: [cardsReply(twoCards)] });
+  assert.equal(usageCalls(counted).length, 1);
+});
+
+Deno.test("a cursor that is used, expired or another user's is refused 410 before any model call, and a malformed one 400", async () => {
+  const refused = await run({
+    body: resuming(["run"]),
+    resume: null,
+    replies: [cardsReply(twoCards)],
+  });
+  assert.equal(refused.status, 410);
+  assert.deepEqual(refused.body, { error: "cursor_expired" });
+  assert.equal(refused.modelCalls.length, 0);
+  assert.equal(usageCalls(refused).length, 0);
+  assert.equal(refused.logs[0].outcome, "cursor_expired");
+  // A cursor whose token the database does not hold is refused the same way.
+  const unknown = await run({
+    body: resuming(["run"], NEXT_TOKEN),
+    resume: { cards_read: 1, continuations: 0 },
+    replies: [cardsReply(twoCards)],
+  });
+  assert.equal(unknown.status, 410);
+  for (
+    const cursor of [
+      "not a cursor",
+      7,
+      encodeCursor({ token: token(TOKEN), fronts: [] }).slice(3),
+    ]
+  ) {
+    const malformed = await run({ body: { image: image(PNG), cursor } });
+    assert.equal(malformed.status, 400, String(cursor));
+    assert.deepEqual(malformed.fake.resumes, []);
+  }
+  // Control: the cursor the database holds is taken.
+  const taken = await run({
+    body: resuming(["run"]),
+    resume: { cards_read: 1, continuations: 0 },
+    replies: [cardsReply(twoCards)],
+  });
+  assert.equal(taken.status, 200);
+});
+
+Deno.test("a resumed request whose calls both fail is answered 502 with no cursor", async () => {
+  const failed = await run({
+    body: resuming(["run", "river"]),
+    resume: { cards_read: 2, continuations: 0 },
+    replies: [{ status: 500 }, { content: "{" }],
+  });
+  assert.equal(failed.status, 502);
+  assert.deepEqual(failed.body, { error: "model_error" });
+  assert.equal(failed.modelCalls.length, 2);
+  assert.deepEqual(failed.fake.resumedRecords, [{
+    usage_id: USAGE_ID,
+    continuations: 2,
+    cards_returned: 0,
+    truncated: true,
+    cursor: null,
+  }]);
+  // Control: a failure asked again into a reply is served.
+  const recovered = await run({
+    body: resuming(["run", "river"]),
+    resume: { cards_read: 2, continuations: 0 },
+    replies: [{ status: 500 }, cardsReply([twoCards[2]])],
+  });
+  assert.equal(recovered.status, 200);
+  assert.deepEqual(recovered.body, { cards: [twoAnswered[2]], partial: false });
+});
+
+Deno.test("a photo at its card cap or its continuing calls' cap is offered no cursor", async () => {
+  const [, river, note] = twoCards;
+  // One call a request: the second would start at 75 s.
+  const resumed = (resume: Fake["resume"]) =>
+    run({
+      body: resuming(["run"]),
+      resume,
+      replies: [cutAfter([river, note])],
+      modelCallMs: RETRY_START_LIMIT_MS,
+    });
+  const atCards = await resumed({ cards_read: 499, continuations: 0 });
+  assert.deepEqual(atCards.body, { cards: [twoAnswered[1]], partial: true });
+  assert.equal(atCards.fake.resumedRecords[0].cursor, null);
+  const atCalls = await resumed({
+    cards_read: 1,
+    continuations: MAX_CONTINUATIONS - 1,
+  });
+  assert.equal(atCalls.body.partial, true);
+  assert.equal(atCalls.body.cursor, undefined);
+  // Control: under both caps the same reply is offered a cursor.
+  const under = await resumed({ cards_read: 1, continuations: 0 });
+  assert.deepEqual(under.body.cards, twoAnswered.slice(1));
+  assert.deepEqual(decodeCursor(String(under.body.cursor)), {
+    token: NEXT_TOKEN,
+    fronts: ["run", "river", "연역 논증"],
+  });
+});
+
+Deno.test("a photo refused before its count records no outcome", async () => {
+  const refused = await run({ allowed: false });
+  assert.equal(refused.status, 429);
+  assert.deepEqual(refused.fake.finishes, []);
+  // Control: a counted photo with no cards records its outcome.
+  const empty = await run({ replies: [cardsReply([])] });
+  assert.equal(empty.status, 422);
+  assert.deepEqual(empty.fake.finishes, [{
+    usage_id: USAGE_ID,
+    outcome: "no_cards",
+    attempts: 1,
+    latency_ms: 0,
+    cards_returned: 0,
+    cards_dropped: 0,
+    failures: [],
+    truncated: false,
+    continuations: 0,
+    cursor: null,
+  }]);
 });
 
 Deno.test("the call uses the model of the caller's plan", async () => {
@@ -563,13 +1083,6 @@ Deno.test("missing plan settings, or a plan naming no model, answer 503 without 
     assert.deepEqual(r.body, { error: "not_configured" });
     assert.equal(r.modelCalls.length, 0);
   }
-});
-
-Deno.test("a model HTTP error answers 502 without a retry", async () => {
-  const r = await run({ replies: [{ status: 500 }, cardsReply(twoCards)] });
-  assert.equal(r.status, 502);
-  assert.deepEqual(r.body, { error: "model_error" });
-  assert.equal(r.modelCalls.length, 1);
 });
 
 Deno.test("a photo with no cards answers 422", async () => {
@@ -877,9 +1390,11 @@ Deno.test("each request logs one line of the allowed fields and never the image"
     assert.equal(r.logs.length, 1);
     assert.deepEqual(Object.keys(r.logs[0]).sort(), [
       "completion_tokens",
+      "dropped_cards",
       "latency_ms",
       "model",
       "outcome",
+      "outcome_recorded",
       "plan",
       "prompt_tokens",
       "prompt_version",
@@ -913,6 +1428,8 @@ Deno.test("each request logs one line of the allowed fields and never the image"
     latency_ms: 0,
     prompt_tokens: 1200,
     completion_tokens: 80,
+    dropped_cards: 0,
+    outcome_recorded: true,
     outcome: "ok",
   });
   assert.equal(outcomes[1].logs[0].prompt_tokens, 1200, "one call's tokens");
@@ -935,11 +1452,17 @@ Deno.test("the model is instructed with the prompt version the server serves the
     prompt: { prompt_version_id: 7, prompt: "Saved instructions." },
   });
   assert.equal(served.status, 200);
-  assert.equal(served.modelCalls[0].messages[0].content, "Saved instructions.");
+  assert.equal(
+    served.modelCalls[0].messages[0].content,
+    composeInstructions("Saved instructions."),
+  );
   assert.equal(served.logs[0].prompt_version, 7);
   // Control: the seed's version is served by default, and its text is prompt v8's.
   const seeded = await run({ replies: [cardsReply(twoCards)] });
-  assert.equal(seeded.modelCalls[0].messages[0].content, SYSTEM_PROMPT);
+  assert.equal(
+    seeded.modelCalls[0].messages[0].content,
+    composeInstructions(SYSTEM_PROMPT),
+  );
   assert.equal(seeded.logs[0].prompt_version, 1);
 });
 

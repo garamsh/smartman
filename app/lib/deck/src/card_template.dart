@@ -5,8 +5,17 @@ import 'model.dart';
 /// card; study draws by the blocks (ADR 0106).
 const freeTemplate = 'free';
 
-/// The version of the template this build writes.
+/// The version of [freeTemplate] that stores a card as two side lists, which
+/// a copy of such a card still writes.
 const cardTemplateVersion = 1;
+
+/// The version of [freeTemplate] that stores a card as one list of 칸
+/// (ADR 0137), which the editor, photo import and a spreadsheet write.
+const cardFrameVersion = 2;
+
+/// Whether a card of [template] at [version] stores a list of 칸.
+bool isFramed(String? template, int? version) =>
+    template == freeTemplate && version == cardFrameVersion;
 
 /// The templates earlier builds wrote beside [freeTemplate], at version 1:
 /// 앞뒤, 빈칸 and 표. Each opens in the block editor as a 자유 card does.
@@ -18,7 +27,8 @@ const _earlierTemplates = {'flip', 'cloze', 'table'};
 /// (ADR 0106).
 bool canEdit(Card card) => switch ((card.template, card.templateVersion)) {
   (null, _) => true,
-  (_, final version?) when version > cardTemplateVersion => false,
-  (final template?, _) =>
-    template == freeTemplate || _earlierTemplates.contains(template),
+  (freeTemplate, final version) => (version ?? 1) <= cardFrameVersion,
+  (final template?, final version) =>
+    (version ?? 1) <= cardTemplateVersion &&
+        _earlierTemplates.contains(template),
 };

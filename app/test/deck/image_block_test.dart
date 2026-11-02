@@ -6,13 +6,15 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/database/database.dart';
-import 'package:smartman/deck/deck.dart';
-import 'package:smartman/deck/src/image_block.dart';
-import 'package:smartman/design/app_text_field.dart';
-import 'package:smartman/design/theme.dart';
-import 'package:smartman/l10n/app_localizations.dart';
-import 'package:smartman/media/media.dart';
+import 'package:knowno/database/database.dart';
+import 'package:knowno/deck/deck.dart';
+import 'package:knowno/deck/src/editor_group.dart';
+import 'package:knowno/design/app_chip.dart';
+import 'package:knowno/deck/src/image_block.dart';
+import 'package:knowno/design/app_text_field.dart';
+import 'package:knowno/design/theme.dart';
+import 'package:knowno/l10n/app_localizations.dart';
+import 'package:knowno/media/media.dart';
 import 'package:uuid/uuid.dart';
 
 import '../contrast.dart';
@@ -361,8 +363,8 @@ void main() {
       );
       await screens.push((deck) => CardEditorScreen(deck: deck));
       await fillText(tester);
-      await tester.ensureVisible(find.bySemanticsLabel('Add to front'));
-      await screens.tap(find.bySemanticsLabel('Add to front'));
+      await tester.ensureVisible(find.bySemanticsLabel('Add block'));
+      await screens.tap(find.bySemanticsLabel('Add block'));
       await screens.tap(find.text('Photo').last);
       await tester.ensureVisible(find.text('Choose from album'));
       await tester.tap(find.text('Choose from album'));
@@ -407,6 +409,50 @@ void main() {
           (const MediaId('photo0'), 160, 90),
         );
         expect(image.boxes, hasLength(1));
+      },
+    );
+
+    testWidgets(
+      'a photo with no box sits on the side its chips choose, the chips go with its first box, and come back with its last gone',
+      (tester) async {
+        final screens = await openWithPhoto(tester);
+        final group = find.ancestor(
+          of: find.text('Add blank'),
+          matching: find.byType(EditorGroup),
+        );
+        Finder side(String name) => find.descendant(
+          of: group,
+          matching: find.widgetWithText(AppChip, name),
+        );
+        expect(side('Front'), findsOneWidget);
+        expect(tester.widget<AppChip>(side('Front')).selected, isTrue);
+        await tapVisible(tester, side('Back'));
+        expect(tester.widget<AppChip>(side('Back')).selected, isTrue);
+
+        await tapVisible(tester, find.text('Add blank'));
+        expect(side('Front'), findsNothing, reason: 'a box has no side');
+        expect(side('Back'), findsNothing);
+
+        await tapVisible(tester, find.text('Delete blank'));
+        expect(side('Back'), findsOneWidget, reason: 'no box, a side again');
+        expect(tester.widget<AppChip>(side('Back')).selected, isTrue);
+
+        await save(tester);
+        final card = (await screens.cards()).single;
+        expect(card.cells!.whereType<PlacedCell>().single.side, CellSide.back);
+        expect(card.back.whereType<ImageContent>(), hasLength(1));
+      },
+    );
+
+    testWidgets(
+      'a photo with a box is saved with no side, drawn as a question',
+      (tester) async {
+        final screens = await openWithPhoto(tester);
+        await tapVisible(tester, find.text('Add blank'));
+        await save(tester);
+        final cells = (await screens.cards()).single.cells!;
+        expect(cells.whereType<PlacedCell>(), isEmpty);
+        expect(cells.whereType<BlankCell>(), hasLength(1));
       },
     );
 
@@ -532,7 +578,7 @@ void main() {
         expect(drawn.height, lessThan(AppSize.tapTarget), reason: 'setup');
         expect(target.width, greaterThanOrEqualTo(AppSize.tapTarget));
         expect(target.height, greaterThanOrEqualTo(AppSize.tapTarget));
-        expect(target.center, drawn.center);
+        expect((target.center - drawn.center).distance, lessThan(0.001));
       },
     );
 
@@ -550,8 +596,8 @@ void main() {
       for (final (index, text) in ['front', 'back'].indexed) {
         await tester.enterText(find.byType(TextField).at(index), text);
       }
-      await tester.ensureVisible(find.bySemanticsLabel('Add to front'));
-      await screens.tap(find.bySemanticsLabel('Add to front'));
+      await tester.ensureVisible(find.bySemanticsLabel('Add block'));
+      await screens.tap(find.bySemanticsLabel('Add block'));
       await screens.tap(find.text('Photo').last);
       expect(find.text('Choose a photo'), findsNothing);
       await tapVisible(tester, find.text('Save'));
@@ -576,8 +622,8 @@ void main() {
         );
         await screens.push((deck) => CardEditorScreen(deck: deck));
         await fillText(tester);
-        await tester.ensureVisible(find.bySemanticsLabel('Add to front'));
-        await screens.tap(find.bySemanticsLabel('Add to front'));
+        await tester.ensureVisible(find.bySemanticsLabel('Add block'));
+        await screens.tap(find.bySemanticsLabel('Add block'));
         await screens.tap(find.text('Photo').last);
         await tapVisible(tester, find.text('Choose from album'));
         await chosen(tester);
@@ -601,8 +647,8 @@ void main() {
         );
         await screens.push((deck) => CardEditorScreen(deck: deck));
         await fillText(tester);
-        await tester.ensureVisible(find.bySemanticsLabel('Add to front'));
-        await screens.tap(find.bySemanticsLabel('Add to front'));
+        await tester.ensureVisible(find.bySemanticsLabel('Add block'));
+        await screens.tap(find.bySemanticsLabel('Add block'));
         await screens.tap(find.text('Photo').last);
         final hold = pick.hold = Completer<void>();
         await tapVisible(tester, find.text('Choose from album'));

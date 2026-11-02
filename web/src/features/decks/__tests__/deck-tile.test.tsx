@@ -13,7 +13,7 @@ function tile(deck: Partial<Deck>) {
   const icon = box?.querySelector("svg");
   return {
     box,
-    fill: box?.className.split(" ").find((name) => name.startsWith("bg-deck-")),
+    fill: box?.className.split(" ").find((name) => name.startsWith("bg-")),
     icon: icon
       ?.getAttribute("class")
       ?.split(" ")
@@ -50,11 +50,11 @@ describe("a deck's tile", () => {
     expect(box).not.toHaveTextContent("F");
   });
 
-  it("draws layers on the colour the id selects for a deck with no keys, or with keys this version does not know", () => {
-    expect(tile({})).toMatchObject({ icon: "lucide-layers", fill: "bg-deck-sky" });
+  it("draws layers on the brand tint for a deck with no keys, or with keys this version does not know", () => {
+    expect(tile({})).toMatchObject({ icon: "lucide-layers", fill: "bg-brand-tint" });
     expect(tile({ icon: "rocket", color: "teal" })).toMatchObject({
       icon: "lucide-layers",
-      fill: "bg-deck-sky",
+      fill: "bg-brand-tint",
     });
     // Control: a known pair is drawn as stored, so the default above is the fallback's.
     expect(tile({ icon: "star", color: "amber" })).toMatchObject({

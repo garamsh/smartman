@@ -1,16 +1,51 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Card;
 
 import '../../design/theme.dart';
 import '../../design/word_break.dart';
 import '../../l10n/app_localizations.dart';
 import 'audio_block.dart';
+import 'card_frame.dart';
 import 'card_list.dart';
 import 'card_text.dart';
 import 'content.dart';
 import 'content_view.dart';
 import 'image_block.dart';
+import 'model.dart';
 
-/// A whole card's front, its blocks in order: a text block as its title, a
+/// Whether a card of [cells] is drawn whole, each 칸 in place, rather than
+/// split: whether it holds a self-revealing 칸 (ADR 0137).
+bool isDrawnWhole(List<Cell> cells) => cells.any((cell) => cell is BlankCell);
+
+/// The 칸 a card of [front] and [back] is drawn from: its blocks converted,
+/// and each block this build cannot show kept after them.
+List<Cell> cellsToDraw(List<Content> front, List<Content> back) {
+  List<Content> known(List<Content> side) =>
+      side.where((block) => block is! UnsupportedContent).toList();
+  return [
+    ...?cellsFromSides(known(front), known(back)),
+    for (final block in [...front, ...back])
+      if (block case final UnsupportedContent kept) UnknownCell(kept),
+  ];
+}
+
+/// The 칸 [card] is drawn from.
+List<Cell> drawnCellsOf(Card card) =>
+    card.cells ?? cellsToDraw(card.front, card.back);
+
+/// One block of a card drawn whole, [added] when the reveal added it.
+typedef CardPart = ({Content block, bool added});
+
+/// What [cells] show in order: each 칸's part before the reveal, followed
+/// when [revealed] by the part the reveal adds.
+List<CardPart> partsOf(List<Cell> cells, {required bool revealed}) => [
+  for (final cell in cells) ...[
+    for (final block in sidesOf([cell]).front) (block: block, added: false),
+    if (revealed)
+      for (final block in sidesOf([cell]).back) (block: block, added: true),
+  ],
+];
+
+/// A whole card's blocks in order: a text block as its title, a
 /// cloze as its sentence, a table as its table, an image as its photo and a
 /// sound as its play control (ADR 0112),
 /// with each blank empty, or each box hidden, or filled or revealed in place
@@ -20,8 +55,13 @@ import 'image_block.dart';
 ///
 /// A cloze is in [style], centred, scaled down as far as [minFontSize] until
 /// its widest word fits [width]. A table is in the body size, [width] wide.
-/// Given [height] too, the whole front is scaled down to fit it. It reads as
-/// [spokenContent] says, each empty blank as "빈칸".
+/// Given [height] too, the whole front is scaled down to fit it. Its text
+/// blocks are aligned by [textAlign]. It reads as [spokenContent] says, each
+/// empty blank as "빈칸".
+///
+/// [WholeCardView.cells] draws a card's 칸 so: each 칸's part before the
+/// reveal and, when [revealed], the part the reveal adds under it at the
+/// back's size in `ink2` (ADR 0137).
 class WholeCardView extends StatelessWidget {
   const WholeCardView(
     this.blocks, {
@@ -31,36 +71,56 @@ class WholeCardView extends StatelessWidget {
     this.minFontSize,
     this.width,
     this.height,
-  });
+    this.textAlign = TextAlign.center,
+  }) : cells = null;
+
+  const WholeCardView.cells(
+    List<Cell> this.cells, {
+    super.key,
+    required this.revealed,
+    required this.style,
+    this.minFontSize,
+    this.width,
+    this.height,
+    this.textAlign = TextAlign.center,
+  }) : blocks = const [];
 
   final List<Content> blocks;
+  final List<Cell>? cells;
   final bool revealed;
   final TextStyle style;
   final double? minFontSize;
   final double? width;
   final double? height;
+  final TextAlign textAlign;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final parts = switch (cells) {
+      final cells? => partsOf(cells, revealed: revealed),
+      null => <CardPart>[
+        for (final block in blocks) (block: block, added: false),
+      ],
+    };
     final column = Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: AppSpace.s12,
       children: [
-        for (final block in blocks)
+        for (final (:block, :added) in parts)
           switch (block) {
             TextContent(:final text) => Text(
               text,
-              textAlign: TextAlign.center,
-              style: _titleStyle,
+              textAlign: textAlign,
+              style: added ? _addedStyle(context) : _titleStyle,
             ),
             ClozeContent() => _cloze(context, block),
             TableContent() => _table(context, block),
             SensesContent() => Text.rich(
               sensesSpan(block),
-              textAlign: TextAlign.center,
-              style: style,
+              textAlign: textAlign,
+              style: added ? _addedStyle(context) : style,
             ),
             // Inside [width] and [height] itself, so the photo alone is
             // not scaled down with the face and its boxes' chrome stays
@@ -83,7 +143,9 @@ class WholeCardView extends StatelessWidget {
     final width = this.width;
     return Semantics(
       container: true,
-      label: spokenContent(l10n, blocks, revealed: revealed),
+      label: spokenContent(l10n, [
+        for (final part in parts) part.block,
+      ], revealed: revealed),
       excludeSemantics: true,
       child: width == null
           ? column
@@ -99,10 +161,21 @@ class WholeCardView extends StatelessWidget {
   /// A text block's style: the headline on a card, or, in a style smaller
   /// than it such as a list row's, that style in bold, so a row keeps its
   /// screen's sizes (#454).
-  TextStyle get _titleStyle =>
-      (style.fontSize ?? 0) < (AppType.headline.fontSize ?? 0)
+  TextStyle get _titleStyle => _inRow
       ? style.copyWith(fontWeight: FontWeight.w700)
-      : AppType.headline.copyWith(color: style.color);
+      : AppType.wholeFront.copyWith(color: style.color);
+
+  /// A part the reveal added: the back's size in `ink2` on a card, or, in a
+  /// style such as a list row's, that style at regular weight in `ink2`.
+  TextStyle _addedStyle(BuildContext context) {
+    final ink2 = AppColors.of(context).ink2;
+    return _inRow
+        ? style.copyWith(color: ink2, fontWeight: FontWeight.w400)
+        : AppType.wholeAdded.copyWith(color: ink2);
+  }
+
+  /// Whether [style] is smaller than a card's, as a list row's is.
+  bool get _inRow => (style.fontSize ?? 0) < (AppType.headline.fontSize ?? 0);
 
   Widget _cloze(BuildContext context, ClozeContent cloze) {
     final parts = cloze.text.split(clozeBlank);
@@ -119,7 +192,7 @@ class WholeCardView extends StatelessWidget {
     final width = this.width;
     final minFontSize = this.minFontSize;
     if (width == null || minFontSize == null) {
-      return Text.rich(span, style: style, textAlign: TextAlign.center);
+      return Text.rich(span, style: style, textAlign: textAlign);
     }
     return CardText(
       cloze.filled,
@@ -127,6 +200,7 @@ class WholeCardView extends StatelessWidget {
       style: style,
       minFontSize: minFontSize,
       width: width,
+      textAlign: textAlign,
     );
   }
 
@@ -191,6 +265,53 @@ class WholeCardView extends StatelessWidget {
               decoration: TextDecoration.underline,
               decorationColor: colors.muted,
             ),
+    );
+  }
+}
+
+/// A whole card's 칸 as the current card and the card preview draw them: in
+/// the largest of [cardSteps] from [style] at which its text fits a box
+/// [width] wide and [height] high, start-aligned at the last, past which the
+/// face scrolls ([CardScroll], ADR 0123).
+class SteppedWholeCardView extends StatelessWidget {
+  const SteppedWholeCardView(
+    this.cells, {
+    super.key,
+    required this.revealed,
+    required this.style,
+    required this.width,
+    required this.height,
+  });
+
+  final List<Cell> cells;
+  final bool revealed;
+  final TextStyle style;
+  final double width;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    // The face's text with each blank filled, whose width an empty blank's
+    // gap keeps.
+    final plain = describeContent(AppLocalizations.of(context), [
+      for (final part in partsOf(cells, revealed: revealed)) part.block,
+    ]);
+    final stepped = steppedStyle(
+      TextSpan(text: keepWords(plain)),
+      plain,
+      steps: cardSteps(style),
+      width: width,
+      height: height,
+      textScaler: MediaQuery.textScalerOf(context),
+      textDirection: Directionality.of(context),
+    );
+    return WholeCardView.cells(
+      cells,
+      revealed: revealed,
+      style: stepped,
+      minFontSize: stepped.fontSize,
+      width: width,
+      textAlign: cardAlign(stepped),
     );
   }
 }

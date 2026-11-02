@@ -1,6 +1,6 @@
 # ADR 0117: Draw the card editor as one group per side, with a full-screen preview, and every action in words or a row's menu
 
-> Status: accepted
+> Status: accepted; its one group per side superseded by [ADR 0137](0137-frame-a-card-by-its-blocks-each-block-type-deciding-whether-it-has-a-front-and-a-back.md), keeping its groups, preview screen and menus
 > Date: 2026-10-27
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.

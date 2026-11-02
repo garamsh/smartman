@@ -36,16 +36,16 @@ abstract final class StatsStyle {
   static const todayRing = 2.0;
 
   /// The recall bands, strong, fair and fading: the ink, the ink a step
-  /// back, and the streak's amber. The fair band's alpha differs by theme so
-  /// that each band stays 3:1 on the surface and every two differ in
-  /// lightness by 1.5:1, not by hue alone.
+  /// back, and the coral. The fair band's alpha differs by theme so that every
+  /// two differ in lightness by 1.5:1, not by hue alone; the ink bands stay
+  /// 3:1 on the surface, and the coral's count carries it where it is not.
   static (Color, Color, Color) bands(AppColors colors, Brightness brightness) =>
       (
         colors.ink,
         colors.ink.withValues(
           alpha: brightness == Brightness.light ? 0.75 : 0.4,
         ),
-        colors.streak,
+        colors.primary,
       );
 
   /// A heatmap cell at each level, from a day without a card to the busiest

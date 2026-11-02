@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/deck/deck.dart';
-import 'package:smartman/photo_import/photo_import.dart';
-import 'package:smartman/photo_import/src/import_list.dart';
+import 'package:knowno/deck/deck.dart';
+import 'package:knowno/photo_import/photo_import.dart';
+import 'package:knowno/photo_import/src/import_list.dart';
 
 /// The parts of speech these tests print, as a page prints them.
 const _printed = {'[동]': PartOfSpeech.verb, '[명]': PartOfSpeech.noun};
@@ -132,7 +132,7 @@ void main() {
     },
   );
 
-  test('a cloze row saves its blocks as its front and their filled text as its back, swapped or not, where a plain note swaps', () {
+  test('a cloze row saves its blocks alone, swapped or not, where a plain note swaps', () {
     const cloze = ClozeContent('3인칭 재귀칭: 높임 ___ · 예사 ___ · 낮춤 저', ['당신', '자기']);
     final list = ImportList(const [
       CandidateCard(
@@ -147,11 +147,11 @@ void main() {
     const filled = '3인칭 재귀칭: 높임 당신 · 예사 자기 · 낮춤 저';
 
     expect(list.toImport().first.front, [cloze]);
-    expect(_sides(list), [(filled, filled), ('재귀칭', '앞의 명사를 다시 가리킴')]);
+    expect(_sides(list), [(filled, ''), ('재귀칭', '앞의 명사를 다시 가리킴')]);
     list.sections.single.form = const NoteForm(swapped: true);
     expect(list.toImport().first.front, [cloze]);
     // Control: the plain note in the same section swaps.
-    expect(_sides(list), [(filled, filled), ('앞의 명사를 다시 가리킴', '재귀칭')]);
+    expect(_sides(list), [(filled, ''), ('앞의 명사를 다시 가리킴', '재귀칭')]);
   });
 
   test('a vocabulary row saves its senses as a senses block with their labels and examples, '
@@ -184,6 +184,25 @@ void main() {
         ),
       ]),
     ]);
+  });
+
+  test('a row with every sense dropped saves nothing and draws its word on '
+      'the side its form shows', () {
+    final list = ImportList([
+      _word('big', [(null, '크다')]),
+    ], const {});
+    final row = list.rows.single..senses.single.kept = false;
+
+    expect(list.toImport(), isEmpty);
+    expect(sidesOf(row.cards(const VocabularyForm()).single).front, [
+      const TextContent('big'),
+    ]);
+    expect(
+      sidesOf(
+        row.cards(const VocabularyForm(direction: Direction.backward)).single,
+      ).back,
+      [const TextContent('big')],
+    );
   });
 
   group('stored forms', () {

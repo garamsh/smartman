@@ -6,6 +6,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../deck/deck.dart';
 import '../../design/app_button.dart';
+import '../../design/mascot.dart';
 import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../../photo_import/photo_import.dart';
@@ -149,7 +150,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 }
 
 /// The three tabs at the foot of the screen, on the surface over a hairline:
-/// the selected one in ink, the others muted.
+/// the current one a coral-tinted pill behind its icon over a bold label, the
+/// others muted.
 class _TabBar extends StatelessWidget {
   const _TabBar({required this.selected, required this.onSelect});
 
@@ -195,11 +197,26 @@ class _TabBar extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.center,
                           spacing: AppSpace.s4,
                           children: [
-                            Icon(
-                              tab.icon,
-                              color: index == selected
-                                  ? colors.ink
-                                  : colors.muted,
+                            // Off the bar's top edge at a large text size too.
+                            const SizedBox(height: AppSpace.s4),
+                            Container(
+                              width: AppSize.tabPill.width,
+                              height: AppSize.tabPill.height,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: index == selected
+                                    ? colors.brandTint
+                                    : null,
+                                borderRadius: BorderRadius.circular(
+                                  AppRadius.chip,
+                                ),
+                              ),
+                              child: Icon(
+                                tab.icon,
+                                color: index == selected
+                                    ? colors.ink
+                                    : colors.muted,
+                              ),
                             ),
                             // One line, shrunk to the tab only where a large
                             // text size is wider than it.
@@ -213,7 +230,7 @@ class _TabBar extends StatelessWidget {
                                       : colors.muted,
                                   fontWeight: index == selected
                                       ? FontWeight.w700
-                                      : FontWeight.w600,
+                                      : FontWeight.w500,
                                 ),
                               ),
                             ),
@@ -245,8 +262,8 @@ class _EmptyHome extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final onBrowse = this.onBrowse;
     return FirstRun(
+      mascot: MascotExpression.thinking,
       title: l10n.emptyHomeTitle,
-      body: l10n.emptyHomeBody,
       actions: [
         AppButton(
           label: l10n.newDeckTitle,

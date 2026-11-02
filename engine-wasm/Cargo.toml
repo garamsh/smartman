@@ -1,9 +1,9 @@
 [package]
-name = "smartman_engine_wasm"
+name = "knowno_engine_wasm"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.99"
-description = "The smartman engine as a WebAssembly module for the web app."
+description = "The knowno engine as a WebAssembly module for the web app."
 publish = false
 
 [lib]
@@ -11,7 +11,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 serde = { version = "1.0.229", features = ["derive"] }
-smartman_engine = { path = "../engine" }
+knowno_engine = { path = "../engine" }
 tsify = { version = "0.5.8", default-features = false, features = ["js"] }
 # Exact: the wasm-bindgen CLI that generates pkg/ and runs the tests must be this release.
 wasm-bindgen = "=0.2.129"

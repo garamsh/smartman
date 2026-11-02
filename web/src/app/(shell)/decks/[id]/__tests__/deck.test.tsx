@@ -22,6 +22,12 @@ import { Study } from "../../../../study/_components/study";
 // compiles the module.
 beforeAll(async () => {
   await loadEngine();
+  HTMLDialogElement.prototype.showModal = function () {
+    this.setAttribute("open", "");
+  };
+  HTMLDialogElement.prototype.close = function () {
+    this.removeAttribute("open");
+  };
 }, 30_000);
 
 vi.mock("next/headers", () => import("@/testing/next-headers"));
@@ -90,7 +96,10 @@ describe("the deck page", () => {
     const card = screen.getByRole("region", { name: "오늘 학습" });
     expect(card).toHaveClass("bg-surface", "text-ink", "shadow-card");
     expect(card).toHaveTextContent(/^오늘 학습약 \d+분2장학습하기/);
-    expect(screen.getByRole("link", { name: "학습하기" })).toHaveClass("bg-ink", "text-on-primary");
+    expect(screen.getByRole("link", { name: "학습하기" })).toHaveClass(
+      "bg-primary",
+      "text-on-primary",
+    );
     expectTextReadable(card);
     expect(screen.getByRole("link", { name: "덱" })).toHaveAttribute("href", "/decks");
   });
@@ -108,7 +117,7 @@ describe("the deck page", () => {
     const hidden = screen.getByRole("button", { name: "chien, 뒷면 가려짐" });
     expect(hidden).toHaveTextContent(/^chien$/);
     expect(hidden.querySelector('[class*="bg-"]')).toBeNull();
-    await userEvent.setup().click(hidden);
+    await userEvent.setup().click(screen.getByRole("switch", { name: "뒷면 보기" }));
     // Control: a shown back is drawn after the front.
     expect(screen.getByRole("button", { name: "chien, 뒷면 chien back" })).toHaveTextContent(
       /^chienchien back$/,
@@ -184,13 +193,16 @@ describe("the deck page", () => {
     await open("d-empty");
 
     const empty = screen.getByRole("region", { name: "아직 카드가 없어요" });
-    expect(empty).toHaveTextContent("카드를 추가해 시작해 보세요.");
+    // Its one action is the page's coral fill.
+    expect(screen.getByRole("button", { name: "카드 추가" })).toHaveClass("bg-primary");
     expect(screen.queryByRole("searchbox", { name: "카드 검색" })).not.toBeInTheDocument();
-    // No mascot: it heads the first-run home alone (ADR 0116).
-    expect(empty.querySelector('img[src*="smartman-symbol"]')).toBeNull();
-    // Control: a deck with cards lists them instead.
+    // The sleepy mascot over the words (ADR 0141).
+    expect(empty.querySelector('img[src*="knowno-sleepy"]')).not.toBeNull();
+    // Control: a deck with cards lists them instead, with no mascot.
     cleanup();
     await open("d-fr");
+    expect(screen.getByRole("button", { name: "카드 추가" })).not.toHaveClass("bg-primary");
+    expect(document.querySelector('img[src*="knowno-sleepy"]')).toBeNull();
     expect(screen.queryByRole("region", { name: "아직 카드가 없어요" })).not.toBeInTheDocument();
   });
 
@@ -246,12 +258,12 @@ describe("the deck page", () => {
     expect(screen.queryByRole("region", { name: "오늘 학습" })).not.toBeInTheDocument();
   });
 
-  it("draws the tile the server's icon and colour keys name, and layers on the id's colour for keys it does not know", async () => {
+  it("draws the tile the server's icon and colour keys name, and layers on the brand tint for keys it does not know", async () => {
     /** The header tile's fill and its icon's Lucide name. */
     const tile = () => {
       const box = screen.getByRole("banner").querySelector("[aria-hidden]");
       return {
-        fill: box?.className.split(" ").find((name) => name.startsWith("bg-deck-")),
+        fill: box?.className.split(" ").find((name) => name.startsWith("bg-")),
         icon: box
           ?.querySelector("svg")
           ?.getAttribute("class")
@@ -273,14 +285,8 @@ describe("the deck page", () => {
     );
     cleanup();
     await open("d-newer");
-    // The colour the id selects, as a deck with no keys takes it: its UTF-16 code units' sum,
-    // modulo the six, in the app's order.
-    const id = uuidOf("d-newer");
-    const sum = Array.from(id).reduce((total, unit) => total + unit.charCodeAt(0), 0);
-    const selected = ["blue", "sky", "violet", "amber", "slate", "sand"][sum % 6];
-    expect(tile()).toEqual({ icon: "lucide-layers", fill: `bg-deck-${String(selected)}` });
-    // Control: that colour is not the stored key's, which no fill names.
-    expect(selected).not.toBe("teal");
+    // A key this version does not know is no choice, so the tile is the brand tint.
+    expect(tile()).toEqual({ icon: "lucide-layers", fill: "bg-brand-tint" });
   });
 
   it("marks a deck its owner published with 공개 under its name", async () => {
@@ -344,21 +350,20 @@ describe("the deck page", () => {
     );
   });
 
-  it("shows a card's back on a click and hides it on the next, that card alone", async () => {
+  it("opens a card in the editor on a click, as on the phone, and leaves every back as it was", async () => {
     await open("d-fr");
     const user = userEvent.setup();
 
     await user.click(screen.getByRole("button", { name: "chien, 뒷면 가려짐" }));
-    expect(rows()).toEqual(["Chat, 뒷면 가려짐", "chien, 뒷면 chien back", "oiseau, 뒷면 가려짐"]);
-    expect(screen.getByRole("button", { name: "chien, 뒷면 chien back" })).toHaveAttribute(
-      "aria-expanded",
-      "true",
-    );
-    await user.click(screen.getByRole("button", { name: "chien, 뒷면 chien back" }));
+    const editor = screen.getByRole("dialog", { name: "카드 편집" });
+    expect(within(editor).getByRole("textbox", { name: "앞면" })).toHaveValue("chien");
+    expect(within(editor).getByRole("textbox", { name: "뒷면" })).toHaveValue("chien back");
+    await user.click(within(editor).getByRole("button", { name: "닫기" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(rows()).toEqual(["Chat, 뒷면 가려짐", "chien, 뒷면 가려짐", "oiseau, 뒷면 가려짐"]);
   });
 
-  it("shows a vocabulary card's senses on a click, each label in brackets with a gap after it, a part of speech by its short form", async () => {
+  it("shows a vocabulary card's senses with 뒷면 보기, each label in brackets with a gap after it, a part of speech by its short form", async () => {
     postgrest.seed("cards", {
       ...cardRow("c-train", "d-fr", "train", day / 2),
       back: [
@@ -382,7 +387,7 @@ describe("the deck page", () => {
     });
     await open("d-fr");
 
-    await userEvent.setup().click(screen.getByRole("button", { name: "train, 뒷면 가려짐" }));
+    await userEvent.setup().click(screen.getByRole("switch", { name: "뒷면 보기" }));
     const card = screen.getByRole("button", { name: "train, 뒷면 [명] [사물] 기차\n열차" });
     expect(sensesUnder(card)).toEqual([
       { labels: ["[명]", "[사물]"], gapped: true, text: "[명][사물]기차" },
@@ -390,7 +395,7 @@ describe("the deck page", () => {
     ]);
   });
 
-  it("shows a whole card's front with its blank empty, and fills it on a click", async () => {
+  it("shows a whole card's front with its blank empty, and fills it with 뒷면 보기", async () => {
     postgrest.seed("cards", {
       ...cardRow("c-cloze", "d-fr", "cloze", day / 2),
       front: [
@@ -405,17 +410,15 @@ describe("the deck page", () => {
       name: "The capital of France is 빈칸, 뒷면 가려짐",
     });
     expect(blanksUnder(hidden)).toEqual({ Paris: false });
-    await user.click(hidden);
+    await user.click(screen.getByRole("switch", { name: "뒷면 보기" }));
     const filledCard = screen.getByRole("button", {
       name: "The capital of France is 빈칸, 뒷면 The capital of France is Paris",
     });
     expect(blanksUnder(filledCard)).toEqual({ Paris: true });
-    // Control: the split cards keep their answers hidden.
-    expect(rows()).toContain("Chat, 뒷면 가려짐");
   });
 
-  it("searches a former cloze card on the one face study draws, never its stale back, and reads that face for its back", async () => {
-    // Made as 빈칸 when the form wrote the back; its front edited since, the back not.
+  it("searches a cloze card's every 칸, revealed, and reads its back after its filled sentence", async () => {
+    // A back beside a blank that differs from the filled text is kept (ADR 0140).
     postgrest.seed("cards", {
       ...cardRow("c-cloze", "d-fr", "cloze", day / 2),
       front: [
@@ -428,29 +431,118 @@ describe("the deck page", () => {
     const search = screen.getByRole("searchbox", { name: "카드 검색" });
     const cloze = "The capital of Italy is 빈칸, 뒷면 가려짐";
 
-    // Its front's words find it, the blank's answer among them.
-    for (const word of ["italy", "Rome"]) {
+    // Its words find it, the blank's answer and the kept back among them.
+    for (const word of ["italy", "Rome", "Paris"]) {
       await user.clear(search);
       await user.type(search, word);
       expect(rows()).toEqual([cloze]);
     }
-    // The stale back's word finds nothing.
+    // Control: a word no 칸 holds finds nothing.
     await user.clear(search);
-    await user.type(search, "Paris");
+    await user.type(search, "Berlin");
     expect(rows()).toEqual([]);
     // Control: a split card's back is searched.
     await user.clear(search);
     await user.type(search, "chien back");
     expect(rows()).toEqual(["chien, 뒷면 가려짐"]);
 
-    // Shown, it reads its one face filled, as study draws it, not the stored back.
+    // Shown, it reads as study draws it: its sentence filled, then what the reveal adds.
     await user.clear(search);
     await user.click(screen.getByRole("switch", { name: "뒷면 보기" }));
-    expect(rows()).toContain("The capital of Italy is 빈칸, 뒷면 The capital of Italy is Rome");
+    expect(rows()).toContain(
+      "The capital of Italy is 빈칸, 뒷면 The capital of Italy is Rome. The capital of France is Paris",
+    );
     expect(rows()).toContain("Chat, 뒷면 Chat back");
   });
 
-  it("shows or hides every back with 뒷면 보기, off when the page opens, resetting a card set apart by a click", async () => {
+  it("reads a whole card holding a block this build does not know by its 칸, its back blank among them", async () => {
+    postgrest.seed("cards", {
+      ...cardRow("c-unknown", "d-fr", "unknown", day / 2),
+      front: side("Fill it"),
+      back: [
+        { type: "chart", payload: {} },
+        { type: "cloze", v: 1, payload: { text: "___ is blue.", answers: ["Sky"] } },
+      ],
+    });
+    await open("d-fr");
+
+    expect(rows()).toContain(
+      "Fill it. 빈칸 is blue.. [이 버전에서 표시할 수 없는 내용: chart], 뒷면 가려짐",
+    );
+    // Control: a split card's row reads its front alone.
+    expect(rows()).toContain("Chat, 뒷면 가려짐");
+  });
+
+  it("lists and searches a free v2 card by its 칸, split and whole, as the same card stored earlier", async () => {
+    const glue = (front: string, back: string) => ({
+      type: "text",
+      v: 2,
+      payload: { front, back },
+    });
+    postgrest.seed(
+      "cards",
+      {
+        ...cardRow("c-glue", "d-fr", "glue", day / 2),
+        front: [glue("Lyon", "a city")],
+        back: [],
+        template: "free",
+        template_version: 2,
+      },
+      {
+        ...cardRow("c-blank", "d-fr", "blank", day / 2),
+        front: [
+          glue("Colour", "A hue."),
+          { type: "cloze", v: 1, payload: { text: "___ is red.", answers: ["Rose"] } },
+          glue("", "A flower."),
+        ],
+        back: [],
+        template: "free",
+        template_version: 2,
+      },
+      // The earlier form of the same blanked card: a back alone holding a blank (#482).
+      {
+        ...cardRow("c-earlier", "d-fr", "earlier", day / 2),
+        front: side("Fill it"),
+        back: [{ type: "cloze", v: 1, payload: { text: "___ is blue.", answers: ["Sky"] } }],
+      },
+    );
+    await open("d-fr");
+    // The read asks for the template: the fake answers whole rows whatever is selected.
+    expect(postgrest.selected).toContain(
+      "cards: id,deck_id,front,back,template,template_version,created_at",
+    );
+    const user = userEvent.setup();
+    const search = screen.getByRole("searchbox", { name: "카드 검색" });
+
+    await user.type(search, "a city");
+    expect(rows()).toEqual(["Lyon, 뒷면 가려짐"]);
+    // Every 칸 is searched, a part only the reveal adds and a blank's answer among them.
+    for (const word of ["A hue", "A flower", "Rose"]) {
+      await user.clear(search);
+      await user.type(search, word);
+      expect(rows()).toEqual(["Colour. 빈칸 is red., 뒷면 가려짐"]);
+    }
+    await user.clear(search);
+    await user.type(search, "Sky");
+    expect(rows()).toEqual(["Fill it. 빈칸 is blue., 뒷면 가려짐"]);
+
+    await user.clear(search);
+    await user.click(screen.getByRole("switch", { name: "뒷면 보기" }));
+    expect(rows()).toContain("Lyon, 뒷면 a city");
+    expect(rows()).toContain("Colour. 빈칸 is red., 뒷면 Colour. A hue.. Rose is red.. A flower.");
+    expect(rows()).toContain("Fill it. 빈칸 is blue., 뒷면 Fill it. Sky is blue.");
+    const blanked = screen.getByRole("button", {
+      name: "Fill it. 빈칸 is blue., 뒷면 Fill it. Sky is blue.",
+    });
+    expect(blanksUnder(blanked)).toEqual({ Sky: true });
+    // Control: hidden, the same card's blank is empty.
+    await user.click(screen.getByRole("switch", { name: "뒷면 보기" }));
+    expect(
+      blanksUnder(screen.getByRole("button", { name: "Fill it. 빈칸 is blue., 뒷면 가려짐" })),
+    ).toEqual({ Sky: false });
+  });
+
+  it("shows or hides every back with 뒷면 보기, off when the page opens", async () => {
     await open("d-fr");
     const user = userEvent.setup();
     const answers = screen.getByRole("switch", { name: "뒷면 보기" });
@@ -464,22 +556,8 @@ describe("the deck page", () => {
       "chien, 뒷면 chien back",
       "oiseau, 뒷면 oiseau back",
     ]);
-    // A click after the switch sets that card alone apart.
-    await user.click(screen.getByRole("button", { name: "Chat, 뒷면 Chat back" }));
-    expect(rows()).toEqual([
-      "Chat, 뒷면 가려짐",
-      "chien, 뒷면 chien back",
-      "oiseau, 뒷면 oiseau back",
-    ]);
-    // The switch then sets every card to its state, the one set apart included.
     await user.click(answers);
     expect(rows()).toEqual(["Chat, 뒷면 가려짐", "chien, 뒷면 가려짐", "oiseau, 뒷면 가려짐"]);
-    await user.click(answers);
-    expect(rows()).toEqual([
-      "Chat, 뒷면 Chat back",
-      "chien, 뒷면 chien back",
-      "oiseau, 뒷면 oiseau back",
-    ]);
   });
 
   it("leads back to 덱 with a chevron, on a target at least the tap target high and wide", async () => {

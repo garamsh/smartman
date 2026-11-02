@@ -1,13 +1,15 @@
 import 'package:drift/drift.dart' show driftRuntimeOptions;
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart' hide Card;
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/deck/deck.dart';
-import 'package:smartman/deck/src/block_list.dart';
-import 'package:smartman/deck/src/card_preview_screen.dart';
-import 'package:smartman/design/app_chip.dart';
-import 'package:smartman/design/app_button.dart';
-import 'package:smartman/design/theme.dart';
-import 'package:smartman/design/word_break.dart';
+import 'package:knowno/deck/deck.dart';
+import 'package:knowno/deck/src/card_preview_screen.dart';
+import 'package:knowno/deck/src/cloze_block.dart';
+import 'package:knowno/design/app_chip.dart';
+import 'package:knowno/design/app_button.dart';
+import 'package:knowno/design/theme.dart';
+import 'package:knowno/design/word_break.dart';
 
 import '../contrast.dart';
 import '../home/deck_screens.dart';
@@ -20,7 +22,7 @@ Future<Card> _stored(DeckScreens screens) async =>
     (await screens.cards()).single;
 
 /// The line: the first field of the front's blocks.
-final _line = blockField(CardSide.front);
+final _line = blockField();
 
 /// The line field's controller.
 TextEditingController _controller(WidgetTester tester) =>
@@ -43,19 +45,23 @@ List<String> _blocks(WidgetTester tester) {
   return blocks;
 }
 
+/// The phones the app ships to, each drawing its own selection handles.
+final _phones = TargetPlatformVariant(const {
+  TargetPlatform.iOS,
+  TargetPlatform.android,
+});
+
 /// The bar's one action while it reads [label].
 Finder _action(String label) => find.widgetWithText(AppChip, label);
 
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
 
-  /// A new card's editor whose front is one Cloze sentence block and whose
-  /// back holds none, as a cloze studied on one face needs.
+  /// A new card's editor whose one 칸 is a Cloze sentence.
   Future<DeckScreens> openCloze(WidgetTester tester, {DeckScreens? on}) async {
     final screens = on ?? await DeckScreens.open(tester);
     await screens.push((deck) => CardEditorScreen(deck: deck));
-    await replaceFirstBlock(screens, CardSide.front, 'Cloze sentence');
-    await actOnBlock(screens, CardSide.back, 1, 'Delete');
+    await replaceFirstBlock(screens, 'Cloze sentence');
     return screens;
   }
 
@@ -212,6 +218,262 @@ void main() {
   );
 
   testWidgets(
+    'a tap on a blank of one or two characters puts the caret in it, so Undo blank turns it back into text',
+    (tester) async {
+      final screens = await openCloze(tester);
+      for (final (line, blank) in [
+        ('Paris is the capital of France', (start: 0, end: 1)),
+        ('물은 산에서 흘러요', (start: 3, end: 4)),
+        ('서울은 한국의 수도예요', (start: 0, end: 2)),
+      ]) {
+        await typeLine(tester, line);
+        await select(tester, blank.start, blank.end);
+        await insertBlank(screens);
+        expect(_blocks(tester), [
+          line.substring(blank.start, blank.end),
+        ], reason: 'setup: $line');
+        // Control: a caret one character away from the blank is outside it.
+        await select(tester, blank.end + 1);
+        expect(_action('Insert blank'), findsOneWidget, reason: line);
+
+        // A tap just inside either edge of the blank, as a finger lands on
+        // it, leaves the caret at that end.
+        final editable = tester
+            .state<EditableTextState>(
+              find.descendant(of: _line, matching: find.byType(EditableText)),
+            )
+            .renderEditable;
+        final [box] = editable.getBoxesForSelection(
+          TextSelection(baseOffset: blank.start, extentOffset: blank.end),
+        );
+        final rect = box.toRect();
+        for (final (x, end) in [
+          (rect.left + 2, blank.start),
+          (rect.right - 2, blank.end),
+        ]) {
+          await tester.tapAt(editable.localToGlobal(Offset(x, rect.center.dy)));
+          await tester.pump(const Duration(milliseconds: 500));
+          final caret = _controller(tester).selection;
+          expect(caret.isCollapsed, isTrue, reason: 'setup: $line');
+          expect(caret.baseOffset, end, reason: 'setup: $line');
+          expect(_action('Undo blank'), findsOneWidget, reason: '$line, $end');
+        }
+        await screens.tap(_action('Undo blank'));
+        expect(_blocks(tester), isEmpty, reason: line);
+        expect(_controller(tester).text, line);
+      }
+      await screens.close();
+    },
+  );
+
+  group('a selection in a Cloze sentence line', () {
+    const sentence = 'Paris is the capital of France';
+    const longer = '$sentence and the largest city in the country';
+    const capital = TextSelection(baseOffset: 13, extentOffset: 20);
+    final insert = _action('Insert blank');
+
+    /// The line's own text layout.
+    RenderEditable line(WidgetTester tester) => tester
+        .state<EditableTextState>(
+          find.descendant(of: _line, matching: find.byType(EditableText)),
+        )
+        .renderEditable;
+
+    /// Where [offset] of the line meets the bottom of its text, on screen.
+    Offset bottomOf(WidgetTester tester, int offset) {
+      final editable = line(tester);
+      final [point] = editable.getEndpointsForSelection(
+        TextSelection.collapsed(offset: offset),
+      );
+      return editable.localToGlobal(point.point);
+    }
+
+    /// Opens the editor as the app root does, the front one Cloze sentence
+    /// block holding [text], raises the keyboard over 300 of a phone's
+    /// screen, and selects "capital" by a double-tap, as a user does.
+    Future<DeckScreens> selectCapital(
+      WidgetTester tester, [
+      String text = sentence,
+    ]) async {
+      final screens = await openCloze(
+        tester,
+        on: await DeckScreens.open(tester, asAppRoot: true),
+      );
+      await typeLine(tester, text);
+      tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+      addTearDown(tester.view.resetViewInsets);
+      await tester.pumpAndSettle();
+      final word = bottomOf(tester, 16) - const Offset(0, 8);
+      await tester.tapAt(word);
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.tapAt(word);
+      await tester.pumpAndSettle();
+      expect(
+        _controller(tester).selection,
+        capital,
+        reason: 'setup: the double-tap selects the word',
+      );
+      expect(insert, findsOneWidget, reason: 'setup');
+      return screens;
+    }
+
+    /// The middle of the selection's end handle as it is painted, over the
+    /// screen rather than in the line: where a fingertip lands on it.
+    Offset endHandle(WidgetTester tester) {
+      // A handle answers a drag in any direction, and nothing else over
+      // the editor does.
+      final handles = find.descendant(
+        of: find.byType(CompositedTransformFollower),
+        matching: find.byWidgetPredicate(
+          (widget) =>
+              widget is RawGestureDetector &&
+              widget.gestures.containsKey(PanGestureRecognizer),
+        ),
+      );
+      expect(handles, findsNWidgets(2), reason: 'setup: start and end');
+      final at = tester.getCenter(
+        find.descendant(of: handles.last, matching: find.byType(CustomPaint)),
+      );
+      final hit = [
+        for (final entry in tester.hitTestOnBinding(at).path) entry.target,
+      ];
+      expect(
+        hit,
+        contains(tester.renderObject(handles.last)),
+        reason: 'setup: on the end handle',
+      );
+      expect(
+        hit,
+        isNot(contains(line(tester))),
+        reason: 'setup: over the line, not in it',
+      );
+      return at;
+    }
+
+    /// The selection is where the double-tap left it and offered a blank;
+    /// "Insert blank" then makes it one.
+    Future<void> expectKept(DeckScreens screens) async {
+      final tester = screens.tester;
+      expect(tester.testTextInput.isVisible, isTrue);
+      expect(_controller(tester).selection, capital);
+      expect(insert, findsOneWidget);
+      await tester.tap(insert);
+      await tester.pumpAndSettle();
+      expect(
+        find.widgetWithText(AppChip, 'Undo blank'),
+        findsOneWidget,
+        reason: '"capital" is a blank',
+      );
+      // Control: a tap on what handles none, the deck's name, still
+      // closes the keyboard.
+      await tester.tap(find.text('French'));
+      await tester.pumpAndSettle();
+      expect(tester.testTextInput.isVisible, isFalse);
+      await screens.close();
+    }
+
+    testWidgets('is kept through a tap on its end handle', (tester) async {
+      final screens = await selectCapital(tester);
+      await tester.tapAt(endHandle(tester));
+      await tester.pumpAndSettle();
+      await expectKept(screens);
+    }, variant: _phones);
+
+    testWidgets(
+      'is kept through a nudge of its end handle shorter than a drag',
+      (tester) async {
+        final screens = await selectCapital(tester);
+        final gesture = await tester.startGesture(endHandle(tester));
+        await gesture.moveBy(const Offset(5, 0));
+        await tester.pump();
+        await gesture.up();
+        await tester.pumpAndSettle();
+        await expectKept(screens);
+      },
+      variant: _phones,
+    );
+
+    testWidgets(
+      "is kept through a drag that starts on the line's text and scrolls the form",
+      (tester) async {
+        final screens = await selectCapital(tester, longer);
+        final form = tester.state<ScrollableState>(
+          find.ancestor(of: _line, matching: find.byType(Scrollable)).first,
+        );
+        expect(form.position.maxScrollExtent, greaterThan(0), reason: 'setup');
+        // On the line's second row, under the selection and clear of
+        // the toolbar over it.
+        final start = bottomOf(tester, longer.length - 2) - const Offset(0, 8);
+        expect(
+          start.dy,
+          greaterThan(bottomOf(tester, capital.end).dy),
+          reason: 'setup: the line wraps',
+        );
+        expect(
+          [
+            for (final entry in tester.hitTestOnBinding(start).path)
+              entry.target,
+          ],
+          contains(line(tester)),
+          reason: "setup: on the line's text",
+        );
+        final drag = await tester.startGesture(start);
+        for (var step = 0; step < 6; step++) {
+          await drag.moveBy(const Offset(0, -10));
+          await tester.pump();
+        }
+        await drag.up();
+        await tester.pumpAndSettle();
+        expect(form.position.pixels, greaterThan(0), reason: 'it scrolled');
+        await expectKept(screens);
+      },
+      variant: _phones,
+    );
+  });
+
+  for (final mode in [ThemeMode.light, ThemeMode.dark]) {
+    testWidgets(
+      'in the ${mode.name} theme an empty blank is drawn in the line as a gap over a muted underline, and the line and the saved cloze are unchanged by it',
+      (tester) async {
+        final screens = await DeckScreens.open(tester, themeMode: mode);
+        await openCloze(tester, on: screens);
+        await typeLine(tester, '물은 예요');
+        final drawn = find.byType(ClozeEmptyBlanks);
+        final muted = AppColors.of(tester.element(_line)).muted;
+        RenderEditable editable() => tester
+            .state<EditableTextState>(
+              find.descendant(of: _line, matching: find.byType(EditableText)),
+            )
+            .renderEditable;
+        double caretAt(int offset) =>
+            editable().getLocalRectForCaret(TextPosition(offset: offset)).left;
+        final before = caretAt(3);
+        await select(tester, 3);
+        expect(drawn, isNot(paints..line()), reason: 'control: no blank');
+
+        await insertBlank(screens);
+        expect(_action('Undo blank'), findsOneWidget, reason: 'setup');
+        expect(
+          caretAt(3) - before,
+          closeTo(emptyBlankWidth, 1),
+          reason: 'a gap opens before the caret',
+        );
+        expect(drawn, paints..line(color: muted, strokeWidth: 1));
+        expect(_controller(tester).text, '물은 예요', reason: 'no text added');
+
+        await typeAt(tester, '물은 H₂O예요', 6);
+        expect(drawn, isNot(paints..line()), reason: 'filled, it is a block');
+        expect(_blocks(tester), ['H₂O']);
+        await save(screens);
+        expect((await _stored(screens)).front, [
+          const ClozeContent('물은 ___예요', ['H₂O']),
+        ]);
+        await screens.close();
+      },
+    );
+  }
+
+  testWidgets(
     'the word chips, Pick letters, the blank list, the hint and any row of blank chips are gone, and the line draws its blanks as blocks in place',
     (tester) async {
       final screens = await openCloze(tester);
@@ -270,7 +532,7 @@ void main() {
         }
 
         expect(blocks(), isEmpty, reason: 'the blanks empty, as study asks');
-        expect(shownText('Tap the card to fill in its blanks'), findsOneWidget);
+        expect(shownText('Tap the card to see the answer'), findsOneWidget);
         await screens.tap(preview);
         expect(blocks(), ['cat', '']);
         expect(shownText('Tap again to empty its blanks'), findsOneWidget);
@@ -491,31 +753,6 @@ void main() {
         );
         if (action == 'Insert blank') await insertBlank(screens);
       }
-      await screens.close();
-    },
-  );
-
-  testWidgets(
-    'a card with a cloze and nothing on its back says the back may stay empty, and says nothing once the back holds text',
-    (tester) async {
-      const hint =
-          'A card with blanks is answered on its front. Its back can stay empty.';
-      // Control: a card of two sides with its back empty is not told so.
-      final screens = await DeckScreens.open(tester);
-      await screens.push((deck) => CardEditorScreen(deck: deck));
-      await typeBlock(tester, CardSide.front, 'Chat');
-      expect(shownText(hint), findsNothing, reason: 'control: no cloze');
-      await screens.tap(find.byTooltip('Close'));
-      await screens.tap(find.text('Discard'));
-
-      await openCloze(tester, on: screens);
-      await typeLine(tester, 'The cat sat');
-      await select(tester, 4, 7);
-      await insertBlank(screens);
-      expect(shownText(hint), findsOneWidget);
-      await addBlock(screens, CardSide.back, 'Text');
-      await typeBlock(tester, CardSide.back, 'A cat sat');
-      expect(shownText(hint), findsNothing);
       await screens.close();
     },
   );

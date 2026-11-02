@@ -6,6 +6,7 @@ import '../../database/database.dart';
 import '../../media/media.dart';
 import 'add_cards.dart';
 import 'card_key.dart';
+import 'card_frame.dart';
 import 'card_template.dart';
 import 'content.dart';
 import 'failure.dart';
@@ -92,15 +93,16 @@ class DeckRepository {
     );
   });
 
-  /// Stores [icon] and [color] as the deck's appearance.
-  Future<void> setAppearance(DeckId id, DeckIcon icon, DeckColor color) =>
+  /// Stores [icon] and [color] as the deck's appearance, no colour leaving
+  /// the deck with none chosen.
+  Future<void> setAppearance(DeckId id, DeckIcon icon, DeckColor? color) =>
       _guard(() async {
         await (_db.update(
           _db.decks,
         )..where((deck) => deck.id.equals(id.value))).write(
           DecksCompanion(
             icon: Value(icon.key),
-            color: Value(color.key),
+            color: Value(color?.key),
             updatedAt: Value(_clock()),
             dirty: const Value(true),
           ),
@@ -246,13 +248,27 @@ class DeckRepository {
     return (await query.get()).map(_toCard).toList();
   });
 
-  /// Adds a manual card, of the template every card is written in. A card in
-  /// the same deck with an equal key blocks the save unless [allowDuplicate]
-  /// is set.
+  /// The card key of every card in [deckId].
+  Future<Set<CardKey>> listKeys(DeckId deckId) => _guard(() async {
+    final query = _db.selectOnly(_db.cards)
+      ..addColumns([_db.cards.cardKey])
+      ..where(
+        _db.cards.deckId.equals(deckId.value) & _db.cards.deletedAt.isNull(),
+      );
+    return {
+      for (final row in await query.get())
+        CardKey.stored(row.read(_db.cards.cardKey)!),
+    };
+  });
+
+  /// Adds a manual card, in the frame when given its [cells], of which [front]
+  /// and [back] are then the projection. A card in the same deck with an
+  /// equal key blocks the save unless [allowDuplicate] is set.
   Future<SaveCardResult> addCard(
     DeckId deckId, {
     required List<Content> front,
     required List<Content> back,
+    List<Cell>? cells,
     bool allowDuplicate = false,
   }) {
     final key = CardKey.fromFront(plainText(front));
@@ -268,12 +284,18 @@ class DeckRepository {
         final row = CardRow(
           id: _newId(),
           deckId: deckId.value,
-          front: encodeContent(_withIds(front, const [])),
-          back: encodeContent(_withIds(back, const [])),
+          front: cells == null
+              ? encodeContent(_withIds(front, const []))
+              : encodeCells(cells, newId: _newBlockId),
+          back: cells == null
+              ? encodeContent(_withIds(back, const []))
+              : encodeContent(const []),
           cardKey: key.value,
           source: CardSource.manual.name,
           template: freeTemplate,
-          templateVersion: cardTemplateVersion,
+          templateVersion: cells == null
+              ? cardTemplateVersion
+              : cardFrameVersion,
           createdAt: now,
           updatedAt: now,
           dirty: true,
@@ -284,14 +306,16 @@ class DeckRepository {
     );
   }
 
-  /// Replaces [card]'s front and back, recording the template every card is
-  /// written in. Another card in the same deck with an equal key blocks the
-  /// save unless [allowDuplicate] is set. Content that cannot be read back is
-  /// not stored: the save fails as [UnreadableCard].
+  /// Replaces [card]'s content, in the frame when given its [cells], of which
+  /// [front] and [back] are then the projection. Another card in the same
+  /// deck with an equal key blocks the save unless [allowDuplicate] is set.
+  /// Content that cannot be read back is not stored: the save fails as
+  /// [UnreadableCard].
   Future<SaveCardResult> editCard(
     Card card, {
     required List<Content> front,
     required List<Content> back,
+    List<Cell>? cells,
     bool allowDuplicate = false,
   }) {
     final key = CardKey.fromFront(plainText(front));
@@ -311,11 +335,21 @@ class DeckRepository {
           _db.cards,
         )..where((row) => row.id.equals(card.id.value))).write(
           CardsCompanion(
-            front: Value(encodeContent(_withIds(front, card.front))),
-            back: Value(encodeContent(_withIds(back, card.back))),
+            front: Value(
+              cells == null
+                  ? encodeContent(_withIds(front, card.front))
+                  : encodeCells(cells, newId: _newBlockId),
+            ),
+            back: Value(
+              cells == null
+                  ? encodeContent(_withIds(back, card.back))
+                  : encodeContent(const []),
+            ),
             cardKey: Value(key.value),
             template: const Value(freeTemplate),
-            templateVersion: const Value(cardTemplateVersion),
+            templateVersion: Value(
+              cells == null ? cardTemplateVersion : cardFrameVersion,
+            ),
             updatedAt: Value(now),
             dirty: const Value(true),
           ),
@@ -377,7 +411,7 @@ class DeckRepository {
           _ => MediaId(_newId()),
         };
     Future<List<Content>> own(List<Content> side) async => switch (source) {
-      FromPhoto() => side,
+      FromPhoto() || FromFile() => side,
       FromCopy() => [
         for (final block in side)
           switch (block) {
@@ -399,6 +433,21 @@ class DeckRepository {
           },
       ],
     };
+    Future<List<Cell>> ownCells(List<Cell> cells) async => [
+      for (final cell in cells)
+        switch (cell) {
+          BlankCell(:final block, :final id) => BlankCell(
+            (await own([block])).single,
+            id: id,
+          ),
+          PlacedCell(:final block, :final side, :final id) => PlacedCell(
+            (await own([block])).single,
+            side,
+            id: id,
+          ),
+          _ => cell,
+        },
+    ];
     final CardsAdded result;
     try {
       result = await _db.transaction(() async {
@@ -418,23 +467,33 @@ class DeckRepository {
             case (null, _) || (_, DuplicateChoice.addNew):
               final now = _clock();
               final back = await own(card.back);
+              final cells = switch (card.cells) {
+                final cells? => await ownCells(cells),
+                null => null,
+              };
               await _db
                   .into(_db.cards)
                   .insert(
                     CardRow(
                       id: _newId(),
                       deckId: deck.id.value,
-                      front: encodeContent(_withIds(front, const [])),
-                      back: encodeContent(_withIds(back, const [])),
+                      front: cells == null
+                          ? encodeContent(_withIds(front, const []))
+                          : encodeCells(cells, newId: _newBlockId),
+                      back: cells == null
+                          ? encodeContent(_withIds(back, const []))
+                          : encodeContent(const []),
                       cardKey: key.value,
                       template: freeTemplate,
-                      templateVersion: cardTemplateVersion,
+                      templateVersion: cells == null
+                          ? cardTemplateVersion
+                          : cardFrameVersion,
                       source: switch (source) {
-                        FromPhoto() => CardSource.import.name,
+                        FromPhoto() || FromFile() => CardSource.import.name,
                         FromCopy() => CardSource.copy.name,
                       },
                       originDeckId: switch (source) {
-                        FromPhoto() => null,
+                        FromPhoto() || FromFile() => null,
                         FromCopy(:final origin) => origin.value,
                       },
                       createdAt: now,
@@ -444,13 +503,24 @@ class DeckRepository {
                   );
               added++;
             case (final existing?, DuplicateChoice.mergeBack):
-              if (mergeBack(existing.back, plainText(card.back))
-                  case final back?) {
+              final incoming = plainText(card.back);
+              final cells = existing.cells;
+              if (mergeBack(existing.back, incoming) case final back?) {
                 await (_db.update(
                   _db.cards,
                 )..where((row) => row.id.equals(existing.id.value))).write(
                   CardsCompanion(
-                    back: Value(encodeContent(_withIds(back, existing.back))),
+                    front: cells == null
+                        ? const Value.absent()
+                        : Value(
+                            encodeCells([
+                              ...cells,
+                              TextCell(back: incoming),
+                            ], newId: _newBlockId),
+                          ),
+                    back: cells == null
+                        ? Value(encodeContent(_withIds(back, existing.back)))
+                        : const Value.absent(),
                     template: Value(_mergedTemplate(existing).$1),
                     templateVersion: Value(_mergedTemplate(existing).$2),
                     updatedAt: Value(_clock()),
@@ -531,10 +601,12 @@ class DeckRepository {
     ];
   }
 
-  /// The template and version a merged back records on [card]: the one every
-  /// card is written in, or the card's own when this build cannot edit it,
-  /// so a later build's template is kept (ADR 0106, ADR 0114).
-  static (String?, int?) _mergedTemplate(Card card) => canEdit(card)
+  /// The template and version a merged back records on [card]: a card of two
+  /// side lists is written in the one this build gives them; a framed card
+  /// keeps the frame, and a later build's template is kept (ADR 0106,
+  /// ADR 0114, ADR 0137).
+  static (String?, int?) _mergedTemplate(Card card) =>
+      canEdit(card) && card.cells == null
       ? (freeTemplate, cardTemplateVersion)
       : (card.template, card.templateVersion);
 
@@ -643,11 +715,15 @@ class DeckRepository {
   Card _toCard(CardRow row) {
     final id = CardId(row.id);
     try {
+      final cells = isFramed(row.template, row.templateVersion)
+          ? decodeCells(row.front)
+          : null;
+      final sides = cells == null ? null : sidesOf(cells);
       return Card(
         id: id,
         deckId: DeckId(row.deckId),
-        front: decodeContent(row.front),
-        back: decodeContent(row.back),
+        front: sides?.front ?? decodeContent(row.front),
+        back: sides?.back ?? decodeContent(row.back),
         cardKey: CardKey.stored(row.cardKey),
         source: CardSource.values.byName(row.source),
         createdAt: row.createdAt,
@@ -658,6 +734,7 @@ class DeckRepository {
         },
         template: row.template,
         templateVersion: row.templateVersion,
+        cells: cells,
       );
     } on FormatException catch (cause) {
       throw UnreadableCard(id, cause);

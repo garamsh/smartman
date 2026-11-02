@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/design/app_button.dart';
+import 'package:knowno/design/app_button.dart';
 
 /// [colour] drawn over the opaque [ground].
 Color over(Color colour, Color ground) => Color.alphaBlend(colour, ground);

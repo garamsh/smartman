@@ -1,12 +1,11 @@
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/deck/deck.dart';
-import 'package:smartman/deck/src/block_list.dart';
-import 'package:smartman/deck/src/card_preview_screen.dart';
-import 'package:smartman/deck/src/table_block.dart';
-import 'package:smartman/design/app_chip.dart';
-import 'package:smartman/design/theme.dart';
+import 'package:knowno/deck/deck.dart';
+import 'package:knowno/deck/src/card_preview_screen.dart';
+import 'package:knowno/deck/src/table_block.dart';
+import 'package:knowno/design/app_chip.dart';
+import 'package:knowno/design/theme.dart';
 
 import '../contrast.dart';
 import '../home/deck_screens.dart';
@@ -15,7 +14,7 @@ import 'whole_cards.dart';
 import '../word_breaks.dart';
 
 /// The front's first block, a Text block holding the table's name.
-final _name = blockField(CardSide.front);
+final _name = blockField();
 
 /// The Table block's [index]th field: the headers, then the cells row by row.
 Finder _cell(int index) => find
@@ -38,14 +37,11 @@ const _capitals = TableContent(
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
 
-  /// A new card's editor whose front is a Text block for the table's name and
-  /// a Table block, and whose back holds none, as a table studied on one face
-  /// needs.
+  /// A new card's editor of a Text for the table's name, then a Table.
   Future<DeckScreens> openTable(WidgetTester tester, {DeckScreens? on}) async {
     final screens = on ?? await DeckScreens.open(tester);
     await screens.push((deck) => CardEditorScreen(deck: deck));
-    await addBlock(screens, CardSide.front, 'Table');
-    await actOnBlock(screens, CardSide.back, 1, 'Delete');
+    await addBlock(screens, 'Table');
     return screens;
   }
 
@@ -353,10 +349,7 @@ void main() {
       await screens.push((deck) => CardEditorScreen(deck: deck, card: card));
       expect(tester.widget<TextField>(_name).controller!.text, 'Capitals');
       expect(
-        find.descendant(
-          of: blockList(CardSide.front),
-          matching: find.byType(TableFields),
-        ),
+        find.descendant(of: blockList, matching: find.byType(TableFields)),
         findsOneWidget,
       );
       expect(await previewedBlanks(screens), {'Paris': true, 'Tokyo': true});
@@ -369,7 +362,7 @@ void main() {
   );
 
   testWidgets(
-    'a stored table card saved unchanged keeps its back as stored: the table alone, as the editor wrote it before #311, and the name and the table, as photo import writes it, and an edited name leaves the back as it is',
+    'a stored table card saved unchanged keeps a back that differs from the filled text, as the editor wrote it before #311, drops one equal to it, as photo import writes it, and an edited name leaves the back as it is',
     (tester) async {
       final screens = await DeckScreens.open(tester);
       const importedFront = [TextContent('Capitals'), _capitals];
@@ -404,7 +397,10 @@ void main() {
       );
       expect(added, isA<CardSaved>());
 
-      for (final (:front, :back) in [imported, oldEditor]) {
+      for (final ((:front, :back), kept) in [
+        (imported, const <Content>[]),
+        (oldEditor, oldEditor.back),
+      ]) {
         Future<Card> stored() async => (await screens.cards()).singleWhere(
           (card) => card.front.first == front.first,
         );
@@ -416,7 +412,7 @@ void main() {
         expect(saved.front, front);
         expect(
           saved.back,
-          back,
+          kept,
           reason: '${plainText([front.first])} saved unchanged',
         );
       }

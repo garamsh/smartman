@@ -2,13 +2,33 @@
 
 import type { Card } from "./cards.ts";
 import type { Config } from "./config.ts";
-import { type Attempt, extractCards } from "./openrouter.ts";
-import { parseRequest } from "./request.ts";
+import {
+  type Cursor,
+  type CursorToken,
+  encodeCursor,
+  lastFronts,
+  MAX_CONTINUATIONS,
+  MAX_PHOTO_CARDS,
+  type ReadOn,
+  readOn,
+  readsOn,
+} from "./continuation.ts";
+import {
+  type Attempt,
+  extractCards,
+  type Extraction,
+  type ModelId,
+} from "./openrouter.ts";
+import { type ExtractRequest, parseRequest } from "./request.ts";
 import { authenticate, type UserId } from "../_shared/auth.ts";
 import {
+  type AttemptFailure,
   beginExtraction,
+  finishExtraction,
   type Period,
   type Plan,
+  recordResumed,
+  resumeExtraction,
   userSuspended,
 } from "./supabase.ts";
 
@@ -23,6 +43,7 @@ export type Outcome =
   | "too_large"
   | "unsupported_type"
   | "rate_limited"
+  | "cursor_expired"
   | "no_cards"
   | "model_error"
   | "internal";
@@ -43,6 +64,10 @@ export type LogEntry = {
   /** The call's usage; null when it made none or reported none. */
   readonly prompt_tokens: number | null;
   readonly completion_tokens: number | null;
+  /** The reply's cards dropped for breaking a rule; null when no reply was read as the schema's. */
+  readonly dropped_cards: number | null;
+  /** Whether the photo's outcome was recorded; null when no photo was counted. */
+  readonly outcome_recorded: boolean | null;
   readonly outcome: Outcome;
 };
 
@@ -52,7 +77,18 @@ export type HandlerDeps = {
   readonly log: (entry: LogEntry) => void;
   /** Milliseconds from a monotonic clock. */
   readonly now: () => number;
+  /** How long the model call may take before it is a model error. */
+  readonly modelTimeoutMs: number;
+  /** A new cursor's token, `newCursorToken` when deployed. */
+  readonly newToken: () => CursorToken;
 };
+
+/**
+ * How long into a request a failed model call may still be retried (ADR 0130): a retry starting
+ * by then ends, at the 60 s model timeout, by about 135 s, under the Edge Function's 150 s request
+ * idle timeout and free plan's wall clock (`supabase.com/docs/guides/functions/limits`).
+ */
+export const RETRY_START_LIMIT_MS = 75_000;
 
 export function status(outcome: Outcome): number {
   switch (outcome) {
@@ -72,6 +108,8 @@ export function status(outcome: Outcome): number {
       return 415;
     case "no_cards":
       return 422;
+    case "cursor_expired":
+      return 410;
     case "rate_limited":
       return 429;
     case "internal":
@@ -92,6 +130,14 @@ type Result = {
   readonly limit?: { readonly photos: number; readonly period: Period };
   readonly attempts: readonly Attempt[];
   readonly cards?: readonly Card[];
+  /** Whether the page was left unread past the answered cards, so the photo was read in part. */
+  readonly partial?: boolean;
+  /** Where a later request goes on reading the photo, when it may. */
+  readonly cursor?: Cursor;
+  /** How many of the reply's cards were dropped, when a reply was read as the schema's. */
+  readonly dropped?: number;
+  /** Whether the counted photo's outcome was recorded. */
+  readonly recorded?: boolean;
 };
 
 export function createHandler(
@@ -101,14 +147,20 @@ export function createHandler(
     const started = deps.now();
     let result: Result;
     try {
-      result = await handle(request, deps);
+      result = await handle(request, deps, started);
     } catch (error) {
       log(deps, started, { outcome: "internal", userId: null, attempts: [] });
       throw error;
     }
     log(deps, started, result);
     const body = result.outcome === "ok"
-      ? { cards: result.cards }
+      ? {
+        cards: result.cards,
+        partial: result.partial ?? false,
+        ...(result.cursor === undefined
+          ? {}
+          : { cursor: encodeCursor(result.cursor) }),
+      }
       : result.outcome === "rate_limited"
       ? {
         error: result.outcome,
@@ -120,7 +172,11 @@ export function createHandler(
   };
 }
 
-async function handle(request: Request, deps: HandlerDeps): Promise<Result> {
+async function handle(
+  request: Request,
+  deps: HandlerDeps,
+  started: number,
+): Promise<Result> {
   const refused = (outcome: Outcome, userId: UserId | null = null): Result => ({
     outcome,
     userId,
@@ -146,6 +202,14 @@ async function handle(request: Request, deps: HandlerDeps): Promise<Result> {
   if (await userSuspended(userId, supabase)) {
     return refused("suspended", userId);
   }
+  if (parsed.request.cursor !== null) {
+    return await resume(parsed.request, parsed.request.cursor, userId, {
+      deps,
+      config,
+      started,
+      supabase,
+    });
+  }
   const start = await beginExtraction(userId, supabase);
   if (start.kind === "not_configured") return refused("not_configured", userId);
   if (start.kind === "rate_limited") {
@@ -160,44 +224,189 @@ async function handle(request: Request, deps: HandlerDeps): Promise<Result> {
   const plan = start.plan;
   const promptVersion = start.prompt.versionId;
 
-  const extraction = await extractCards(
-    parsed.request.image,
-    parsed.request.languages,
-    start.model,
-    start.prompt.text,
-    {
-      apiKey: config.openRouterApiKey,
-      fetch: deps.fetch,
-      now: deps.now,
-    },
-  );
+  const extract = caller(parsed.request, start.model, start.prompt.text, {
+    deps,
+    config,
+  });
+  const first = await extract();
+  const firstFailure = failureOf(first);
+  // A retry starts only early enough to end, at its own timeout, inside the Edge Function's limit.
+  const retry = firstFailure !== null && mayStart(deps, started);
+  const extraction = retry ? await extract() : first;
+  const lastFailure = failureOf(extraction);
+  const firstRead = extraction.kind === "cards" ? extraction.cards : [];
+  const read = extraction.kind === "cards" ||
+      extraction.kind === "invalid_output"
+    ? extraction
+    : null;
+  // A cut reply, or a whole one of many cards, is read on after its last card, in this request
+  // while time allows (ADR 0138).
+  const on: ReadOn | null = extraction.kind === "cards" &&
+      readsOn(extraction.cut, extraction.cards.length)
+    ? await readOn(extract, {
+      read: firstRead.length,
+      fronts: lastFronts(firstRead.map((card) => card.front)),
+      calls: MAX_CONTINUATIONS,
+    }, () => mayStart(deps, started))
+    : null;
+  const cards = [...firstRead, ...(on?.cards ?? [])];
+  const partial = on !== null && !on.done;
+  const token = on !== null && !on.done && cards.length < MAX_PHOTO_CARDS &&
+      on.calls < MAX_CONTINUATIONS
+    ? deps.newToken()
+    : null;
+  const dropped = (read?.dropped.length ?? 0) + (on?.dropped.length ?? 0);
+  const recorded = await finishExtraction(start.usageId, {
+    outcome: extraction.kind === "cards" ? "ok" : extraction.kind,
+    attempts: retry ? 2 : 1,
+    latencyMs: deps.now() - started,
+    cardsReturned: cards.length,
+    cardsDropped: dropped,
+    failures: [
+      ...(retry && firstFailure !== null ? [firstFailure] : []),
+      ...(lastFailure === null ? [] : [lastFailure]),
+    ],
+    truncated: extraction.kind === "cards" ? partial : read?.cut ?? false,
+    continuations: on?.calls ?? 0,
+    cursor: token,
+  }, supabase);
+  const attempts = [
+    ...(retry ? first.attempts : []),
+    ...extraction.attempts,
+    ...(on?.attempts ?? []),
+  ];
+  const served = { userId, plan, promptVersion, attempts, recorded };
   switch (extraction.kind) {
     case "cards":
       return {
         outcome: "ok",
-        userId,
-        plan,
-        promptVersion,
-        attempts: extraction.attempts,
-        cards: extraction.cards,
+        ...served,
+        cards,
+        partial,
+        ...offered(token, recorded, cards.map((card) => card.front)),
+        dropped,
       };
     case "no_cards":
-      return {
-        outcome: "no_cards",
-        userId,
-        plan,
-        promptVersion,
-        attempts: extraction.attempts,
-      };
+      return { outcome: "no_cards", ...served, dropped: 0 };
     case "invalid_output":
-    case "model_error":
       return {
         outcome: "model_error",
-        userId,
-        plan,
-        promptVersion,
-        attempts: extraction.attempts,
+        ...served,
+        ...(dropped === 0 ? {} : { dropped }),
       };
+    case "model_error":
+      return { outcome: "model_error", ...served };
+  }
+}
+
+/**
+ * A request that goes on reading a photo from [cursor] (ADR 0138), by the model and prompt version
+ * of its first read; the photo is not counted again.
+ */
+async function resume(
+  request: ExtractRequest,
+  cursor: Cursor,
+  userId: UserId,
+  context: {
+    readonly deps: HandlerDeps;
+    readonly config: Configured;
+    readonly started: number;
+    readonly supabase: Parameters<typeof resumeExtraction>[2];
+  },
+): Promise<Result> {
+  const { deps, started, supabase } = context;
+  const resumed = await resumeExtraction(userId, cursor.token, supabase);
+  if (resumed.kind !== "resumed") {
+    return {
+      outcome: resumed.kind === "refused" ? "cursor_expired" : "not_configured",
+      userId,
+      attempts: [],
+    };
+  }
+  const extract = caller(request, resumed.model, resumed.prompt.text, context);
+  const on = await readOn(extract, {
+    read: resumed.cardsRead,
+    fronts: cursor.fronts,
+    calls: MAX_CONTINUATIONS - resumed.continuations,
+  }, () => mayStart(deps, started));
+  const token = !on.done && !on.failed &&
+      resumed.cardsRead + on.cards.length < MAX_PHOTO_CARDS &&
+      resumed.continuations + on.calls < MAX_CONTINUATIONS
+    ? deps.newToken()
+    : null;
+  const recorded = await recordResumed(resumed.usageId, {
+    continuations: on.calls,
+    cardsReturned: on.cards.length,
+    truncated: !on.done,
+    cursor: token,
+  }, supabase);
+  const served = {
+    userId,
+    plan: resumed.plan,
+    promptVersion: resumed.prompt.versionId,
+    attempts: on.attempts,
+    recorded,
+    dropped: on.dropped.length,
+  };
+  if (on.failed) return { outcome: "model_error", ...served };
+  return {
+    outcome: "ok",
+    ...served,
+    cards: on.cards,
+    partial: !on.done,
+    ...offered(token, recorded, [
+      ...cursor.fronts,
+      ...on.cards.map((card) => card.front),
+    ]),
+  };
+}
+
+type Configured = Extract<Config, { kind: "configured" }>;
+
+/** The cursor an answer offers: none without a token, or when the record did not keep it. */
+function offered(
+  token: CursorToken | null,
+  recorded: boolean,
+  fronts: readonly string[],
+): { readonly cursor?: Cursor } {
+  return token === null || !recorded
+    ? {}
+    : { cursor: { token, fronts: lastFronts(fronts) } };
+}
+
+/** One model call reading [request]'s photo, asking after the photo for [followUp] when given. */
+function caller(
+  request: ExtractRequest,
+  model: ModelId,
+  prompt: string,
+  context: { readonly deps: HandlerDeps; readonly config: Configured },
+): (followUp?: string) => Promise<Extraction> {
+  return (followUp) =>
+    extractCards(request.image, request.languages, model, prompt, {
+      apiKey: context.config.openRouterApiKey,
+      fetch: context.deps.fetch,
+      now: context.deps.now,
+      timeoutMs: context.deps.modelTimeoutMs,
+    }, followUp === undefined ? {} : { followUp });
+}
+
+/** Whether a model call may still start, early enough to end inside the Edge Function's limit. */
+function mayStart(deps: HandlerDeps, started: number): boolean {
+  return deps.now() - started < RETRY_START_LIMIT_MS;
+}
+
+/** How a model call failed, or null when it answered cards or a valid empty list. */
+function failureOf(extraction: Extraction): AttemptFailure | null {
+  switch (extraction.kind) {
+    case "cards":
+    case "no_cards":
+      return null;
+    case "invalid_output":
+      return "invalid_output";
+    case "model_error":
+      return extraction.attempts.some((attempt) => attempt.timedOut)
+        ? "timeout"
+        : "model_error";
   }
 }
 
@@ -217,6 +426,8 @@ function log(deps: HandlerDeps, started: number, result: Result): void {
     latency_ms: Math.round(deps.now() - started),
     prompt_tokens: sum((usage) => usage.promptTokens),
     completion_tokens: sum((usage) => usage.completionTokens),
+    dropped_cards: result.dropped ?? null,
+    outcome_recorded: result.recorded ?? null,
     outcome: result.outcome,
   });
 }

@@ -1,6 +1,6 @@
 //! Invalid input is refused with a typed error; each refusal is paired with a control.
 
-use smartman_engine::{
+use knowno_engine::{
     Error, FuzzFactor, MemoryState, Quantity, Rating, Review, Timestamp, replay, review,
 };
 

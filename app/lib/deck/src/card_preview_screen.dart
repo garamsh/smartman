@@ -7,6 +7,8 @@ import '../../design/app_section_label.dart';
 import '../../design/theme.dart';
 import '../../design/word_break.dart';
 import '../../l10n/app_localizations.dart';
+import 'card_frame.dart';
+import 'card_text.dart';
 import 'content.dart';
 import 'content_view.dart';
 import 'whole_card_view.dart';
@@ -27,16 +29,17 @@ const _studyGaps =
 
 /// The card as study draws it, from the card editor's "미리보기" (ADR 0117):
 /// one card of study's current card's size, centred on the screen, its front alone and,
-/// after a tap, its back, or, for a card studied on one face, that face
-/// with its blanks empty and, after a tap, filled. Each tap turns the card
+/// after a tap, its back, or, for a card drawn whole, its 칸 in place with
+/// each blank empty and, after a tap, revealed. Each tap turns the card
 /// over in 3D, or switches it at once when the system asks to reduce
 /// motion. "앞면" or "뒷면" names the side over a card of two sides, and a
 /// line under the card says what a tap does.
 class CardPreviewScreen extends StatefulWidget {
-  const CardPreviewScreen({super.key, required this.front, required this.back});
+  const CardPreviewScreen({super.key, required this.cells});
 
-  final List<Content> front;
-  final List<Content> back;
+  /// The card's 칸, read as a saved card's are, so each part shows where
+  /// study shows it.
+  final List<Cell> cells;
 
   @override
   State<CardPreviewScreen> createState() => _CardPreviewScreenState();
@@ -75,8 +78,10 @@ class _CardPreviewScreenState extends State<CardPreviewScreen>
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
-    final face = oneFaceOf(widget.front, widget.back);
-    final hint = switch ((face != null, _turned)) {
+    final cells = widget.cells;
+    final whole = isDrawnWhole(cells);
+    final sides = sidesOf(cells);
+    final hint = switch ((whole, _turned)) {
       (false, false) => l10n.previewTapToBack,
       (false, true) => l10n.previewTapToFront,
       (true, false) => l10n.previewTapToReveal,
@@ -99,7 +104,7 @@ class _CardPreviewScreenState extends State<CardPreviewScreen>
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (face == null)
+                if (!whole)
                   AppSectionLabel(_turned ? l10n.cardBack : l10n.cardFront),
                 // Study's card height, kept below what the screen leaves it.
                 Flexible(
@@ -124,9 +129,9 @@ class _CardPreviewScreenState extends State<CardPreviewScreen>
                                 ..setEntry(3, 2, 0.001)
                                 ..rotateY(back ? angle - pi : angle),
                               child: _Face(
-                                face: face,
-                                front: widget.front,
-                                back: widget.back,
+                                cells: whole ? cells : null,
+                                front: sides.front,
+                                back: sides.back,
                                 turned: back,
                               ),
                             );
@@ -154,19 +159,20 @@ class _CardPreviewScreenState extends State<CardPreviewScreen>
 }
 
 /// One side of the card as study's current card draws it: on the surface
-/// with the study card's radius and shadow, its blocks centred, fitted to
-/// its width in the front's type, a back in the back's, scrolling inside
-/// where they are taller than the card.
+/// with the study card's radius and shadow, its blocks centred, in the
+/// largest of the card's three sizes at which they fit, from the front's
+/// type or a back's, scrolling inside where they are taller than the card at
+/// the last (ADR 0123).
 class _Face extends StatelessWidget {
   const _Face({
-    required this.face,
+    required this.cells,
     required this.front,
     required this.back,
     required this.turned,
   });
 
-  /// The one face of a card with a blank, or null for one of two sides.
-  final List<Content>? face;
+  /// The 칸 of a card drawn whole, or null for one of two sides.
+  final List<Cell>? cells;
   final List<Content> front;
   final List<Content> back;
   final bool turned;
@@ -174,7 +180,7 @@ class _Face extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    final face = this.face;
+    final cells = this.cells;
     return DecoratedBox(
       decoration: BoxDecoration(
         color: colors.surface,
@@ -184,44 +190,26 @@ class _Face extends StatelessWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(AppRadius.card),
         child: SizedBox.expand(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final width = constraints.maxWidth - 2 * AppSpace.s16;
-              return Center(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(AppSpace.s16),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: switch ((face, turned)) {
-                      (final face?, _) => WholeCardView(
-                        face,
-                        revealed: turned,
-                        style: AppType.front,
-                        minFontSize: AppType.frontFloor,
-                        width: width,
-                      ),
-                      (null, false) => ContentView(
-                        front,
-                        style: AppType.front,
-                        fit: (
-                          minFontSize: AppType.frontFloor,
-                          width: width,
-                          height: null,
-                        ),
-                      ),
-                      (null, true) => ContentView(
-                        back,
-                        style: AppType.back.copyWith(color: colors.ink),
-                        fit: (
-                          minFontSize: AppType.backFloor,
-                          width: width,
-                          height: null,
-                        ),
-                      ),
-                    },
-                  ),
-                ),
-              );
+          child: CardScroll(
+            padding: AppSpace.s16,
+            builder: (context, width, height) => switch ((cells, turned)) {
+              (final cells?, _) => SteppedWholeCardView(
+                cells,
+                revealed: turned,
+                style: AppType.front,
+                width: width,
+                height: height,
+              ),
+              (null, false) => ContentView(
+                front,
+                style: AppType.front,
+                fit: StepFit(width: width, height: height),
+              ),
+              (null, true) => ContentView(
+                back,
+                style: AppType.back.copyWith(color: colors.ink),
+                fit: StepFit(width: width, height: height),
+              ),
             },
           ),
         ),

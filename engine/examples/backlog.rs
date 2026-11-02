@@ -16,7 +16,7 @@
 //!   (the engine gives a retrievability of 1 within the day) if the budget allows;
 //! - every review draws a fuzz factor, as the app does.
 
-use smartman_engine::{FuzzFactor, MemoryState, Rating, Timestamp, review};
+use knowno_engine::{FuzzFactor, MemoryState, Rating, Timestamp, review};
 
 const DAY: i64 = 86_400;
 /// When each day's session starts: 09:00.

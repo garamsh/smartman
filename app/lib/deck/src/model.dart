@@ -1,4 +1,5 @@
 import '../../media/media.dart';
+import 'card_frame.dart';
 import 'card_key.dart';
 import 'content.dart';
 
@@ -151,6 +152,7 @@ final class Card {
     this.originDeckId,
     this.template,
     this.templateVersion,
+    this.cells,
   });
 
   final CardId id;
@@ -174,4 +176,8 @@ final class Card {
 
   /// The version of [template] the card was written in; null with it.
   final int? templateVersion;
+
+  /// The 칸 list a framed card stores, of which [front] and [back] are the
+  /// projection; null on an earlier card (ADR 0137). Read through [cellsOf].
+  final List<Cell>? cells;
 }

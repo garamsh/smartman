@@ -53,6 +53,7 @@ vi.mock("next/cache", () => ({
 const notFound = { digest: "NEXT_HTTP_ERROR_FALLBACK;404" };
 const french = "d0000000-0000-4000-8000-0000000000f1";
 const diary = "d0000000-0000-4000-8000-0000000000f2";
+const stored = "d0000000-0000-4000-8000-0000000000f3";
 
 /** Signs the next request in as [user], with the browser's zone UTC. */
 async function signIn(user: typeof testUser | typeof otherUser = testUser) {
@@ -95,12 +96,24 @@ describe("the admin area's gate", () => {
       within(menu)
         .getAllByRole("link")
         .map((link) => link.textContent),
-    ).toEqual(["개요", "신고", "공개 덱", "사용자", "요금제", "프롬프트", "관리자", "작업 기록"]);
+    ).toEqual([
+      "개요",
+      "신고",
+      "공개 덱",
+      "사용자",
+      "요금제",
+      "프롬프트",
+      "추출 결과",
+      "관리자",
+      "작업 기록",
+    ]);
     expect(within(menu).getByRole("link", { name: "신고" })).toHaveAttribute(
       "aria-current",
       "page",
     );
     expect(screen.getByText("내용")).toBeInTheDocument();
+    // Korean on every page breaks only between words.
+    expect(screen.getByText("내용").parentElement).toHaveClass("break-keep");
   });
 
   it("gives a revoked admin the not-found page at once", async () => {
@@ -232,13 +245,15 @@ describe("the reports page", () => {
     await user.click(screen.getByRole("button", { name: "숨기기" }));
     const question = screen.getByRole("group", { name: "'French' 덱을 공개 목록에서 숨길까요?" });
     expect(within(question).getByRole("button", { name: "숨기기" })).toHaveFocus();
-    // A reversible action's confirm comes last, after 취소, in the navy fill.
+    // A reversible action's confirm comes last, after 취소, in the ink fill.
     expect(
       within(question)
         .getAllByRole("button")
         .map((button) => button.textContent),
     ).toEqual(["취소", "숨기기"]);
-    expect(within(question).getByRole("button", { name: "숨기기" }).className).toContain("bg-ink");
+    expect(within(question).getByRole("button", { name: "숨기기" }).className).toContain(
+      "bg-primary",
+    );
     await user.click(within(question).getByRole("button", { name: "취소" }));
     expect(admin.decks[0]?.hidden).toBe(false);
     expect(admin.calls.some((call) => call.startsWith("admin_set_deck_hidden"))).toBe(false);
@@ -258,7 +273,9 @@ describe("the reports page", () => {
   it("says when there are no reports", async () => {
     admin.decks.length = 0;
     await render(ReportsContent, {});
-    expect(screen.getByText("신고된 덱이 없어요.")).toBeInTheDocument();
+    expect(
+      screen.getByText("신고된 덱이 없어요. 새 신고가 들어오면 여기에 보여요."),
+    ).toBeInTheDocument();
   });
 });
 
@@ -348,6 +365,44 @@ describe("a deck's page", () => {
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
   });
 
+  it("describes a card by every 칸, for an earlier card and a free v2 card", async () => {
+    const senses = [{ labels: [], meaning: "사과", examples: [] }];
+    admin.seedDeck({
+      id: stored,
+      name: "Stored",
+      cards: [
+        { id: "earlier", front: "chat", back: "고양이" },
+        {
+          id: "glue",
+          front: [{ type: "text", v: 2, payload: { front: "chien", back: "개" } }],
+          back: [],
+        },
+        {
+          id: "word",
+          front: [{ type: "senses", v: 2, payload: { term: "apple", ask: "term", senses } }],
+          back: [],
+        },
+        {
+          id: "blank",
+          front: [
+            { type: "cloze", v: 1, payload: { text: "___ is red.", answers: ["Rose"] } },
+            { type: "text", v: 2, payload: { front: "", back: "A flower." } },
+          ],
+          back: [],
+        },
+      ],
+    });
+    await render(DeckContent, { params: Promise.resolve({ id: stored }) });
+
+    const cards = within(screen.getByRole("region", { name: "카드" }));
+    expect(cards.getAllByRole("listitem").map((card) => card.textContent)).toEqual([
+      "chat고양이",
+      "chien개",
+      "apple사과",
+      "Rose is red.A flower.",
+    ]);
+  });
+
   it("shows a private deck no one reported, read-only, and is not found for an id that is no deck's", async () => {
     await render(DeckContent, { params: Promise.resolve({ id: diary }) });
     expect(screen.getByRole("heading", { name: "Diary" })).toBeInTheDocument();
@@ -380,7 +435,7 @@ describe("a deck's page", () => {
     expect(confirm.className.split(" ")).toEqual(
       expect.arrayContaining(["bg-dont-know-text", "text-on-dont-know-text"]),
     );
-    expect(confirm.className).not.toContain("bg-ink");
+    expect(confirm.className).not.toContain("bg-primary");
     await user.click(screen.getByRole("button", { name: "취소" }));
     expect(admin.removals.size).toBe(0);
 

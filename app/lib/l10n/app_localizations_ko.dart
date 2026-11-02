@@ -10,7 +10,7 @@ class AppLocalizationsKo extends AppLocalizations {
   AppLocalizationsKo([String locale = 'ko']) : super(locale);
 
   @override
-  String get appTitle => 'smartman';
+  String get appTitle => '알아몰라';
 
   @override
   String get newDeck => '새 덱';
@@ -110,7 +110,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get deckNameRequired => '이름을 입력해 주세요';
 
   @override
-  String get noCards => '아직 카드가 없어요. 카드를 추가해 시작해 보세요.';
+  String get noCards => '아직 카드가 없어요';
 
   @override
   String get newCard => '카드 추가';
@@ -160,31 +160,22 @@ class AppLocalizationsKo extends AppLocalizations {
   String get clozeBlankMarker => '줄에서 ___를 빼 주세요';
 
   @override
-  String get addToFront => '앞면에 추가';
-
-  @override
-  String get addToBack => '뒷면에 추가';
-
-  @override
-  String get addBlock => '추가';
+  String get addBlock => '칸 추가';
 
   @override
   String get blockText => '글';
 
   @override
-  String get blockTextDescription => '단어, 문장, 설명';
+  String get blockSenses => '단어';
 
   @override
-  String get blockSenses => '뜻 목록';
-
-  @override
-  String get blockSensesDescription => '라벨과 뜻을 여러 개 적어요';
+  String get blockSensesDescription => '단어와 뜻을 함께 적어요';
 
   @override
   String get blockTable => '표';
 
   @override
-  String get blockTableDescription => '칸을 골라 가려요';
+  String get blockTableDescription => '가릴 부분을 골라요';
 
   @override
   String get blockCloze => '빈칸 문장';
@@ -304,15 +295,24 @@ class AppLocalizationsKo extends AppLocalizations {
   String get autoplayAudio => '앞면 소리 자동 재생';
 
   @override
-  String blockMenu(String side, int number) {
-    return '$side $number번째 블록 메뉴';
+  String blockMenu(int number) {
+    return '$number번째 칸 메뉴';
   }
 
   @override
-  String get deleteBlock => '삭제';
+  String get cardNothingBefore => '앞면에 보일 내용을 하나 이상 넣어 주세요';
 
   @override
-  String get sideBlockRequired => '블록을 하나 이상 넣어 주세요';
+  String get cardNothingAdded => '뒷면이나 빈칸을 하나 이상 넣어 주세요';
+
+  @override
+  String get wordTerm => '단어';
+
+  @override
+  String get wordAskFirst => '앞면에 보일 것';
+
+  @override
+  String get deleteBlock => '삭제';
 
   @override
   String get tableToolbar => '표 도구';
@@ -387,13 +387,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get previewTapToFront => '다시 탭하면 앞면으로 돌아가요';
 
   @override
-  String get previewTapToReveal => '카드를 탭하면 빈칸이 채워져요';
+  String get previewTapToReveal => '카드를 탭하면 답이 보여요';
 
   @override
   String get previewTapToHide => '다시 탭하면 빈칸으로 돌아가요';
-
-  @override
-  String get clozeBackHint => '빈칸 카드는 앞면에서 바로 답을 맞혀요. 뒷면은 비워 둬도 돼요.';
 
   @override
   String get senseLabelHint => '라벨';
@@ -562,12 +559,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String currentCardSemantics(String front) {
     return '앞면: $front';
   }
-
-  @override
-  String get showBack => '뒷면 보기';
-
-  @override
-  String get hideBack => '뒷면 가리기';
 
   @override
   String previousCardSemantics(
@@ -942,6 +933,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get retry => '다시 시도';
 
   @override
+  String get retryFailedPhotos => '실패한 사진 다시 시도';
+
+  @override
   String get extractionOffline => '인터넷에 연결되지 않았어요. 연결을 확인하고 다시 시도해 주세요.';
 
   @override
@@ -1160,19 +1154,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get noCardsTitle => '첫 카드를 만들어 볼까요?';
 
   @override
-  String get noCardsBody => '덱에 카드를 추가해 시작해요.';
-
-  @override
-  String get openDeck => '덱 열기';
-
-  @override
   String get addCardsInDecks => '덱에서 카드 추가';
 
   @override
   String get emptyHomeTitle => '첫 덱을 만들어 볼까요?';
-
-  @override
-  String get emptyHomeBody => '단어장 사진을 찍으면 카드를 바로 만들어 드려요. 직접 입력해도 돼요.';
 
   @override
   String get createManually => '직접 입력';
@@ -1753,4 +1738,124 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get keepWriting => '계속 쓰기';
+
+  @override
+  String get spreadsheetPick => '파일에서 고르기';
+
+  @override
+  String get spreadsheetPickBody => '엑셀이나 CSV 파일의 행을 카드로 만들어요';
+
+  @override
+  String get spreadsheetStartTitle => '파일에서 카드 추가';
+
+  @override
+  String get spreadsheetStartBody =>
+      '엑셀(.xlsx)이나 CSV 파일의 한 행이 카드 한 장이 돼요. 파일은 5MB, 1,000행까지 읽어요.';
+
+  @override
+  String get spreadsheetChoose => '파일 고르기';
+
+  @override
+  String get spreadsheetReading => '읽는 중';
+
+  @override
+  String get spreadsheetAnother => '다른 파일';
+
+  @override
+  String get spreadsheetReviewTitle => '카드 확인';
+
+  @override
+  String get spreadsheetColumns => '열';
+
+  @override
+  String get spreadsheetSheet => '시트';
+
+  @override
+  String get spreadsheetLabelColumn => '라벨';
+
+  @override
+  String get spreadsheetExampleColumn => '예문';
+
+  @override
+  String get spreadsheetNoColumn => '없음';
+
+  @override
+  String get spreadsheetHeaderRow => '첫 행은 머리글';
+
+  @override
+  String get spreadsheetDistinct => '항목마다 다른 열을 골라 주세요';
+
+  @override
+  String get spreadsheetExcludeAll => '모두 빼기';
+
+  @override
+  String get spreadsheetSelectAll => '모두 선택';
+
+  @override
+  String spreadsheetRow(int row) {
+    return '$row행';
+  }
+
+  @override
+  String spreadsheetRowCard(int row, String front) {
+    return '$row행 $front';
+  }
+
+  @override
+  String spreadsheetSkipped(int count) {
+    return '앞면이나 뒷면이 빈 행 $count개는 건너뛰어요';
+  }
+
+  @override
+  String spreadsheetTooLong(String rows, int limit) {
+    return '$rows은 $limit자가 넘는 칸이 있어 뺐어요';
+  }
+
+  @override
+  String spreadsheetRowsMore(String rows, int count) {
+    return '$rows 외 $count개 행';
+  }
+
+  @override
+  String spreadsheetDuplicateStored(int row) {
+    return '$row행은 이 덱에 이미 있는 카드예요';
+  }
+
+  @override
+  String spreadsheetDuplicateRow(int row, int earlier) {
+    return '$row행의 앞면이 $earlier행과 같아요';
+  }
+
+  @override
+  String spreadsheetLeaveOut(int row) {
+    return '$row행 빼기';
+  }
+
+  @override
+  String get spreadsheetAddAnyway => '그래도 추가';
+
+  @override
+  String get spreadsheetDiscardTitle => '읽은 카드를 버릴까요?';
+
+  @override
+  String get spreadsheetDiscardBody => '저장하지 않은 카드는 사라져요.';
+
+  @override
+  String get spreadsheetWrongType => '.xlsx나 .csv 파일을 골라 주세요';
+
+  @override
+  String get spreadsheetTooLarge => '파일이 5MB보다 커서 읽지 못했어요. 파일을 나눠 다시 골라 주세요.';
+
+  @override
+  String get spreadsheetNotUtf8 => 'CSV를 읽지 못했어요. UTF-8 CSV로 저장해 다시 골라 주세요.';
+
+  @override
+  String get spreadsheetUnreadable => '파일을 읽지 못했어요. 엑셀에서 다시 저장해 골라 주세요.';
+
+  @override
+  String get spreadsheetTooManyRows =>
+      '행이 1,000개보다 많아 읽지 못했어요. 파일을 나눠 다시 골라 주세요.';
+
+  @override
+  String get spreadsheetNotRead => '파일을 읽지 못했어요. 다시 골라 주세요.';
 }

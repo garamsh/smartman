@@ -4,8 +4,8 @@ import 'dart:typed_data';
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/database/database.dart';
-import 'package:smartman/media/media.dart';
+import 'package:knowno/database/database.dart';
+import 'package:knowno/media/media.dart';
 import 'package:uuid/uuid.dart';
 
 import 'fakes.dart';
@@ -193,6 +193,9 @@ void main() {
     const unknown = MediaId('00000000-0000-4000-8000-0000000000b4');
     const adts = MediaId('00000000-0000-4000-8000-0000000000b5');
     const untagged = MediaId('00000000-0000-4000-8000-0000000000b6');
+    const png = MediaId('00000000-0000-4000-8000-0000000000b7');
+    const webp = MediaId('00000000-0000-4000-8000-0000000000b8');
+    const wave = MediaId('00000000-0000-4000-8000-0000000000b9');
     final image = preparedImage(3);
 
     setUp(() {
@@ -203,12 +206,47 @@ void main() {
       // An ADTS AAC header, its layer bits 00, and an MP3 frame, layer III.
       server.shared[(owner, adts)] = Uint8List.fromList([0xFF, 0xF1, 0x50, 0]);
       server.shared[(owner, untagged)] = Uint8List.fromList([0xFF, 0xFB, 0, 0]);
+      server.shared[(owner, png)] = Uint8List.fromList([
+        0x89,
+        0x50,
+        0x4E,
+        0x47,
+        0x0D,
+        0x0A,
+        0x1A,
+        0x0A,
+        0,
+      ]);
+      Uint8List riff(String form) => Uint8List.fromList([
+        ...'RIFF'.codeUnits,
+        1,
+        0,
+        0,
+        0,
+        ...form.codeUnits,
+        0,
+      ]);
+      server.shared[(owner, webp)] = riff('WEBP');
+      // A RIFF file of another form, which the bucket does not take.
+      server.shared[(owner, wave)] = riff('WAVE');
     });
 
     List<String> filesOnDevice() => [
       if (directory.existsSync())
         for (final file in directory.listSync()) file.uri.pathSegments.last,
     ];
+
+    test('a PNG or a WebP photo an MCP card stored is kept in a copy, a RIFF file of another form left out', () async {
+      final fetched = await store.fetchShared(owner, [png, webp, wave]);
+
+      expect(
+        {
+          for (final MapEntry(:key, :value) in fetched.entries)
+            key: (value.kind.key, value.mimeType),
+        },
+        {png: ('image', 'image/png'), webp: ('image', 'image/webp')},
+      );
+    });
 
     test('are read from their owner\'s folder with the kind and type their bytes show, an ADTS stream as audio/mp4 apart from an MP3 frame', () async {
       final fetched = await store.fetchShared(owner, [

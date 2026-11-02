@@ -133,7 +133,7 @@ List<String> importedPaths(String file, String source) => [
     ?_resolve(file, match.group(1)!),
 ];
 
-const _package = 'package:smartman/';
+const _package = 'package:knowno/';
 
 String? _resolve(String file, String uri) {
   if (uri.startsWith(_package)) return uri.substring(_package.length);
@@ -250,7 +250,7 @@ void main() {
     // src/, so an empty result below is not the result of reading nothing.
     expect(
       testSources['study/engine_bridge_test.dart'],
-      contains("import 'package:smartman/study/src/"),
+      contains("import 'package:knowno/study/src/"),
     );
 
     expect(testImportViolations(testSources), isEmpty);
@@ -281,7 +281,7 @@ void main() {
     expect(
       importViolations({
         'design/app_button.dart': "import '../deck/deck.dart';",
-        'database/database.dart': "import 'package:smartman/home/shell.dart';",
+        'database/database.dart': "import 'package:knowno/home/shell.dart';",
       }),
       [
         'design/app_button.dart imports deck (deck/deck.dart), from a foundation',
@@ -316,7 +316,7 @@ void main() {
   test("reaching into a domain's src from outside is refused, and its surface or its own src is not", () {
     expect(
       importViolations({
-        'study/study.dart': "import 'package:smartman/deck/src/model.dart';",
+        'study/study.dart': "import 'package:knowno/deck/src/model.dart';",
         'main.dart': "import 'deck/src/deck_repository.dart';",
         'home/shell.dart': "import '../deck/src/model.dart';",
       }),
@@ -328,7 +328,7 @@ void main() {
     );
     expect(
       importViolations({
-        'study/study.dart': "import 'package:smartman/deck/deck.dart';",
+        'study/study.dart': "import 'package:knowno/deck/deck.dart';",
         'main.dart': "import 'deck/deck.dart';",
         'deck/deck.dart': "export 'src/model.dart';",
         'deck/src/deck_row.dart': "import 'model.dart';",
@@ -341,10 +341,9 @@ void main() {
     expect(
       testImportViolations({
         'sync/answer_path_test.dart':
-            "import 'package:smartman/study/src/providers.dart';",
-        'widget_test.dart': "import 'package:smartman/study/src/model.dart';",
-        'home/home_data.dart':
-            "import 'package:smartman/study/src/model.dart';",
+            "import 'package:knowno/study/src/providers.dart';",
+        'widget_test.dart': "import 'package:knowno/study/src/model.dart';",
+        'home/home_data.dart': "import 'package:knowno/study/src/model.dart';",
       }),
       [
         'test/sync/answer_path_test.dart imports study/src/providers.dart, inside study/src/',
@@ -355,9 +354,9 @@ void main() {
     expect(
       testImportViolations({
         'study/session_test.dart':
-            "import 'package:smartman/study/src/session.dart';",
+            "import 'package:knowno/study/src/session.dart';",
         'sync/answer_path_test.dart':
-            "import 'package:smartman/study/study.dart';",
+            "import 'package:knowno/study/study.dart';",
         'home/home_data.dart': "import '../account/fake_account_service.dart';",
       }),
       isEmpty,

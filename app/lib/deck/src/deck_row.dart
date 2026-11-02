@@ -86,9 +86,9 @@ class DeckRow extends StatelessWidget {
 
 /// The deck's image, or else its icon on its colour, on a rounded tile;
 /// decorative, beside the name. A deck that holds no icon or colour this
-/// build knows shows [DeckIcon.fallback] on the colour its id selects
-/// ([deckTintIndex]); an image not yet on the device shows the icon until it
-/// is.
+/// build knows shows [DeckIcon.fallback] on the brand tint, a colour of the
+/// palette being only what the user chose (ADR 0145); an image not yet on the
+/// device shows the icon until it is.
 ///
 /// [icon], [color] and [image] are drawn in place of the deck's own, as the
 /// 덱 꾸미기 sheet previews a choice; [size] is the tile's side.
@@ -111,14 +111,14 @@ class DeckTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    final shown = color ?? deck.color ?? defaultDeckColor(deck.id);
+    final shown = color ?? deck.color;
     final radius = BorderRadius.circular(AppRadius.field);
     final iconTile = Container(
       width: size,
       height: size,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: deckTileColor(colors, shown),
+        color: shown == null ? colors.brandTint : deckTileColor(colors, shown),
         borderRadius: radius,
       ),
       child: Icon(
@@ -176,10 +176,6 @@ final class NoTileImage extends TileImage {
   const NoTileImage();
 }
 
-/// The colour a deck with none chosen takes, selected by its id.
-DeckColor defaultDeckColor(DeckId deck) =>
-    DeckColor.values[deckTintIndex(deck, DeckColor.values.length)];
-
 /// The line icon drawn for [icon].
 IconData deckIconData(DeckIcon icon) => switch (icon) {
   DeckIcon.layers => LucideIcons.layers,
@@ -207,8 +203,3 @@ Color deckTileColor(AppColors colors, DeckColor color) => switch (color) {
   DeckColor.slate => colors.deckSlate,
   DeckColor.sand => colors.deckSand,
 };
-
-/// Which of [count] colours a deck's tile takes by default: the sum of its id's UTF-16
-/// code units, modulo [count]. The web app computes the same.
-int deckTintIndex(DeckId deck, int count) =>
-    deck.value.codeUnits.fold(0, (sum, unit) => sum + unit) % count;

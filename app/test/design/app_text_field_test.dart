@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/design/app_text_field.dart';
-import 'package:smartman/design/theme.dart';
+import 'package:knowno/design/app_text_field.dart';
+import 'package:knowno/design/theme.dart';
 
 import '../contrast.dart';
 import 'harness.dart';

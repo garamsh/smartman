@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../design/app_chip.dart';
 import '../../design/app_sheet.dart';
 import '../../design/app_text_field.dart';
 import '../../design/theme.dart';
@@ -7,6 +8,7 @@ import '../../design/word_break.dart';
 import '../../l10n/app_localizations.dart';
 import '../../media/media.dart';
 import 'audio_block.dart';
+import 'card_frame.dart';
 import 'cloze_block.dart';
 import 'content.dart';
 import 'editor_group.dart';
@@ -14,27 +16,24 @@ import 'image_block.dart';
 import 'senses_block.dart';
 import 'table_block.dart';
 
-/// A side of a card, which a block list adds to.
-enum CardSide { front, back }
-
 /// A block type the add sheet offers. A type whose block issue has not
 /// landed is not one of them (ADR 0108).
 enum BlockType {
   text,
   senses,
-  table,
   cloze,
+  table,
   image,
   audio;
 
-  /// An empty block of this type: a 글 with no text, one empty meaning, a
-  /// table of two rows of two cells, a line with no blank, a 사진 with no
-  /// photo yet, or a 소리 with no sound yet.
+  /// An empty block of this type: a 글 with no text, a 단어 with one empty
+  /// meaning, a line with no blank, a table of two rows of two cells, a 사진
+  /// with no photo yet, or a 소리 with no sound yet.
   BlockDraft draft() => switch (this) {
     text => TextBlockDraft(),
     senses => SensesBlockDraft(),
-    table => TableBlockDraft(),
     cloze => ClozeBlockDraft(),
+    table => TableBlockDraft(),
     image => ImageBlockDraft(),
     audio => AudioBlockDraft(),
   };
@@ -42,8 +41,8 @@ enum BlockType {
   String title(AppLocalizations l10n) => switch (this) {
     text => l10n.blockText,
     senses => l10n.blockSenses,
-    table => l10n.blockTable,
     cloze => l10n.blockCloze,
+    table => l10n.blockTable,
     image => l10n.blockImage,
     audio => l10n.blockAudio,
   };
@@ -53,35 +52,55 @@ enum BlockType {
   String? description(AppLocalizations l10n) => switch (this) {
     text => null,
     senses => l10n.blockSensesDescription,
-    table => l10n.blockTableDescription,
     cloze => l10n.blockClozeDescription,
+    table => l10n.blockTableDescription,
     image => l10n.blockImageDescription,
     audio => l10n.blockAudioDescription,
   };
 }
 
-/// A block as a block list edits it.
+/// A 칸 as a block list edits it.
 sealed class BlockDraft {
-  /// A draft of [block]: its text, senses, table or line, or a block this
-  /// build cannot read, kept as it is.
-  static BlockDraft of(Content block) => switch (block) {
-    TextContent(:final text) => TextBlockDraft(text),
-    SensesContent(:final senses) => SensesBlockDraft(senses),
-    TableContent() => TableBlockDraft(block),
-    ClozeContent() => ClozeBlockDraft(block),
-    ImageContent() => ImageBlockDraft(block),
-    AudioContent() => AudioBlockDraft(block),
-    final UnsupportedContent kept => KeptBlockDraft(kept),
+  BlockDraft({this.id});
+
+  /// A draft of [cell], or of a block this build cannot read, kept as it is.
+  static BlockDraft of(Cell cell) => switch (cell) {
+    TextCell() => TextBlockDraft(cell),
+    WordCell() => SensesBlockDraft(cell),
+    BlankCell(:final block, :final id) => _ofBlock(block, CellSide.front, id),
+    PlacedCell(:final block, :final side, :final id) => _ofBlock(
+      block,
+      side,
+      id,
+    ),
+    UnknownCell(:final block) => KeptBlockDraft(block),
   };
+
+  static BlockDraft _ofBlock(Content block, CellSide side, String? id) =>
+      switch (block) {
+        TableContent() => TableBlockDraft(block, id),
+        ClozeContent() => ClozeBlockDraft(block, id),
+        ImageContent() => ImageBlockDraft(block, side, id),
+        AudioContent() => AudioBlockDraft(block, side, id),
+        _ => throw ArgumentError.value(
+          block,
+          'block',
+          'holds no blank or side',
+        ),
+      };
+
+  /// The stored block's id, kept across edits; a new 칸 takes one on saving.
+  final String? id;
 
   /// The block's type, or null for a block this build cannot read.
   BlockType? get type;
 
-  /// The block as saved; meaningful once [isComplete].
-  Content get content;
+  /// The 칸 as saved, meaningful once [isComplete]; null while it holds
+  /// nothing to save.
+  Cell? get cell;
 
-  /// The block as the preview draws it, while it may still be incomplete.
-  Content get preview => content;
+  /// The 칸 as the preview draws it, while it may still be incomplete.
+  Cell? get preview => cell;
 
   /// Whether the block can be saved as it is.
   bool get isComplete;
@@ -89,66 +108,89 @@ sealed class BlockDraft {
   void dispose() {}
 }
 
-/// A 글 block: its text as typed.
+/// A 글: its front and its back as typed.
 final class TextBlockDraft extends BlockDraft {
-  TextBlockDraft([String text = '']) : text = TextEditingController(text: text);
+  TextBlockDraft([TextCell? cell])
+    : front = TextEditingController(text: cell?.front),
+      back = TextEditingController(text: cell?.back),
+      super(id: cell?.id);
 
-  final TextEditingController text;
+  final TextEditingController front;
+  final TextEditingController back;
 
-  /// The field's focus, which a new card's first block takes.
+  /// The front field's focus, which a new card's first 글 takes.
   final focus = FocusNode();
 
   @override
   BlockType get type => BlockType.text;
 
+  /// The 글, a part holding only spaces saved empty; null with both so, as
+  /// the editor saves no 칸 for it.
   @override
-  Content get content => TextContent(text.text);
-
-  /// Whether nothing but spaces is typed, so the editor saves no block for
-  /// it.
-  bool get isEmpty => text.text.trim().isEmpty;
+  Cell? get cell {
+    String part(TextEditingController field) =>
+        field.text.trim().isEmpty ? '' : field.text;
+    final (shown, added) = (part(front), part(back));
+    if (shown.isEmpty && added.isEmpty) return null;
+    return TextCell(front: shown, back: added, id: id);
+  }
 
   @override
   bool get isComplete => true;
 
   @override
   void dispose() {
-    text.dispose();
+    front.dispose();
+    back.dispose();
     focus.dispose();
   }
 }
 
-/// A 뜻 목록 block: its senses, one empty meaning when new.
+/// A 단어: its word, its senses, one empty meaning when new, and which shows
+/// first.
 final class SensesBlockDraft extends BlockDraft {
-  SensesBlockDraft([List<CardSense> senses = const []])
-    : senses = senses.isEmpty
+  SensesBlockDraft([WordCell? word])
+    : term = TextEditingController(text: word?.term),
+      ask = word?.ask ?? WordAsk.term,
+      senses = word == null || word.senses.isEmpty
           ? [SenseDraft()]
-          : [for (final sense in senses) SenseDraft(sense)];
+          : [for (final sense in word.senses) SenseDraft(sense)],
+      super(id: word?.id);
 
+  final TextEditingController term;
   final List<SenseDraft> senses;
+
+  /// Which part shows before the reveal.
+  WordAsk ask;
 
   @override
   BlockType get type => BlockType.senses;
 
   @override
-  Content get content =>
-      SensesContent([for (final sense in senses) sense.sense]);
+  Cell get cell => WordCell(
+    term: term.text.trim(),
+    senses: [for (final sense in senses) sense.sense],
+    ask: ask,
+    id: id,
+  );
 
   @override
   bool get isComplete => !senses.any((sense) => sense.isBlank);
 
   @override
   void dispose() {
+    term.dispose();
     for (final sense in senses) {
       sense.dispose();
     }
   }
 }
 
-/// A 표 block: its headers, cells and blanks.
+/// A 표: its headers, cells and blanks.
 final class TableBlockDraft extends BlockDraft {
-  TableBlockDraft([TableContent? table])
-    : table = table == null ? TableDraft() : TableDraft.of(table);
+  TableBlockDraft([TableContent? table, String? id])
+    : table = table == null ? TableDraft() : TableDraft.of(table),
+      super(id: id);
 
   final TableDraft table;
 
@@ -156,7 +198,7 @@ final class TableBlockDraft extends BlockDraft {
   BlockType get type => BlockType.table;
 
   @override
-  Content get content => table.table;
+  Cell get cell => BlankCell(table.table, id: id);
 
   @override
   bool get isComplete => table.problem == null;
@@ -165,12 +207,13 @@ final class TableBlockDraft extends BlockDraft {
   void dispose() => table.dispose();
 }
 
-/// A 빈칸 문장 block: its line and blanks, kept as stored until either is
-/// edited, so a blank inside a word survives an unchanged save.
+/// A 빈칸 문장: its line and blanks, kept as stored until either is edited, so
+/// a blank inside a word survives an unchanged save.
 final class ClozeBlockDraft extends BlockDraft {
-  ClozeBlockDraft([ClozeContent? stored])
+  ClozeBlockDraft([ClozeContent? stored, String? id])
     : _stored = stored,
-      cloze = stored == null ? ClozeDraft() : ClozeDraft.of(stored) {
+      cloze = stored == null ? ClozeDraft() : ClozeDraft.of(stored),
+      super(id: id) {
     line = ClozeLineController(
       text: cloze.line,
       blanks: () => cloze.line == line.text ? cloze.blanks : const [],
@@ -197,13 +240,14 @@ final class ClozeBlockDraft extends BlockDraft {
     ..track(line.selection);
 
   @override
-  Content get content => switch (_stored) {
+  Cell get cell => BlankCell(switch (_stored) {
     final stored? when !edited => stored,
     _ => cloze.content ?? cloze.preview,
-  };
+  }, id: id);
 
   @override
-  Content get preview => edited || _stored == null ? cloze.preview : content;
+  Cell get preview =>
+      edited || _stored == null ? BlankCell(cloze.preview, id: id) : cell;
 
   @override
   bool get isComplete => (!edited && _stored != null) || cloze.content != null;
@@ -217,19 +261,26 @@ final class ClozeBlockDraft extends BlockDraft {
   }
 }
 
-/// A 사진 block: its photo, once chosen, and the boxes over it (ADR 0109).
+/// A 사진: its photo, once chosen, the boxes over it (ADR 0109), and the side
+/// it sits on while it holds none.
 final class ImageBlockDraft extends BlockDraft {
-  ImageBlockDraft([ImageContent? image]) : image = ImageDraft(image);
+  ImageBlockDraft([ImageContent? image, this.side = CellSide.front, String? id])
+    : image = ImageDraft(image),
+      super(id: id);
 
   final ImageDraft image;
+  CellSide side;
 
   @override
   BlockType get type => BlockType.image;
 
-  /// The photo and its boxes; an empty 글 while no photo is chosen, which
-  /// [isComplete] refuses to save.
+  /// Null while no photo is chosen, which [isComplete] refuses to save.
   @override
-  Content get content => image.image ?? const TextContent('');
+  Cell? get cell => switch (image.image) {
+    null => null,
+    final photo when photo.boxes.isNotEmpty => BlankCell(photo, id: id),
+    final photo => PlacedCell(photo, side, id: id),
+  };
 
   @override
   bool get isComplete => image.image != null;
@@ -238,19 +289,24 @@ final class ImageBlockDraft extends BlockDraft {
   void dispose() => image.dispose();
 }
 
-/// A 소리 block: its sound, once recorded or picked (ADR 0112).
+/// A 소리: its sound, once recorded or picked (ADR 0112), and its side.
 final class AudioBlockDraft extends BlockDraft {
-  AudioBlockDraft([AudioContent? audio]) : audio = AudioDraft(audio);
+  AudioBlockDraft([AudioContent? audio, this.side = CellSide.front, String? id])
+    : audio = AudioDraft(audio),
+      super(id: id);
 
   final AudioDraft audio;
+  CellSide side;
 
   @override
   BlockType get type => BlockType.audio;
 
-  /// The sound; an empty 글 while none is in it, which [isComplete] refuses
-  /// to save.
+  /// Null while no sound is in it, which [isComplete] refuses to save.
   @override
-  Content get content => audio.audio ?? const TextContent('');
+  Cell? get cell => switch (audio.audio) {
+    final sound? => PlacedCell(sound, side, id: id),
+    null => null,
+  };
 
   @override
   bool get isComplete => audio.audio != null;
@@ -258,10 +314,12 @@ final class AudioBlockDraft extends BlockDraft {
 
 /// A block this build cannot read, kept and written back as it was stored.
 final class KeptBlockDraft extends BlockDraft {
-  KeptBlockDraft(this.content);
+  KeptBlockDraft(this.block);
+
+  final UnsupportedContent block;
 
   @override
-  final UnsupportedContent content;
+  Cell get cell => UnknownCell(block);
 
   @override
   BlockType? get type => null;
@@ -270,30 +328,25 @@ final class KeptBlockDraft extends BlockDraft {
   bool get isComplete => true;
 }
 
-/// One side's [blocks] in one white group, each a row separated from the
-/// next by a hairline, with a ⋯ menu that moves it up or down or deletes
-/// it, a non-drag way to reorder (WCAG 2.2 dragging); a block's type is
-/// named over its fields but for a 글's. The group ends with "+ 추가",
-/// which opens a sheet of the types to add, titled "앞면에 추가" or
-/// "뒷면에 추가" (ADR 0108, ADR 0117). With [showErrors], what keeps a
-/// block from being saved shows under it. [emptyError], given while the
-/// side must hold a block and holds none to save, shows under the group
-/// when it holds no block, and each empty 글 then asks for its text.
+/// A card's [blocks], one white group per 칸 headed by its type, each with a
+/// ⋯ menu that moves it up or down or deletes it, a non-drag way to reorder
+/// (WCAG 2.2 dragging). "+ 칸 추가" after the last opens the sheet "칸 추가"
+/// of the types (ADR 0137). With [showErrors], what keeps a block from being
+/// saved shows under it, and [error], why the card as a whole cannot be
+/// saved, under the column.
 class BlockList extends StatelessWidget {
   const BlockList({
     super.key,
-    required this.side,
     required this.blocks,
     required this.showErrors,
     required this.onChanged,
     required this.onMediaStored,
-    this.emptyError,
+    this.error,
   });
 
-  final CardSide side;
   final List<BlockDraft> blocks;
   final bool showErrors;
-  final String? emptyError;
+  final String? error;
 
   /// Called after every change, which this widget makes in place.
   final VoidCallback onChanged;
@@ -318,7 +371,7 @@ class BlockList extends StatelessWidget {
     final type = await showAppSheet<BlockType>(
       context,
       builder: (context) => AppSheet(
-        title: _addLabel(AppLocalizations.of(context)),
+        title: AppLocalizations.of(context).addBlock,
         content: const _TypeList(),
       ),
     );
@@ -327,55 +380,45 @@ class BlockList extends StatelessWidget {
     onChanged();
   }
 
-  String _addLabel(AppLocalizations l10n) => switch (side) {
-    CardSide.front => l10n.addToFront,
-    CardSide.back => l10n.addToBack,
-  };
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
-    final emptyError = this.emptyError;
-    final sideName = switch (side) {
-      CardSide.front => l10n.cardFront,
-      CardSide.back => l10n.cardBack,
-    };
+    final error = this.error;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
-      spacing: AppSpace.s8,
+      spacing: AppSpace.s12,
       children: [
-        EditorGroup(
-          children: [
-            for (final (index, block) in blocks.indexed)
-              _Block(
-                // Keyed by the draft, so a moved block keeps its fields'
-                // focus and state.
-                key: ObjectKey(block),
-                block: block,
-                menuLabel: l10n.blockMenu(sideName, index + 1),
-                showErrors: showErrors,
-                sideRequired: emptyError != null,
-                onChanged: onChanged,
-                onMediaStored: onMediaStored,
-                onAction: (action) => _act(index, action),
-                canMoveUp: index > 0,
-                canMoveDown: index < blocks.length - 1,
-              ),
-            GroupAddRow(
-              label: l10n.addBlock,
-              semanticsLabel: _addLabel(l10n),
-              onPressed: () => _add(context),
-            ),
-          ],
+        for (final (index, block) in blocks.indexed)
+          _Block(
+            // Keyed by the draft, so a moved block keeps its fields' focus
+            // and state.
+            key: ObjectKey(block),
+            block: block,
+            menuLabel: l10n.blockMenu(index + 1),
+            showErrors: showErrors,
+            onChanged: onChanged,
+            onMediaStored: onMediaStored,
+            onAction: (action) => _act(index, action),
+            canMoveUp: index > 0,
+            canMoveDown: index < blocks.length - 1,
+          ),
+        GroupAddRow(
+          label: l10n.addBlock,
+          semanticsLabel: l10n.addBlock,
+          color: colors.ink2,
+          onPressed: () => _add(context),
         ),
-        if (emptyError != null && blocks.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpace.s4),
-            child: Text(
-              keepWords(emptyError),
-              semanticsLabel: emptyError,
-              style: AppType.caption.copyWith(color: colors.dontKnowText),
+        if (error != null)
+          Semantics(
+            liveRegion: true,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpace.s4),
+              child: Text(
+                keepWords(error),
+                semanticsLabel: error,
+                style: AppType.caption.copyWith(color: colors.dontKnowText),
+              ),
             ),
           ),
       ],
@@ -438,8 +481,8 @@ class _TypeList extends StatelessWidget {
   }
 }
 
-/// One block's row: a 글's field beside its menu, or a block's type and menu
-/// over its fields, or, for a block this build cannot read, its placeholder
+/// One 칸's group: its type and menu over its fields, each further row parted
+/// by a hairline, or, for a block this build cannot read, its placeholder
 /// line and menu with no field.
 class _Block extends StatelessWidget {
   const _Block({
@@ -447,7 +490,6 @@ class _Block extends StatelessWidget {
     required this.block,
     required this.menuLabel,
     required this.showErrors,
-    required this.sideRequired,
     required this.onChanged,
     required this.onMediaStored,
     required this.onAction,
@@ -459,55 +501,40 @@ class _Block extends StatelessWidget {
   final ValueChanged<MediaId> onMediaStored;
   final String menuLabel;
   final bool showErrors;
-
-  /// Whether the side must hold a block and holds none to save, so an empty
-  /// 글 asks for its text.
-  final bool sideRequired;
   final VoidCallback onChanged;
   final ValueChanged<RowAction> onAction;
   final bool canMoveUp;
   final bool canMoveDown;
 
+  /// The two chips of a side, the one [selected] tinted.
+  Widget _sideRow(
+    AppLocalizations l10n,
+    CellSide selected,
+    ValueChanged<CellSide> onSelected,
+  ) => _ChoiceRow(
+    choices: [
+      for (final side in CellSide.values)
+        (
+          label: switch (side) {
+            CellSide.front => l10n.cardFront,
+            CellSide.back => l10n.cardBack,
+          },
+          selected: side == selected,
+          onPressed: () {
+            onSelected(side);
+            onChanged();
+          },
+        ),
+    ],
+  );
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
-    final menu = RowMenu(
-      label: menuLabel,
-      upLabel: l10n.moveUp,
-      downLabel: l10n.moveDown,
-      deleteLabel: l10n.deleteBlock,
-      canMoveUp: canMoveUp,
-      canMoveDown: canMoveDown,
-      onAction: onAction,
-    );
     final block = this.block;
-    if (block is TextBlockDraft) {
-      return Padding(
-        padding: const EdgeInsets.all(groupInset),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: AppTextField(
-                controller: block.text,
-                focusNode: block.focus,
-                hint: l10n.blockTextDescription,
-                minLines: 2,
-                maxLines: null,
-                errorText: sideRequired && block.isEmpty
-                    ? l10n.cardSideRequired
-                    : null,
-                onChanged: (_) => onChanged(),
-              ),
-            ),
-            menu,
-          ],
-        ),
-      );
-    }
     final title = switch (block) {
-      KeptBlockDraft(:final content) => l10n.unsupportedContent(content.type),
+      KeptBlockDraft(block: final kept) => l10n.unsupportedContent(kept.type),
       TextBlockDraft(:final type) ||
       SensesBlockDraft(:final type) ||
       TableBlockDraft(:final type) ||
@@ -515,83 +542,228 @@ class _Block extends StatelessWidget {
       ImageBlockDraft(:final type) ||
       AudioBlockDraft(:final type) => type.title(l10n),
     };
-    final fields = switch (block) {
-      TextBlockDraft() || KeptBlockDraft() => null,
-      SensesBlockDraft(:final senses) => SenseFields(
-        senses: senses,
-        showErrors: showErrors,
-        onChanged: onChanged,
-      ),
-      TableBlockDraft(:final table) => Padding(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpace.s16,
-          0,
-          AppSpace.s16,
-          AppSpace.s16,
+    const fieldInset = EdgeInsets.fromLTRB(
+      AppSpace.s16,
+      0,
+      AppSpace.s16,
+      AppSpace.s16,
+    );
+    final rows = switch (block) {
+      KeptBlockDraft() => const <Widget>[],
+      TextBlockDraft() => [
+        _NamedField(
+          name: l10n.cardFront,
+          controller: block.front,
+          focusNode: block.focus,
+          multiline: true,
+          onChanged: onChanged,
         ),
-        child: TableFields(
-          draft: table,
+        _NamedField(
+          name: l10n.cardBack,
+          controller: block.back,
+          multiline: true,
+          onChanged: onChanged,
+        ),
+      ],
+      SensesBlockDraft(:final senses, :final ask) => [
+        _NamedField(
+          name: l10n.wordTerm,
+          controller: block.term,
+          onChanged: onChanged,
+        ),
+        SenseFields(
+          senses: senses,
           showErrors: showErrors,
           onChanged: onChanged,
         ),
-      ),
-      final ClozeBlockDraft draft => _ClozeFields(
-        draft: draft,
-        showErrors: showErrors,
-        onChanged: onChanged,
-      ),
-      ImageBlockDraft(:final image) => Padding(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpace.s16,
-          0,
-          AppSpace.s16,
-          AppSpace.s16,
-        ),
-        child: ImageBlockFields(
-          draft: image,
-          showErrors: showErrors,
-          onChanged: onChanged,
-          onPicked: onMediaStored,
-        ),
-      ),
-      AudioBlockDraft(:final audio) => Padding(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpace.s16,
-          0,
-          AppSpace.s16,
-          AppSpace.s16,
-        ),
-        child: AudioBlockFields(
-          draft: audio,
-          showErrors: showErrors,
-          onChanged: onChanged,
-          onStored: onMediaStored,
-        ),
-      ),
-    };
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          // The menu's inset matches a 글's, so the menus line up.
-          padding: const EdgeInsets.only(right: groupInset),
-          child: Row(
-            children: [
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.only(left: AppSpace.s20),
-                  child: Text(
-                    title,
-                    style: AppType.caption.copyWith(color: colors.muted),
-                  ),
-                ),
+        _ChoiceRow(
+          name: l10n.wordAskFirst,
+          choices: [
+            for (final (value, label) in [
+              (WordAsk.term, l10n.wordTerm),
+              (WordAsk.meaning, l10n.senseMeaning),
+            ])
+              (
+                label: label,
+                selected: ask == value,
+                onPressed: () {
+                  block.ask = value;
+                  onChanged();
+                },
               ),
-              menu,
-            ],
+          ],
+        ),
+      ],
+      TableBlockDraft(:final table) => [
+        Padding(
+          padding: fieldInset,
+          child: TableFields(
+            draft: table,
+            showErrors: showErrors,
+            onChanged: onChanged,
           ),
         ),
-        ?fields,
       ],
+      ClozeBlockDraft() => [
+        _ClozeFields(
+          draft: block,
+          showErrors: showErrors,
+          onChanged: onChanged,
+        ),
+      ],
+      ImageBlockDraft(:final image, :final side) => [
+        Padding(
+          padding: fieldInset,
+          child: ImageBlockFields(
+            draft: image,
+            showErrors: showErrors,
+            onChanged: onChanged,
+            onPicked: onMediaStored,
+          ),
+        ),
+        if (image.boxes.isEmpty)
+          _sideRow(l10n, side, (side) => block.side = side),
+      ],
+      AudioBlockDraft(:final audio, :final side) => [
+        Padding(
+          padding: fieldInset,
+          child: AudioBlockFields(
+            draft: audio,
+            showErrors: showErrors,
+            onChanged: onChanged,
+            onStored: onMediaStored,
+          ),
+        ),
+        _sideRow(l10n, side, (side) => block.side = side),
+      ],
+    };
+    final heading = Padding(
+      padding: const EdgeInsets.only(right: groupInset),
+      child: Row(
+        children: [
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(left: AppSpace.s20),
+              child: Text(
+                title,
+                style: AppType.caption.copyWith(color: colors.muted),
+              ),
+            ),
+          ),
+          RowMenu(
+            label: menuLabel,
+            upLabel: l10n.moveUp,
+            downLabel: l10n.moveDown,
+            deleteLabel: l10n.deleteBlock,
+            canMoveUp: canMoveUp,
+            canMoveDown: canMoveDown,
+            onAction: onAction,
+          ),
+        ],
+      ),
+    );
+    return EditorGroup(
+      children: [
+        // The heading stands over the first row, no hairline between them.
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [heading, ?rows.firstOrNull],
+        ),
+        ...rows.skip(1),
+      ],
+    );
+  }
+}
+
+/// A row of a group holding one field, named [name] inline in muted text so
+/// the name stays once the field holds text, and read by that name.
+class _NamedField extends StatelessWidget {
+  const _NamedField({
+    required this.name,
+    required this.controller,
+    required this.onChanged,
+    this.focusNode,
+    this.multiline = false,
+  });
+
+  final String name;
+  final TextEditingController controller;
+  final FocusNode? focusNode;
+  final bool multiline;
+  final VoidCallback onChanged;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(
+      AppSpace.s20,
+      groupInset,
+      groupInset,
+      groupInset,
+    ),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.baseline,
+      textBaseline: TextBaseline.alphabetic,
+      children: [
+        ExcludeSemantics(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              minWidth: kMinInteractiveDimension,
+            ),
+            child: Text(
+              name,
+              style: AppType.body.copyWith(color: AppColors.of(context).muted),
+            ),
+          ),
+        ),
+        Expanded(
+          child: Semantics(
+            label: name,
+            child: AppTextField(
+              controller: controller,
+              focusNode: focusNode,
+              maxLines: multiline ? null : 1,
+              onChanged: (_) => onChanged(),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+/// A row of a group offering a choice of chips, after its [name] when it has
+/// one.
+class _ChoiceRow extends StatelessWidget {
+  const _ChoiceRow({this.name, required this.choices});
+
+  final String? name;
+  final List<({String label, bool selected, VoidCallback onPressed})> choices;
+
+  @override
+  Widget build(BuildContext context) {
+    final name = this.name;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpace.s20),
+      child: Row(
+        spacing: AppSpace.s8,
+        children: [
+          if (name != null)
+            Expanded(
+              child: Text(
+                name,
+                style: AppType.body.copyWith(
+                  color: AppColors.of(context).muted,
+                ),
+              ),
+            ),
+          for (final choice in choices)
+            AppChip.action(
+              label: choice.label,
+              selected: choice.selected,
+              onPressed: choice.onPressed,
+            ),
+        ],
+      ),
     );
   }
 }
@@ -620,16 +792,19 @@ class _ClozeFields extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          AppTextField(
+          ClozeEmptyBlanks(
             controller: draft.line,
-            focusNode: draft.focus,
-            hint: l10n.blockClozeDescription,
-            minLines: 2,
-            maxLines: null,
-            onChanged: (_) {
-              draft.edited = true;
-              onChanged();
-            },
+            child: AppTextField(
+              controller: draft.line,
+              focusNode: draft.focus,
+              hint: l10n.blockClozeDescription,
+              minLines: 2,
+              maxLines: null,
+              onChanged: (_) {
+                draft.edited = true;
+                onChanged();
+              },
+            ),
           ),
           if (draft.focus.hasFocus)
             Padding(

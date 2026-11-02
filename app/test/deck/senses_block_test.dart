@@ -1,19 +1,17 @@
-import 'dart:convert';
-
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/deck/deck.dart';
-import 'package:smartman/deck/src/block_list.dart';
-import 'package:smartman/deck/src/editor_group.dart';
-import 'package:smartman/deck/src/label_presets.dart';
-import 'package:smartman/deck/src/senses_block.dart';
-import 'package:smartman/design/app_chip.dart';
-import 'package:smartman/design/theme.dart';
+import 'package:knowno/deck/deck.dart';
+import 'package:knowno/deck/src/editor_group.dart';
+import 'package:knowno/deck/src/label_presets.dart';
+import 'package:knowno/deck/src/senses_block.dart';
+import 'package:knowno/design/app_chip.dart';
+import 'package:knowno/design/theme.dart';
 
 import '../contrast.dart';
 import '../home/deck_screens.dart';
+import '../word_breaks.dart';
 import 'editor.dart';
 
 /// The [index]th sense's label field.
@@ -26,14 +24,11 @@ Finder _labelField([int index = 0]) => find
     )
     .at(index);
 
-/// The field labelled [label] in the back's blocks.
-Finder _back(String label) => labelledField(CardSide.back, label);
+/// The field labelled [label] in the column.
+Finder _back(String label) => labelledField(label);
 
-/// [blocks] as stored, without the ids a write gives them.
-List<Object?> _withoutIds(List<Content> blocks) => [
-  for (final block in jsonDecode(encodeContent(blocks)) as List<Object?>)
-    {...block! as Map<String, Object?>}..remove('id'),
-];
+/// The 단어's word field.
+Finder _term() => namedField('Word');
 
 /// The stored card, front and back.
 Future<Card> _stored(DeckScreens screens) async =>
@@ -44,11 +39,11 @@ const _noun = PartOfSpeechLabel(PartOfSpeech.noun, '명');
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
 
-  /// A new card's editor whose back is one Meanings block.
+  /// A new card's editor whose one 칸 is a Word.
   Future<DeckScreens> openNew(WidgetTester tester) async {
     final screens = await DeckScreens.open(tester);
     await screens.push((deck) => CardEditorScreen(deck: deck));
-    await replaceFirstBlock(screens, CardSide.back, 'Meanings');
+    await replaceFirstBlock(screens, 'Word');
     return screens;
   }
 
@@ -57,7 +52,7 @@ void main() {
       screens.push((deck) => CardEditorScreen(deck: deck, card: card));
 
   testWidgets(
-    'a card whose back holds senses opens with them as a Meanings block, each with its label and meaning',
+    'a card of a word and a back of senses opens as a Word, each with its label and meaning',
     (tester) async {
       final screens = await DeckScreens.open(tester);
       await tester.runAsync(
@@ -77,11 +72,9 @@ void main() {
       );
       await openCard(screens, await _stored(screens));
       expect(
-        find.descendant(
-          of: blockList(CardSide.back),
-          matching: find.text('Meanings'),
-        ),
-        findsOneWidget,
+        tester.widget<TextField>(_term()).controller!.text,
+        'present',
+        reason: 'the front text is its word',
       );
       expect(find.byType(SenseFields), findsOneWidget);
       expect(tester.widget<TextField>(_labelField()).controller!.text, '명');
@@ -93,10 +86,10 @@ void main() {
   );
 
   testWidgets(
-    'a Meanings block is saved as senses, one meaning without a label included, and a Text block as text',
+    'a Word is saved as senses, one meaning without a label included, and a Text as text',
     (tester) async {
       final screens = await openNew(tester);
-      await typeBlock(tester, CardSide.front, 'cat');
+      await typeInto(tester, _term(), 'cat');
       await typeInto(tester, _back('Meaning'), '고양이');
       await tapVisible(screens, find.text('Save'));
       expect((await _stored(screens)).back, [
@@ -105,8 +98,8 @@ void main() {
 
       // Control: the same card with a Text block on its back.
       await screens.push((deck) => CardEditorScreen(deck: deck));
-      await typeBlock(tester, CardSide.front, 'dog');
-      await typeBlock(tester, CardSide.back, '개');
+      await typeBlock(tester, 'dog');
+      await typeBlock(tester, '개', 1);
       await tapVisible(screens, find.text('Save'));
       final dog = (await screens.cards()).singleWhere(
         (card) => card.front.single == const TextContent('dog'),
@@ -158,7 +151,7 @@ void main() {
     'a typed label is saved as a part of speech when it is a short form and as another label otherwise, and a label left as it was keeps the text it was stored with',
     (tester) async {
       final screens = await openNew(tester);
-      await typeBlock(tester, CardSide.front, 'present');
+      await typeInto(tester, _term(), 'present');
       await typeInto(tester, _labelField(), '[명]');
       await typeInto(tester, _back('Meaning'), '선물');
       await tapVisible(screens, find.bySemanticsLabel('Add meaning'));
@@ -290,14 +283,19 @@ void main() {
           LabelPreset('명', '명사'),
         ]),
       );
-      await tester.tap(blockField(CardSide.front));
+      await tester.tap(blockField());
       await tester.pumpAndSettle();
       expect(find.byType(LabelPresetStrip), findsNothing);
       await tester.tap(_labelField());
       await tester.pumpAndSettle();
       expect(find.byType(LabelPresetStrip), findsOneWidget);
       final chips = tester
-          .widgetList<AppChip>(find.byType(AppChip))
+          .widgetList<AppChip>(
+            find.descendant(
+              of: find.byType(LabelPresetStrip),
+              matching: find.byType(AppChip),
+            ),
+          )
           .map((chip) => chip.label)
           .toList();
       expect(chips, ['숙어', '명'], reason: "in the user's order");
@@ -316,7 +314,7 @@ void main() {
         isTrue,
       );
 
-      await tester.tap(blockField(CardSide.front));
+      await tester.tap(blockField());
       await tester.pumpAndSettle();
       expect(
         find.byType(LabelPresetStrip),
@@ -358,98 +356,93 @@ void main() {
   );
 
   testWidgets(
-    'each text block beside a back\'s senses is a Text block of its own: untouched the back is stored as it was, edited it saves the text, deleted the block goes, and a block of an unknown type stays',
+    'each text beside a Word is a Text of its own: untouched the card is stored as it was, edited it saves the text, and deleted the 칸 goes',
     (tester) async {
       final screens = await DeckScreens.open(tester);
-      const senses = SensesContent([
+      const senses = [
         CardSense(labels: [_noun], meaning: '얼굴', examples: ['a face']),
-      ]);
-      const unknown = UnsupportedContent('future', {'x': 1});
-      final back = <Content>[
-        senses,
-        const TextContent('유의어 confront'),
-        unknown,
-        const TextContent('a merged line'),
       ];
       await tester.runAsync(
         () => screens.repository.addCard(
           screens.deck.id,
           front: [const TextContent('face')],
-          back: back,
+          back: const [
+            SensesContent(senses),
+            TextContent('유의어 confront'),
+            TextContent('a merged line'),
+          ],
         ),
       );
       final card = await _stored(screens);
       await openCard(screens, card);
-      // Each text a Text block's field of its own, beside the senses' block.
       for (final text in ['유의어 confront', 'a merged line']) {
         expect(
           find.descendant(
-            of: blockList(CardSide.back),
+            of: blockList,
             matching: find.widgetWithText(TextField, text),
           ),
           findsOneWidget,
           reason: text,
         );
       }
-      expect(find.byTooltip('Back block 4 menu'), findsOneWidget);
+      expect(find.byTooltip('Block 3 menu'), findsOneWidget);
       expect(
-        find.descendant(
-          of: blockList(CardSide.back),
-          matching: find.text('Examples'),
-        ),
+        find.descendant(of: blockList, matching: find.text('Examples')),
         findsOneWidget,
         reason: 'it has examples',
       );
-      expect(find.widgetWithText(TextField, '유의어 confront'), findsOneWidget);
 
       await tapVisible(screens, find.text('Save'));
-      expect(
-        encodeContent((await _stored(screens)).back),
-        encodeContent(card.back),
-        reason: 'untouched, stored as it was',
-      );
+      final saved = await _stored(screens);
+      expect(saved.cells, const [
+        WordCell(term: 'face', senses: senses, ask: WordAsk.term),
+        TextCell(back: '유의어 confront'),
+        TextCell(back: 'a merged line'),
+      ], reason: 'untouched, nothing lost');
 
-      await openCard(screens, await _stored(screens));
+      await openCard(screens, saved);
       await typeInto(
         tester,
         find.widgetWithText(TextField, '유의어 confront'),
         '유의어 confront, encounter',
       );
-      await actOnBlock(screens, CardSide.back, 4, 'Delete');
+      await actOnBlock(screens, 3, 'Delete');
       await tapVisible(screens, find.text('Save'));
-      expect(
-        _withoutIds((await _stored(screens)).back),
-        _withoutIds([
-          senses,
-          const TextContent('유의어 confront, encounter'),
-          unknown,
-        ]),
-      );
+      expect((await _stored(screens)).cells, const [
+        WordCell(term: 'face', senses: senses, ask: WordAsk.term),
+        TextCell(back: '유의어 confront, encounter'),
+      ]);
       await screens.close();
     },
   );
 
   testWidgets(
-    'a sense without a meaning and an empty front are refused, each with a message on its field',
+    'a sense without a meaning is refused on its field, with no message under the column until it is filled',
     (tester) async {
       final screens = await openNew(tester);
       await typeInto(tester, _back('Meaning'), '사과');
       await tapVisible(screens, find.bySemanticsLabel('Add meaning'));
       await tapVisible(screens, find.text('Save'));
       expect(find.text('Enter the meaning'), findsOneWidget);
-      expect(find.text('Write something'), findsOneWidget);
-      expect(await screens.cards(), isEmpty);
-
-      // The front alone filled: the block refuses the empty meaning itself,
-      // without a save that fails.
-      await typeBlock(tester, CardSide.front, 'apple');
-      await tapVisible(screens, find.text('Save'));
-      expect(find.text('Enter the meaning'), findsOneWidget);
-      expect(find.text('Write something'), findsNothing);
+      expect(
+        shownText('Add something to show on the front'),
+        findsNothing,
+        reason: 'the block says what is wrong first',
+      );
       expect(find.byType(SnackBar), findsNothing);
       expect(await screens.cards(), isEmpty);
 
       await typeInto(tester, _back('Meaning 2'), '능금');
+      await tapVisible(screens, find.text('Save'));
+      expect(find.text('Enter the meaning'), findsNothing);
+      expect(
+        shownText('Add something to show on the front'),
+        findsOneWidget,
+        reason: 'the word it asks first is empty',
+      );
+      expect(await screens.cards(), isEmpty);
+
+      await typeInto(tester, _term(), 'apple');
       await tapVisible(screens, find.text('Save'));
       expect((await _stored(screens)).back, [
         const SensesContent([
@@ -465,7 +458,7 @@ void main() {
     'senses move and are deleted through each one\'s menu, which a block of one meaning has none of, and the one left is hinted Meaning again',
     (tester) async {
       final screens = await openNew(tester);
-      await typeBlock(tester, CardSide.front, 'apple');
+      await typeInto(tester, _term(), 'apple');
       await typeInto(tester, _back('Meaning'), 'first');
       await tapVisible(screens, find.bySemanticsLabel('Add meaning'));
       await typeInto(tester, _back('Meaning 2'), 'second');
@@ -493,7 +486,7 @@ void main() {
 
       // A new block starts as one meaning, with no menu to move or delete it.
       await screens.push((deck) => CardEditorScreen(deck: deck));
-      await replaceFirstBlock(screens, CardSide.back, 'Meanings');
+      await replaceFirstBlock(screens, 'Word');
       expect(find.byTooltip('Meaning 1 menu'), findsNothing);
       await tapVisible(screens, find.bySemanticsLabel('Add meaning'));
       expect(
@@ -512,8 +505,8 @@ void main() {
     (tester) async {
       final screens = await DeckScreens.open(tester, cards: {'apple': '사과'});
       await screens.push((deck) => CardEditorScreen(deck: deck));
-      await replaceFirstBlock(screens, CardSide.back, 'Meanings');
-      await typeBlock(tester, CardSide.front, ' Apple ');
+      await replaceFirstBlock(screens, 'Word');
+      await typeInto(tester, _term(), ' Apple ');
       await typeInto(tester, _labelField(), '명');
       await typeInto(tester, _back('Meaning'), '능금');
       await tapVisible(screens, find.text('Save'));
@@ -525,11 +518,11 @@ void main() {
 
   for (final mode in [ThemeMode.light, ThemeMode.dark]) {
     testWidgets(
-      'in the ${mode.name} theme a Meanings block with its senses and presets meets the tap target, label and contrast guidelines',
+      'in the ${mode.name} theme a Word with its senses and presets meets the tap target, label and contrast guidelines',
       (tester) async {
         final screens = await DeckScreens.open(tester, themeMode: mode);
         await screens.push((deck) => CardEditorScreen(deck: deck));
-        await replaceFirstBlock(screens, CardSide.back, 'Meanings');
+        await replaceFirstBlock(screens, 'Word');
         await tapVisible(screens, find.bySemanticsLabel('Add meaning'));
         await tester.tap(_labelField());
         await tester.pumpAndSettle();

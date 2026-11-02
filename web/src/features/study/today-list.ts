@@ -1,7 +1,7 @@
 import type { CardId } from "@/features/decks";
 
 import type { Answer } from "./answer-write";
-import { type Today, todaysList } from "./engine-wasm/smartman_engine_wasm.js";
+import { type Today, todaysList } from "./engine-wasm/knowno_engine_wasm.js";
 import {
   type CardStates,
   type SelectedQueue,

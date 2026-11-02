@@ -13,19 +13,19 @@ import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
-import 'package:smartman/account/account.dart';
-import 'package:smartman/account/src/account_service.dart';
-import 'package:smartman/account/src/google_button.dart';
-import 'package:smartman/account/src/sign_in_screen.dart';
-import 'package:smartman/deck/deck.dart';
-import 'package:smartman/design/app_text_field.dart';
-import 'package:smartman/design/theme_choice.dart';
-import 'package:smartman/home/home.dart';
-import 'package:smartman/main.dart';
-import 'package:smartman/media/media.dart';
-import 'package:smartman/photo_import/photo_import.dart';
-import 'package:smartman/study/study.dart';
-import 'package:smartman/sync/sync.dart';
+import 'package:knowno/account/account.dart';
+import 'package:knowno/account/src/account_service.dart';
+import 'package:knowno/account/src/google_button.dart';
+import 'package:knowno/account/src/sign_in_screen.dart';
+import 'package:knowno/deck/deck.dart';
+import 'package:knowno/design/app_text_field.dart';
+import 'package:knowno/design/theme_choice.dart';
+import 'package:knowno/home/home.dart';
+import 'package:knowno/main.dart';
+import 'package:knowno/media/media.dart';
+import 'package:knowno/photo_import/photo_import.dart';
+import 'package:knowno/study/study.dart';
+import 'package:knowno/sync/sync.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../photo_import/fakes.dart';
@@ -67,8 +67,9 @@ String _expiredSession() {
 /// An extraction client the test never calls.
 final class _NoExtraction implements ExtractionClient {
   @override
-  Future<List<CandidateCard>?> extract(
+  Future<Extracted?> extract(
     JpegPhoto photo, {
+    String? cursor,
     required Future<void> cancel,
   }) => throw UnimplementedError('not called');
 
@@ -207,7 +208,7 @@ void main() {
       await pumpApp(tester, FakeAccountService());
 
       expect(find.byType(SignInScreen), findsOneWidget);
-      expect(find.bySemanticsLabel('smartman'), findsOneWidget);
+      expect(find.bySemanticsLabel('알아몰라'), findsOneWidget);
       expect(find.text('밀어서 응답하고,\n잊을 때쯤 다시 만나는 암기 카드'), findsOneWidget);
       expect(find.text('Apple로 계속하기 · 준비 중'), findsOneWidget);
       // Besides Google's button, only the links to the terms answer a tap.

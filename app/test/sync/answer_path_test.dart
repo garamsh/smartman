@@ -5,22 +5,23 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
-import 'package:smartman/account/account.dart';
-import 'package:smartman/deck/deck.dart';
-import 'package:smartman/design/app_text_field.dart';
-import 'package:smartman/design/theme_choice.dart';
-import 'package:smartman/home/home.dart';
-import 'package:smartman/main.dart';
-import 'package:smartman/media/media.dart';
-import 'package:smartman/photo_import/photo_import.dart';
-import 'package:smartman/study/study.dart';
-import 'package:smartman/sync/sync.dart';
+import 'package:knowno/account/account.dart';
+import 'package:knowno/deck/deck.dart';
+import 'package:knowno/design/app_text_field.dart';
+import 'package:knowno/design/theme_choice.dart';
+import 'package:knowno/home/home.dart';
+import 'package:knowno/main.dart';
+import 'package:knowno/media/media.dart';
+import 'package:knowno/photo_import/photo_import.dart';
+import 'package:knowno/study/study.dart';
+import 'package:knowno/sync/sync.dart';
 
 import '../account/fake_account_service.dart';
 import '../photo_import/fakes.dart';
 import '../sharing/fakes.dart';
 import 'fake_sync_server.dart';
 import '../media/fakes.dart';
+import '../word_breaks.dart';
 
 const _ada = UserId('00000000-0000-4000-8000-00000000000a');
 
@@ -86,6 +87,7 @@ void main() {
     await tapAndSettle(tester, 'Save');
     for (final (front, back) in [('Chat', 'cat'), ('Chien', 'dog')]) {
       await tapAndSettle(tester, 'Add card');
+      await tapAndSettle(tester, 'Enter by hand');
       // A new card's two Text blocks, the front's and the back's.
       await tester.enterText(find.byType(TextField).at(0), front);
       await tester.enterText(find.byType(TextField).at(1), back);
@@ -96,10 +98,10 @@ void main() {
     expect(sync.status.value, isA<Syncing>());
     expect(server.requests, isEmpty);
     expect(find.text('0/2'), findsOneWidget);
-    final first = find.text('Chat').evaluate().isEmpty ? 'Chien' : 'Chat';
+    final first = shownText('Chat').evaluate().isEmpty ? 'Chien' : 'Chat';
 
     await tester.timedDrag(
-      find.text(first),
+      shownText(first),
       const Offset(200, 0),
       const Duration(seconds: 1),
     );

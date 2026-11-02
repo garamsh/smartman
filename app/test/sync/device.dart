@@ -2,12 +2,12 @@ import 'dart:io';
 
 import 'package:drift/drift.dart' show Value, driftRuntimeOptions;
 import 'package:drift/native.dart';
-import 'package:smartman/account/account.dart';
-import 'package:smartman/database/database.dart';
-import 'package:smartman/deck/deck.dart';
-import 'package:smartman/media/media.dart';
-import 'package:smartman/study/study.dart';
-import 'package:smartman/sync/sync.dart';
+import 'package:knowno/account/account.dart';
+import 'package:knowno/database/database.dart';
+import 'package:knowno/deck/deck.dart';
+import 'package:knowno/media/media.dart';
+import 'package:knowno/study/study.dart';
+import 'package:knowno/sync/sync.dart';
 import 'package:uuid/uuid.dart';
 
 import '../media/fakes.dart';

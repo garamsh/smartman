@@ -3,6 +3,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../design/app_button.dart';
 import '../../design/app_list_row.dart';
+import '../../design/mascot.dart';
 import '../../design/theme.dart';
 import '../../design/word_break.dart';
 import '../../l10n/app_localizations.dart';
@@ -11,11 +12,13 @@ import 'failure_message.dart';
 import 'import_job.dart';
 import 'photo_viewer.dart';
 
-/// Several photos being read: "사진 n장 중 k장 읽음" over a bar of the same k, and
-/// one row per photo with its thumbnail and state. A photo that failed says
+/// Several photos being read: "사진 n장 중 k장 읽음", beside the thinking mascot
+/// while no row shows a failure's red, over a bar of the same k, and one row
+/// per photo with its thumbnail and state. A photo that failed says
 /// why, with a retry where sending it again can help and a way to leave it
-/// out. [note] says when today's limit left photos out; the privacy note and
-/// a cancel close the screen.
+/// out, and while any can be sent again, one action at the bottom that sends
+/// them all. [note] says when today's limit left photos out; the privacy note
+/// and a cancel close the screen.
 class ReadingView extends StatelessWidget {
   const ReadingView({
     super.key,
@@ -41,6 +44,12 @@ class ReadingView extends StatelessWidget {
     final images = [for (final photo in jobs) job.imageOf(photo)];
     final read = jobs.where((photo) => photo.state is PhotoRead).length;
     final failed = jobs.where((photo) => photo.state is PhotoFailed).length;
+    final retryable = jobs.any(
+      (photo) => switch (photo.state) {
+        PhotoFailed(:final failure) => isRetryable(failure),
+        _ => false,
+      },
+    );
     final busy = jobs.any(
       (photo) => photo.state is PhotoReading || photo.state is PhotoWaiting,
     );
@@ -72,10 +81,22 @@ class ReadingView extends StatelessWidget {
             AppSpace.s16,
           ),
           children: [
-            Semantics(
-              header: true,
-              liveRegion: true,
-              child: Text(title, style: AppType.title),
+            Row(
+              spacing: AppSpace.s16,
+              children: [
+                Expanded(
+                  child: Semantics(
+                    header: true,
+                    liveRegion: true,
+                    child: Text(title, style: AppType.title),
+                  ),
+                ),
+                if (busy && failed == 0)
+                  const Mascot(
+                    expression: MascotExpression.thinking,
+                    size: AppSize.mascotGuide,
+                  ),
+              ],
             ),
             const SizedBox(height: AppSpace.s16),
             ExcludeSemantics(
@@ -119,11 +140,27 @@ class ReadingView extends StatelessWidget {
             AppSpace.gutter,
             AppSpace.s16,
           ),
-          child: AppButton(
-            label: l10n.cancel,
-            variant: AppButtonVariant.secondary,
-            size: AppButtonSize.cta,
-            onPressed: onCancel,
+          child: Row(
+            spacing: AppSpace.s12,
+            children: [
+              Expanded(
+                child: AppButton(
+                  label: l10n.cancel,
+                  variant: AppButtonVariant.secondary,
+                  size: AppButtonSize.cta,
+                  onPressed: onCancel,
+                ),
+              ),
+              if (retryable)
+                Expanded(
+                  flex: 2,
+                  child: AppButton(
+                    label: l10n.retryFailedPhotos,
+                    size: AppButtonSize.cta,
+                    onPressed: job.retryFailed,
+                  ),
+                ),
+            ],
           ),
         ),
       ),

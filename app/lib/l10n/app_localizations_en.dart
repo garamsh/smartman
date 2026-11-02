@@ -10,7 +10,7 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
-  String get appTitle => 'smartman';
+  String get appTitle => 'knowno';
 
   @override
   String get newDeck => 'New deck';
@@ -111,7 +111,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deckNameRequired => 'Enter a name';
 
   @override
-  String get noCards => 'No cards yet. Add a card to start.';
+  String get noCards => 'No cards yet';
 
   @override
   String get newCard => 'Add card';
@@ -161,25 +161,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clozeBlankMarker => 'Remove ___ from the line';
 
   @override
-  String get addToFront => 'Add to front';
-
-  @override
-  String get addToBack => 'Add to back';
-
-  @override
-  String get addBlock => 'Add';
+  String get addBlock => 'Add block';
 
   @override
   String get blockText => 'Text';
 
   @override
-  String get blockTextDescription => 'A word, a sentence or a note';
+  String get blockSenses => 'Word';
 
   @override
-  String get blockSenses => 'Meanings';
-
-  @override
-  String get blockSensesDescription => 'Write labels and one or more meanings';
+  String get blockSensesDescription => 'A word and its meanings';
 
   @override
   String get blockTable => 'Table';
@@ -307,15 +298,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get autoplayAudio => 'Play front sound automatically';
 
   @override
-  String blockMenu(String side, int number) {
-    return '$side block $number menu';
+  String blockMenu(int number) {
+    return 'Block $number menu';
   }
 
   @override
-  String get deleteBlock => 'Delete';
+  String get cardNothingBefore => 'Add something to show on the front';
 
   @override
-  String get sideBlockRequired => 'Add at least one block';
+  String get cardNothingAdded => 'Add a back or a blank';
+
+  @override
+  String get wordTerm => 'Word';
+
+  @override
+  String get wordAskFirst => 'Shown on the front';
+
+  @override
+  String get deleteBlock => 'Delete';
 
   @override
   String get tableToolbar => 'Table tools';
@@ -390,14 +390,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get previewTapToFront => 'Tap again to go back to the front';
 
   @override
-  String get previewTapToReveal => 'Tap the card to fill in its blanks';
+  String get previewTapToReveal => 'Tap the card to see the answer';
 
   @override
   String get previewTapToHide => 'Tap again to empty its blanks';
-
-  @override
-  String get clozeBackHint =>
-      'A card with blanks is answered on its front. Its back can stay empty.';
 
   @override
   String get senseLabelHint => 'Label';
@@ -574,12 +570,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String currentCardSemantics(String front) {
     return 'Front: $front';
   }
-
-  @override
-  String get showBack => 'show the back';
-
-  @override
-  String get hideBack => 'hide the back';
 
   @override
   String previousCardSemantics(
@@ -1012,6 +1002,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get retry => 'Try again';
 
   @override
+  String get retryFailedPhotos => 'Retry failed photos';
+
+  @override
   String get extractionOffline =>
       'You\'re offline. Check your connection and try again.';
 
@@ -1259,20 +1252,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noCardsTitle => 'Make your first card?';
 
   @override
-  String get noCardsBody => 'Add cards to a deck to start.';
-
-  @override
-  String get openDeck => 'Open deck';
-
-  @override
   String get addCardsInDecks => 'Add cards in a deck';
 
   @override
   String get emptyHomeTitle => 'Shall we make your first deck?';
-
-  @override
-  String get emptyHomeBody =>
-      'Take a photo of a vocabulary page and we\'ll make the cards for you. You can also type them in.';
 
   @override
   String get createManually => 'Enter by hand';
@@ -1915,4 +1898,129 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get keepWriting => 'Keep writing';
+
+  @override
+  String get spreadsheetPick => 'Choose a file';
+
+  @override
+  String get spreadsheetPickBody =>
+      'Turn the rows of an Excel or CSV file into cards';
+
+  @override
+  String get spreadsheetStartTitle => 'Add cards from a file';
+
+  @override
+  String get spreadsheetStartBody =>
+      'Each row of an Excel (.xlsx) or CSV file becomes a card. Files up to 5 MB and 1,000 rows are read.';
+
+  @override
+  String get spreadsheetChoose => 'Choose file';
+
+  @override
+  String get spreadsheetReading => 'Reading';
+
+  @override
+  String get spreadsheetAnother => 'Another file';
+
+  @override
+  String get spreadsheetReviewTitle => 'Review cards';
+
+  @override
+  String get spreadsheetColumns => 'Columns';
+
+  @override
+  String get spreadsheetSheet => 'Sheet';
+
+  @override
+  String get spreadsheetLabelColumn => 'Label';
+
+  @override
+  String get spreadsheetExampleColumn => 'Example';
+
+  @override
+  String get spreadsheetNoColumn => 'None';
+
+  @override
+  String get spreadsheetHeaderRow => 'First row is a header';
+
+  @override
+  String get spreadsheetDistinct => 'Choose a different column for each field';
+
+  @override
+  String get spreadsheetExcludeAll => 'Leave all out';
+
+  @override
+  String get spreadsheetSelectAll => 'Select all';
+
+  @override
+  String spreadsheetRow(int row) {
+    return 'Row $row';
+  }
+
+  @override
+  String spreadsheetRowCard(int row, String front) {
+    return 'Row $row $front';
+  }
+
+  @override
+  String spreadsheetSkipped(int count) {
+    return '$count rows with an empty front or back are skipped';
+  }
+
+  @override
+  String spreadsheetTooLong(String rows, int limit) {
+    return '$rows left out: a cell is over $limit characters';
+  }
+
+  @override
+  String spreadsheetRowsMore(String rows, int count) {
+    return '$rows and $count more';
+  }
+
+  @override
+  String spreadsheetDuplicateStored(int row) {
+    return 'Row $row is already in this deck';
+  }
+
+  @override
+  String spreadsheetDuplicateRow(int row, int earlier) {
+    return 'Row $row has the same front as row $earlier';
+  }
+
+  @override
+  String spreadsheetLeaveOut(int row) {
+    return 'Leave out row $row';
+  }
+
+  @override
+  String get spreadsheetAddAnyway => 'Add anyway';
+
+  @override
+  String get spreadsheetDiscardTitle => 'Discard the cards read?';
+
+  @override
+  String get spreadsheetDiscardBody => 'Unsaved cards will be lost.';
+
+  @override
+  String get spreadsheetWrongType => 'Choose an .xlsx or .csv file';
+
+  @override
+  String get spreadsheetTooLarge =>
+      'The file is over 5 MB. Split it and choose it again.';
+
+  @override
+  String get spreadsheetNotUtf8 =>
+      'The CSV could not be read. Save it as UTF-8 CSV and choose it again.';
+
+  @override
+  String get spreadsheetUnreadable =>
+      'The file could not be read. Save it again in Excel and choose it.';
+
+  @override
+  String get spreadsheetTooManyRows =>
+      'The file has over 1,000 rows. Split it and choose it again.';
+
+  @override
+  String get spreadsheetNotRead =>
+      'The file could not be read. Choose it again.';
 }

@@ -3,17 +3,17 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/database/database.dart';
-import 'package:smartman/deck/deck.dart';
-import 'package:smartman/design/theme.dart';
-import 'package:smartman/l10n/app_localizations.dart';
-import 'package:smartman/l10n/app_localizations_en.dart';
-import 'package:smartman/study/src/failure.dart';
-import 'package:smartman/study/src/rust/api/engine.dart'
+import 'package:knowno/database/database.dart';
+import 'package:knowno/deck/deck.dart';
+import 'package:knowno/design/theme.dart';
+import 'package:knowno/l10n/app_localizations.dart';
+import 'package:knowno/l10n/app_localizations_en.dart';
+import 'package:knowno/study/src/failure.dart';
+import 'package:knowno/study/src/rust/api/engine.dart'
     show EngineError, Quantity;
-import 'package:smartman/study/src/stats.dart' show StatsPeriod;
-import 'package:smartman/study/src/stats_style.dart';
-import 'package:smartman/study/study.dart';
+import 'package:knowno/study/src/stats.dart' show StatsPeriod;
+import 'package:knowno/study/src/stats_style.dart';
+import 'package:knowno/study/study.dart';
 
 import '../contrast.dart';
 import '../word_breaks.dart';
@@ -532,15 +532,17 @@ void main() {
     ('dark', AppColors.dark, Brightness.dark),
   ]) {
     test(
-      '$name: each recall band and the quiet week are 3:1 on the surface, and the bands and the heatmap levels differ in lightness by 1.5:1',
+      '$name: the ink recall bands and the quiet week are 3:1 on the surface, and the bands and the heatmap levels differ in lightness by 1.5:1',
       () {
         final surface = colors.surface;
         final (strong, fair, fading) = StatsStyle.bands(colors, brightness);
         final bands = [
           for (final band in [strong, fair, fading]) _over(band, surface),
         ];
+        // The coral band is 2.67:1 on the light surface; its count in words
+        // carries it (ADR 0145).
         for (final mark in [
-          ...bands,
+          ...bands.take(2),
           _over(AppColors.quiet(colors.ink), surface),
         ]) {
           expect(

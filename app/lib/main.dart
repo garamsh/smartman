@@ -181,14 +181,14 @@ Widget composeApp(
       themeStorageProvider.overrideWithValue(preferences),
       deckStorageProvider.overrideWithValue(preferences),
     ],
-    child: const SmartmanApp(),
+    child: const KnownoApp(),
   );
 }
 
 /// The application root, opening on the account gate in the theme the user
 /// chose, every route closing the keyboard as [KeyboardDismissal] says.
-class SmartmanApp extends ConsumerWidget {
-  const SmartmanApp({super.key});
+class KnownoApp extends ConsumerWidget {
+  const KnownoApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

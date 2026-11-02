@@ -2,8 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/design/app_button.dart';
-import 'package:smartman/design/theme.dart';
+import 'package:knowno/design/app_button.dart';
+import 'package:knowno/design/theme.dart';
 
 import '../contrast.dart';
 import 'harness.dart';
@@ -42,9 +42,9 @@ void main() {
           themeMode: mode,
         );
 
-        expect(_fill(tester, 'primary'), colors.ink);
+        expect(_fill(tester, 'primary'), colors.primary);
         expect(_fill(tester, 'onHero'), colors.onHero);
-        // The primary fill inverts in the dark theme, and its label with it.
+        // The coral fill holds its cocoa label in both themes.
         expect(
           tester
               .widget<DefaultTextStyle>(

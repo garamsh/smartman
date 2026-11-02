@@ -1,4 +1,4 @@
-import type { Deck, DeckId } from "./library";
+import type { Deck } from "./library";
 
 /**
  * The deck palette's colours by the key a deck stores, in the app's order (`DeckColor` in
@@ -19,26 +19,15 @@ export type DeckColor = keyof typeof deckFills;
 /** The palette's colours, in the app's order. */
 export const deckColors = Object.keys(deckFills) as DeckColor[];
 
-/**
- * Which colour a deck takes while it holds none this version knows: the sum of its id's UTF-16
- * code units, modulo the palette's six. The app computes the same (`deckTintIndex(id, 6)` in
- * app/lib/deck/src/deck_row.dart).
- */
-export function deckTintIndex(deck: DeckId): number {
-  let sum = 0;
-  for (let i = 0; i < deck.length; i++) sum += deck.charCodeAt(i);
-  return sum % deckColors.length;
-}
-
-/** The colour [deck]'s tile takes: the one it stores, or, for none or a key this version does not know, the one its id selects. */
-export function deckColor(deck: Deck): DeckColor {
+/** The colour [deck]'s tile takes: the one it stores, or none for no key this version knows. */
+export function deckColor(deck: Deck): DeckColor | undefined {
   const stored = deck.color;
-  if (stored !== undefined && Object.hasOwn(deckFills, stored)) return stored as DeckColor;
-  // The index is always in range, so the fallback never runs.
-  return deckColors[deckTintIndex(deck.id)] ?? "blue";
+  return stored !== undefined && Object.hasOwn(deckFills, stored)
+    ? (stored as DeckColor)
+    : undefined;
 }
 
-/** The theme colour utility of [color]. */
-export function deckFill(color: DeckColor): string {
-  return deckFills[color];
+/** The theme colour utility of [color], or the brand tint with none chosen (ADR 0145). */
+export function deckFill(color: DeckColor | undefined): string {
+  return color ? deckFills[color] : "bg-brand-tint";
 }

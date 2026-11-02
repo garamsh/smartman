@@ -1,8 +1,8 @@
 import 'dart:async';
 
-import 'package:smartman/account/account.dart';
-import 'package:smartman/deck/deck.dart';
-import 'package:smartman/sharing/sharing.dart';
+import 'package:knowno/account/account.dart';
+import 'package:knowno/deck/deck.dart';
+import 'package:knowno/sharing/sharing.dart';
 
 /// Stands in for the device's network state, online unless given false;
 /// [online] changes it.

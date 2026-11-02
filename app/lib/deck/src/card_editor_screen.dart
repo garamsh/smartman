@@ -6,17 +6,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../design/app_button.dart';
-import '../../design/app_section_label.dart';
 import '../../design/bottom_actions.dart';
 import '../../design/app_sheet.dart';
 import '../../design/theme.dart';
-import '../../design/word_break.dart';
 import '../../l10n/app_localizations.dart';
 import '../../media/media.dart';
 import 'block_list.dart';
+import 'card_frame.dart';
 import 'card_preview.dart';
 import 'card_preview_screen.dart';
-import 'card_template.dart';
 import 'content.dart';
 import 'deck_repository.dart';
 import 'failure_message.dart';
@@ -26,11 +24,11 @@ import 'model.dart';
 import 'providers.dart';
 import 'senses_block.dart';
 
-/// Adds a card to [deck], or edits [card] when one is given. Each side is a
-/// group of blocks under its name, ending in "+ 추가"; "미리보기" opens the
-/// card as study draws it. A new card opens with one empty 글 on each side,
-/// and every card, of whichever template it was made in, opens with all its
-/// blocks in order (ADR 0108, ADR 0114, ADR 0117).
+/// Adds a card to [deck], or edits [card] when one is given. The card is a
+/// column of groups, one per 칸, ending in "+ 칸 추가"; "미리보기" opens the
+/// card as study draws it. A new card opens with one empty 글, and every card,
+/// of whichever template it was made in, opens as its 칸 in order and is
+/// written in the frame (ADR 0114, ADR 0117, ADR 0137).
 class CardEditorScreen extends ConsumerStatefulWidget {
   const CardEditorScreen({super.key, required this.deck, this.card});
 
@@ -48,25 +46,20 @@ enum _DuplicateChoice { saveAnyway, openExisting }
 enum _AfterSave { close, next }
 
 class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
-  /// The card's blocks on each side, or one empty 글 on each of a new card.
-  late final _front = switch (widget.card) {
-    final card? => [for (final block in card.front) BlockDraft.of(block)],
-    null => <BlockDraft>[TextBlockDraft()],
+  /// The 칸 the card opens as: null for a card of a template or version this
+  /// build does not know or holding a side block it cannot read, which the
+  /// editor shows read-only and never writes (ADR 0106).
+  late final _opened = switch (widget.card) {
+    final card? => cellsOf(card),
+    null => const <Cell>[TextCell()],
   };
-  late final _back = switch (widget.card) {
-    final card? => [for (final block in card.back) BlockDraft.of(block)],
-    null => <BlockDraft>[TextBlockDraft()],
-  };
+
+  /// The card's 칸.
+  late final _blocks = [
+    for (final cell in _opened ?? const <Cell>[]) BlockDraft.of(cell),
+  ];
 
   bool _showRequired = false;
-
-  /// Whether the card records a template, or a template version, this build
-  /// does not know, so the editor shows it read-only and never writes it
-  /// (ADR 0106).
-  late final bool _readOnly = switch (widget.card) {
-    final card? => !canEdit(card),
-    null => false,
-  };
 
   bool get _isNew => widget.card == null;
 
@@ -85,11 +78,11 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
 
   void _focusChanged() => setState(() {});
 
-  /// Puts the focus in the front's first block once it is built, where a new
-  /// card is typed first, while that block is a 글.
+  /// Puts the focus in the first 칸's 앞면 once it is built, where a new card
+  /// is typed first, while that 칸 is a 글.
   void _focusFront() => WidgetsBinding.instance.addPostFrameCallback((_) {
     if (!mounted) return;
-    if (_front.firstOrNull case final TextBlockDraft first) {
+    if (_blocks.firstOrNull case final TextBlockDraft first) {
       first.focus.requestFocus();
     }
   });
@@ -118,7 +111,7 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
   @override
   void dispose() {
     FocusManager.instance.removeListener(_focusChanged);
-    for (final block in [..._front, ..._back]) {
+    for (final block in _blocks) {
       block.dispose();
     }
     // Photos and sounds stored here that no saved card holds, the card left
@@ -152,64 +145,46 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
     _picked.clear();
   }
 
-  /// Whether each side holds what it must, and every block can be saved.
-  bool get _isComplete =>
-      _sideRequired(CardSide.front) == null &&
-      _sideRequired(CardSide.back) == null &&
-      [..._saved(_front), ..._saved(_back)].every((block) => block.isComplete);
+  /// The 칸 as saved: each as its type writes it, but for one holding nothing
+  /// to save, such as a 글 left empty.
+  List<Cell> get _cells => [for (final block in _blocks) ?block.cell];
 
-  /// Why [side] cannot be saved: it holds no block to save, the front always
-  /// and the back unless the card is studied on one face; null once it can.
-  String? _sideRequired(CardSide side) {
-    final l10n = AppLocalizations.of(context);
-    return switch (side) {
-      CardSide.front when _saved(_front).isEmpty => l10n.sideBlockRequired,
-      CardSide.back
-          when _saved(_back).isEmpty &&
-              oneFaceOf(_frontBlocks, _backBlocks) == null =>
-        l10n.sideBlockRequired,
-      _ => null,
-    };
-  }
+  /// Whether every block can be saved, so the card as a whole is what is left
+  /// to refuse.
+  bool get _blocksComplete => _blocks.every((block) => block.isComplete);
 
-  /// The blocks of [side] that are saved: all but a 글 left empty, which
-  /// is dropped, so a new card's untouched back holds nothing.
-  List<BlockDraft> _saved(List<BlockDraft> side) => [
-    for (final block in side)
-      if (block is! TextBlockDraft || !block.isEmpty) block,
-  ];
-
-  /// The front as saved: each block as its type writes it.
-  List<Content> get _frontBlocks => [
-    for (final block in _saved(_front)) block.content,
-  ];
-
-  /// The back as saved: each block as its type writes it.
-  List<Content> get _backBlocks => [
-    for (final block in _saved(_back)) block.content,
-  ];
+  /// Why the card as a whole cannot be saved, null once it can; [_cells] holds
+  /// no empty 글, so what shows nothing before the reveal says so.
+  String? _cardProblem(AppLocalizations l10n) => switch (frameProblem(_cells)) {
+    FrameProblem.emptyText ||
+    FrameProblem.nothingBefore => l10n.cardNothingBefore,
+    FrameProblem.nothingAdded => l10n.cardNothingAdded,
+    null => null,
+  };
 
   Future<void> _save(_AfterSave after, {bool allowDuplicate = false}) async {
-    if (!_isComplete) {
+    if (!_blocksComplete || frameProblem(_cells) != null) {
       setState(() => _showRequired = true);
       return;
     }
     final repository = ref.read(deckRepositoryProvider);
     final card = widget.card;
-    final front = _frontBlocks;
-    final back = _backBlocks;
+    final cells = _cells;
+    final (:front, :back) = sidesOf(cells);
     await reportingFailure(context, () async {
       final result = card == null
           ? await repository.addCard(
               widget.deck.id,
               front: front,
               back: back,
+              cells: cells,
               allowDuplicate: allowDuplicate,
             )
           : await repository.editCard(
               card,
               front: front,
               back: back,
+              cells: cells,
               allowDuplicate: allowDuplicate,
             );
       if (result is CardSaved) {
@@ -222,14 +197,12 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
           Navigator.of(context).pop();
         case (CardSaved(), _AfterSave.next):
           setState(() {
-            for (final side in [_front, _back]) {
-              for (final block in side) {
-                block.dispose();
-              }
-              side
-                ..clear()
-                ..add(TextBlockDraft());
+            for (final block in _blocks) {
+              block.dispose();
             }
+            _blocks
+              ..clear()
+              ..add(TextBlockDraft());
             _showRequired = false;
             _edited = false;
           });
@@ -277,46 +250,21 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
     });
   }
 
-  /// The 뜻 목록 sense whose label field has focus.
+  /// The 단어 sense whose label field has focus.
   SenseDraft? _focusedSense() => [
-    for (final block in [..._front, ..._back])
+    for (final block in _blocks)
       if (block case SensesBlockDraft(:final senses)) ...senses,
   ].where((sense) => sense.labelFocus.hasFocus).firstOrNull;
 
-  /// The blocks of [side] in its group, ending in "+ 추가".
-  Widget _blockList(CardSide side) => BlockList(
-    side: side,
-    blocks: switch (side) {
-      CardSide.front => _front,
-      CardSide.back => _back,
-    },
-    showErrors: _showRequired,
-    emptyError: _showRequired ? _sideRequired(side) : null,
-    onChanged: _change,
-    onMediaStored: _mediaStored,
-  );
-
-  /// Each side as study will draw it, empty blanks and incomplete blocks
-  /// included.
-  List<Content> get _frontPreview => [
-    for (final block in _front) block.preview,
-  ];
-  List<Content> get _backPreview => [for (final block in _back) block.preview];
-
-  /// Whether the back holds nothing to save while the card holds a blank,
-  /// so the card is answered on its front and the back may stay empty.
-  bool get _backMayStayEmpty =>
-      _saved(_back).isEmpty && oneFaceOf(_frontPreview, _backPreview) != null;
-
   /// Opens the card as study draws it.
   void _openPreview() {
-    final front = _frontPreview;
-    final back = _backPreview;
+    // As the editor holds them, empty blanks and incomplete blocks included.
+    final cells = [for (final block in _blocks) ?block.preview];
     FocusManager.instance.primaryFocus?.unfocus();
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         fullscreenDialog: true,
-        builder: (_) => CardPreviewScreen(front: front, back: back),
+        builder: (_) => CardPreviewScreen(cells: cells),
       ),
     );
   }
@@ -326,7 +274,7 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
     final card = widget.card;
-    if (card != null && _readOnly) {
+    if (card != null && _opened == null) {
       return _ReadOnlyCard(card: card, onDelete: _delete);
     }
     return PopScope(
@@ -376,25 +324,15 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
                       ),
                     ),
                     const SizedBox(height: AppSpace.s20),
-                    AppSectionLabel(l10n.cardFront),
-                    _blockList(CardSide.front),
-                    const SizedBox(height: AppSpace.sectionGap),
-                    AppSectionLabel(l10n.cardBack),
-                    _blockList(CardSide.back),
-                    if (_backMayStayEmpty)
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(
-                          AppSpace.s4,
-                          AppSpace.s8,
-                          AppSpace.s4,
-                          0,
-                        ),
-                        child: Text(
-                          keepWords(l10n.clozeBackHint),
-                          semanticsLabel: l10n.clozeBackHint,
-                          style: AppType.caption.copyWith(color: colors.muted),
-                        ),
-                      ),
+                    BlockList(
+                      blocks: _blocks,
+                      showErrors: _showRequired,
+                      error: _showRequired && _blocksComplete
+                          ? _cardProblem(l10n)
+                          : null,
+                      onChanged: _change,
+                      onMediaStored: _mediaStored,
+                    ),
                     if (card != null) ...[
                       const SizedBox(height: AppSpace.sectionGap),
                       Align(

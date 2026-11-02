@@ -7,14 +7,19 @@ import 'package:image/image.dart' as img;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
-import 'package:smartman/deck/deck.dart'
+import 'package:knowno/deck/deck.dart'
     show CardSense, OtherLabel, PartOfSpeech, PartOfSpeechLabel;
-import 'package:smartman/design/theme_choice.dart';
-import 'package:smartman/photo_import/photo_import.dart';
-import 'package:smartman/photo_import/src/photo.dart';
+import 'package:knowno/design/theme_choice.dart';
+import 'package:knowno/photo_import/photo_import.dart';
+import 'package:knowno/photo_import/src/photo.dart';
 
 /// A small prepared photo.
 final testPhoto = downscalePhoto(img.encodePng(img.Image(width: 8, height: 6)));
+
+/// A small prepared photo [width] wide, which a call's photo is told apart
+/// by.
+JpegPhoto photoOfWidth(int width) =>
+    downscalePhoto(img.encodePng(img.Image(width: width, height: 6)));
 
 /// A system camera and a library that hand over [testPhoto], or fail as
 /// told, and a settings page that opens as told.
@@ -90,11 +95,18 @@ final class FakePhotoSource implements PhotoSource {
 
 /// One extraction the test answers.
 final class PendingExtraction {
-  PendingExtraction(this.photo, this.cancel);
+  PendingExtraction(this.photo, this.cancel, this.cursor);
 
   final JpegPhoto photo;
   final Future<void> cancel;
+
+  /// The cursor the call read on from; null for a first read.
+  final String? cursor;
+
   final answer = Completer<List<CandidateCard>?>();
+
+  /// The cursor the answer carries, to read the page on from.
+  String? nextCursor;
 
   bool cancelled = false;
 }
@@ -113,15 +125,22 @@ final class FakeExtractionClient implements ExtractionClient {
   Iterable<PendingExtraction> get open =>
       calls.where((call) => !call.answer.isCompleted && !call.cancelled);
 
+  /// The calls the function counts against the user's limit: those without
+  /// a cursor (ADR 0138).
+  int get usages => calls.where((call) => call.cursor == null).length;
+
   @override
-  Future<List<CandidateCard>?> extract(
+  Future<Extracted?> extract(
     JpegPhoto photo, {
+    String? cursor,
     required Future<void> cancel,
   }) {
-    final call = PendingExtraction(photo, cancel);
+    final call = PendingExtraction(photo, cancel, cursor);
     calls.add(call);
     unawaited(cancel.then((_) => call.cancelled = true));
-    return call.answer.future;
+    return call.answer.future.then(
+      (cards) => cards == null ? null : (cards: cards, cursor: call.nextCursor),
+    );
   }
 
   /// Answers the last call with vocabulary cards of one sense, front →
@@ -131,9 +150,12 @@ final class FakeExtractionClient implements ExtractionClient {
       word(front: front, meaning: meaning),
   ]);
 
-  /// Answers the last call with [cards].
-  void answerCards(List<CandidateCard> cards) =>
-      calls.last.answer.complete(cards);
+  /// Answers the last call with [cards], and a [cursor] to read on from when
+  /// the page was left unread past them.
+  void answerCards(List<CandidateCard> cards, {String? cursor}) {
+    calls.last.nextCursor = cursor;
+    calls.last.answer.complete(cards);
+  }
 
   /// Answers the last call with [failure].
   void fail(PhotoImportFailure failure) =>

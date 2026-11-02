@@ -2,8 +2,13 @@ import 'dart:convert';
 import 'dart:ui' show Rect, Size;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/deck/src/content.dart';
-import 'package:smartman/media/media.dart';
+import 'package:knowno/deck/src/content.dart';
+import 'package:knowno/deck/src/whole_card_view.dart';
+import 'package:knowno/media/media.dart';
+
+/// Whether a card of [front] and [back] is drawn whole.
+bool _whole(List<Content> front, [List<Content> back = const []]) =>
+    isDrawnWhole(cellsToDraw(front, back));
 
 void main() {
   group('content encoding', () {
@@ -133,10 +138,10 @@ void main() {
         plainText([const TextContent('Capitals'), table]),
         'Capitals\nCapital | Country\nParis | France',
       );
-      expect(isWholeCard([cloze]), isTrue);
-      expect(isWholeCard([const TextContent('Capitals'), table]), isTrue);
+      expect(_whole([cloze]), isTrue);
+      expect(_whole([const TextContent('Capitals'), table]), isTrue);
       // Control: text alone, a v6 cloze's "___" included, is split.
-      expect(isWholeCard([const TextContent('___ is in France')]), isFalse);
+      expect(_whole([const TextContent('___ is in France')]), isFalse);
     });
 
     test('round-trips a senses block, each sense with its labels, meaning and examples', () {
@@ -452,37 +457,19 @@ void main() {
     const senses = SensesContent([CardSense(meaning: '파리')]);
     const unknown = UnsupportedContent('video', {'media': 'm1'});
 
-    test('a card with no blank is studied front then back, whatever its '
-        'blocks', () {
+    test('a card with no blank is drawn split, whatever its blocks', () {
       for (final block in <Content>[text, senses, unknown]) {
-        expect(
-          oneFaceOf([block], [text]),
-          isNull,
-          reason: '$block on the front',
-        );
-        expect(
-          oneFaceOf([text], [block]),
-          isNull,
-          reason: '$block on the back',
-        );
+        expect(_whole([block], [text]), isFalse, reason: '$block on the front');
+        expect(_whole([text], [block]), isFalse, reason: '$block on the back');
       }
     });
 
-    test('a cloze or a table on the front makes the front the one face', () {
+    test('a cloze or a table on either side makes the card whole', () {
       for (final block in <Content>[cloze, table]) {
-        expect(oneFaceOf([text, block], [text]), [text, block]);
-        expect(oneFaceOf([block], [block]), [block], reason: 'front first');
-      }
-    });
-
-    test('a cloze or a table on the back alone makes one face of the front '
-        'followed by the back (ADR 0108)', () {
-      for (final block in <Content>[cloze, table]) {
-        expect(oneFaceOf([text], [senses, block]), [text, senses, block]);
-        expect(oneFaceOf(const [], [senses, block]), [
-          senses,
-          block,
-        ], reason: 'an empty front adds nothing');
+        expect(_whole([text, block], [text]), isTrue);
+        expect(_whole([block], [block]), isTrue);
+        expect(_whole([text], [senses, block]), isTrue);
+        expect(_whole(const [], [senses, block]), isTrue);
       }
     });
 
@@ -493,13 +480,11 @@ void main() {
         ImageBox(id: '1', x: 0, y: 0, w: 0.5, h: 0.5),
       ]);
 
-      expect(oneFaceOf([boxed], [text]), [boxed]);
-      expect(oneFaceOf([text], [boxed]), [text, boxed]);
-      expect(isWholeCard([boxed]), isTrue);
-      // Control: the same photo without its box is studied front then back.
-      expect(oneFaceOf([photo], [text]), isNull);
-      expect(oneFaceOf([text], [photo]), isNull);
-      expect(isWholeCard([photo]), isFalse);
+      expect(_whole([boxed], [text]), isTrue);
+      expect(_whole([text], [boxed]), isTrue);
+      // Control: the same photo without its box is drawn split.
+      expect(_whole([photo], [text]), isFalse);
+      expect(_whole([text], [photo]), isFalse);
     });
   });
 
@@ -649,7 +634,7 @@ void main() {
       );
       const image = ImageContent(media: MediaId('m2'), width: 1, height: 1);
 
-      expect(oneFaceOf([audio], const [TextContent('cat')]), isNull);
+      expect(_whole([audio], const [TextContent('cat')]), isFalse);
       expect(mediaOf([const TextContent('a'), audio, image]), {
         const MediaId('m1'),
         const MediaId('m2'),

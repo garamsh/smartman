@@ -1,16 +1,23 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:drift/drift.dart' show driftRuntimeOptions;
+import 'package:drift/native.dart';
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/deck/deck.dart';
-import 'package:smartman/deck/src/block_list.dart';
-import 'package:smartman/deck/src/card_preview.dart';
-import 'package:smartman/deck/src/card_preview_screen.dart';
-import 'package:smartman/design/app_button.dart';
-import 'package:smartman/design/theme.dart';
-import 'package:smartman/design/word_break.dart';
+import 'package:knowno/database/database.dart';
+import 'package:knowno/deck/deck.dart';
+import 'package:knowno/deck/src/card_preview.dart';
+import 'package:knowno/deck/src/card_preview_screen.dart';
+import 'package:knowno/design/app_button.dart';
+import 'package:knowno/design/theme.dart';
+import 'package:knowno/design/word_break.dart';
+import 'package:knowno/media/media.dart';
 
 import '../home/deck_screens.dart';
+import '../media/fakes.dart';
 import '../word_breaks.dart';
 import 'editor.dart';
 
@@ -31,13 +38,10 @@ Future<List<(String, String)>> _stored(DeckScreens screens) async => [
     (plainText(card.front), plainText(card.back)),
 ];
 
-/// Whether the first field of [side]'s blocks has the focus.
-bool _focused(WidgetTester tester, CardSide side) => tester
+/// Whether the first 글's 앞면 has the focus.
+bool _focused(WidgetTester tester) => tester
     .widget<EditableText>(
-      find.descendant(
-        of: blockField(side),
-        matching: find.byType(EditableText),
-      ),
+      find.descendant(of: blockField(), matching: find.byType(EditableText)),
     )
     .focusNode
     .hasFocus;
@@ -61,8 +65,8 @@ void main() {
       expect(find.text('New card'), findsOneWidget);
       expect(find.text('French'), findsOneWidget);
       expect(find.byType(CardPreview), findsNothing);
-      await typeBlock(tester, CardSide.front, 'Chat');
-      await typeBlock(tester, CardSide.back, 'cat');
+      await typeBlock(tester, 'Chat');
+      await typeBlock(tester, 'cat', 1);
 
       await screens.tap(find.text('Preview'));
       expect(find.byType(CardPreviewScreen), findsOneWidget);
@@ -91,8 +95,8 @@ void main() {
     'the preview draws the card at study\'s current card\'s size, centred, with its side above it and its hint below',
     (tester) async {
       final screens = await openNew(tester);
-      await typeBlock(tester, CardSide.front, 'Chat');
-      await typeBlock(tester, CardSide.back, 'cat');
+      await typeBlock(tester, 'Chat');
+      await typeBlock(tester, 'cat', 1);
       await screens.tap(find.text('Preview'));
       final card = tester.getRect(
         find
@@ -142,8 +146,8 @@ void main() {
     'the preview turns the card over in 3D, part way through after 100 ms, and at once when the system asks to reduce motion',
     (tester) async {
       final screens = await openNew(tester);
-      await typeBlock(tester, CardSide.front, 'Chat');
-      await typeBlock(tester, CardSide.back, 'cat');
+      await typeBlock(tester, 'Chat');
+      await typeBlock(tester, 'cat', 1);
       await screens.tap(find.text('Preview'));
       // The card's turn about its vertical axis, from its transform.
       double turn() {
@@ -211,8 +215,8 @@ void main() {
         );
       }
       for (final (front, back) in [('Chat', 'cat'), ('Chien', 'dog')]) {
-        await typeBlock(tester, CardSide.front, front);
-        await typeBlock(tester, CardSide.back, back);
+        await typeBlock(tester, front);
+        await typeBlock(tester, back, 1);
         await tester.tap(find.text('Save and next card'), warnIfMissed: false);
         await tester.pumpAndSettle();
       }
@@ -237,8 +241,8 @@ void main() {
       'with changes, Close and the system back ask first: Keep writing stays with the text, Discard leaves and stores nothing',
       (tester) async {
         final screens = await openNew(tester);
-        await typeBlock(tester, CardSide.front, 'ephemeral');
-        await typeBlock(tester, CardSide.back, '덧없는');
+        await typeBlock(tester, 'ephemeral');
+        await typeBlock(tester, '덧없는', 1);
 
         await screens.tap(find.byTooltip('Close'));
         expect(shownText('Discard this card?'), findsOneWidget);
@@ -266,8 +270,8 @@ void main() {
         expect(find.byType(CardEditorScreen), findsNothing);
 
         await screens.push((deck) => CardEditorScreen(deck: deck));
-        await typeBlock(tester, CardSide.front, 'Chat');
-        await typeBlock(tester, CardSide.back, 'cat');
+        await typeBlock(tester, 'Chat');
+        await typeBlock(tester, 'cat', 1);
         await screens.tap(find.text('Save and next card'));
         await screens.tap(find.byTooltip('Close'));
         expect(find.byType(CardEditorScreen), findsNothing);
@@ -286,7 +290,7 @@ void main() {
                 .popDisposition;
         expect(disposition(), RoutePopDisposition.pop);
 
-        await typeBlock(tester, CardSide.front, 'ephemeral');
+        await typeBlock(tester, 'ephemeral');
         expect(disposition(), RoutePopDisposition.doNotPop);
         await screens.close();
       },
@@ -328,8 +332,8 @@ void main() {
   testWidgets('Save stores the card and closes the editor', (tester) async {
     final screens = await openNew(tester);
 
-    await typeBlock(tester, CardSide.front, 'Chat');
-    await typeBlock(tester, CardSide.back, 'cat');
+    await typeBlock(tester, 'Chat');
+    await typeBlock(tester, 'cat', 1);
     await screens.tap(find.text('Save'));
 
     expect(find.byType(CardEditorScreen), findsNothing);
@@ -341,11 +345,11 @@ void main() {
     'Save and next card stores the card and leaves the editor open and empty, focused on the front',
     (tester) async {
       final screens = await openNew(tester);
-      await typeBlock(tester, CardSide.front, 'Chat');
-      await typeBlock(tester, CardSide.back, 'cat');
+      await typeBlock(tester, 'Chat');
+      await typeBlock(tester, 'cat', 1);
       await tester.showKeyboard(find.widgetWithText(TextField, 'cat'));
       // Control: focus has left the front before the save.
-      expect(_focused(tester, CardSide.front), isFalse);
+      expect(_focused(tester), isFalse);
 
       await screens.tap(find.text('Save and next card'));
 
@@ -353,28 +357,15 @@ void main() {
       expect(await _stored(screens), [('Chat', 'cat')]);
       expect(find.widgetWithText(TextField, 'Chat'), findsNothing);
       expect(find.widgetWithText(TextField, 'cat'), findsNothing);
-      expect(_focused(tester, CardSide.front), isTrue);
+      expect(_focused(tester), isTrue);
 
-      await typeBlock(tester, CardSide.front, 'Chien');
-      await typeBlock(tester, CardSide.back, 'dog');
+      await typeBlock(tester, 'Chien');
+      await typeBlock(tester, 'dog', 1);
       await screens.tap(find.text('Save and next card'));
       expect(await _stored(screens), [('Chat', 'cat'), ('Chien', 'dog')]);
       await screens.close();
     },
   );
-
-  testWidgets('an empty side is refused with a message on its field', (
-    tester,
-  ) async {
-    final screens = await openNew(tester);
-    await typeBlock(tester, CardSide.front, 'Chat');
-
-    await screens.tap(find.text('Save and next card'));
-
-    expect(find.text('Write something'), findsOneWidget);
-    expect(await _stored(screens), isEmpty);
-    await screens.close();
-  });
 
   testWidgets('a saved card gives one light haptic, and a refused save none', (
     tester,
@@ -396,141 +387,164 @@ void main() {
       ),
     );
     final screens = await openNew(tester);
-    await typeBlock(tester, CardSide.front, 'Chat');
+    await typeBlock(tester, 'Chat');
     await screens.tap(find.text('Save and next card'));
-    expect(find.text('Write something'), findsOneWidget);
+    expect(shownText('Add a back or a blank'), findsOneWidget);
     expect(haptics, isEmpty, reason: 'refused');
 
-    await typeBlock(tester, CardSide.back, 'cat');
+    await typeBlock(tester, 'cat', 1);
     await screens.tap(find.text('Save and next card'));
     expect(await _stored(screens), [('Chat', 'cat')]);
     expect(haptics, ['HapticFeedbackType.lightImpact']);
     await screens.close();
   });
 
-  testWidgets(
-    'a card whose front holds senses opens with them as a Meanings block: saved as it was it keeps them, and an edited meaning stays senses',
-    (tester) async {
-      final screens = await DeckScreens.open(tester);
-      const senses = SensesContent([
-        CardSense(
-          labels: [PartOfSpeechLabel(PartOfSpeech.noun, '명')],
-          meaning: '사과',
-        ),
-      ]);
-      await tester.runAsync(
-        () => screens.repository.addCard(
-          screens.deck.id,
-          front: [senses],
-          back: [const TextContent('apple')],
-        ),
-      );
-      Future<Card> stored() async => (await screens.cards()).single;
+  group('a card of each fixture placement', () {
+    final fixtures = (jsonDecode(
+      File('../supabase/fixtures/card-frame/conversion.json')
+          .readAsStringSync(),
+    ) as List<Object?>).cast<Map<String, Object?>>();
+    List<Content> blocks(Object? stored) => decodeContent(jsonEncode(stored));
 
-      final card = await stored();
-      await screens.push((deck) => CardEditorScreen(deck: deck, card: card));
-      expect(
-        find.descendant(
-          of: blockList(CardSide.front),
-          matching: find.text('Meanings'),
-        ),
-        findsOneWidget,
-      );
-      expect(labelledField(CardSide.front, 'Meaning'), findsOneWidget);
-      // Control: saved as it was, the front keeps its senses block.
-      await tapVisible(screens, find.text('Save'));
-      expect((await stored()).front, [senses]);
-
-      await screens.push((deck) => CardEditorScreen(deck: deck, card: card));
-      await typeInto(
-        tester,
-        labelledField(CardSide.front, 'Meaning'),
-        '사과, 능금',
-      );
-      await tapVisible(screens, find.text('Save'));
-      expect((await stored()).front, const [
-        SensesContent([
-          CardSense(
-            labels: [PartOfSpeechLabel(PartOfSpeech.noun, '명')],
-            meaning: '사과, 능금',
+    test('the fixtures name each placement', () {
+      for (var number = 1; number <= 7; number++) {
+        expect(
+          fixtures.where(
+            (fixture) =>
+                (fixture['name'] as String).contains('placement $number'),
           ),
-        ]),
-      ]);
-      await screens.close();
-    },
-  );
+          isNotEmpty,
+          reason: 'placement $number',
+        );
+      }
+    });
+
+    /// A store whose files no test writes, so a photo is drawn as its fallback.
+    List<Override> media() => [
+      mediaStoreProvider.overrideWithValue(
+        MediaStore(
+          AppDatabase(NativeDatabase.memory()),
+          FakeMediaServer(),
+          directory: unusedMediaDirectory,
+          clock: DateTime.now,
+          newId: () => 'unused',
+        ),
+      ),
+    ];
+
+    bool valid(Map<String, Object?> fixture) =>
+        frameProblem(decodeCells(jsonEncode(fixture['cells']))) == null;
+
+    test('every fixture but the one card with no back is valid', () {
+      expect(
+        [
+          for (final fixture in fixtures)
+            if (fixture['cells'] != null && !valid(fixture)) fixture['name'],
+        ],
+        ['no blank: front senses alone keep their meanings first'],
+      );
+    });
+
+    for (final fixture in fixtures.where(
+      (f) => f['cells'] != null && valid(f),
+    )) {
+      testWidgets('opens, saves and reads back: ${fixture['name']}', (
+        tester,
+      ) async {
+        final screens = await DeckScreens.open(tester, overrides: media());
+        await tester.runAsync(
+          () => screens.repository.addCard(
+            screens.deck.id,
+            front: blocks(fixture['front']),
+            back: blocks(fixture['back']),
+          ),
+        );
+        final card = (await screens.cards()).single;
+        expect(
+          (card.template, card.templateVersion, card.cells),
+          ('free', 1, null),
+          reason: 'the setup stores a card of two side lists',
+        );
+        await screens.push((deck) => CardEditorScreen(deck: deck, card: card));
+        await tapVisible(screens, find.text('Save'));
+        expect(find.byType(CardEditorScreen), findsNothing);
+        final saved = (await screens.cards()).single;
+        expect((saved.template, saved.templateVersion), ('free', 2));
+        expect(saved.cells, decodeCells(jsonEncode(fixture['cells'])));
+        await screens.close();
+      });
+    }
+
+    testWidgets(
+      'a card that fails validity opens and is refused, as it was before the frame, and stays as stored',
+      (tester) async {
+        final fixture = fixtures.singleWhere(
+          (f) => f['cells'] != null && !valid(f),
+        );
+        final screens = await DeckScreens.open(tester);
+        await tester.runAsync(
+          () => screens.repository.addCard(
+            screens.deck.id,
+            front: blocks(fixture['front']),
+            back: blocks(fixture['back']),
+          ),
+        );
+        final card = (await screens.cards()).single;
+        await screens.push((deck) => CardEditorScreen(deck: deck, card: card));
+        await tapVisible(screens, find.text('Save'));
+        expect(shownText('Add a back or a blank'), findsOneWidget);
+        expect((await screens.cards()).single.templateVersion, 1);
+        await screens.close();
+      },
+    );
+
+    for (final fixture in fixtures.where((f) => f['cells'] == null)) {
+      testWidgets('opens read-only: ${fixture['name']}', (tester) async {
+        final screens = await DeckScreens.open(tester);
+        await tester.runAsync(
+          () => screens.repository.addCard(
+            screens.deck.id,
+            front: blocks(fixture['front']),
+            back: blocks(fixture['back']),
+          ),
+        );
+        final card = (await screens.cards()).single;
+        await screens.push((deck) => CardEditorScreen(deck: deck, card: card));
+        expect(find.text('Save'), findsNothing);
+        expect(find.byType(CardPreview), findsOneWidget);
+        await screens.close();
+      });
+    }
+  });
 
   testWidgets(
-    'a card of each earlier template opens with all its blocks listed in order, and saved unchanged is stored byte for byte, as free',
+    'a card of each earlier template opens as its 칸 in order, and saved records the frame',
     (tester) async {
       final screens = await DeckScreens.open(tester);
-      final unknown = decodeContent(
-        '[{"type":"mindmap","v":1,"id":"m","payload":{"nodes":[1,2]}}]',
-      ).single;
-      // Each earlier template's card as its form wrote it, the blocks its
-      // sides show in order, each by its type's name or, for a 글, which
-      // shows none, as "Text:" and its text, and whether study draws it
-      // whole, on the face that holds its blank.
-      final cards = [
-        (
-          'flip',
-          <Content>[const TextContent('apple')],
-          <Content>[
-            const SensesContent([
-              CardSense(
-                labels: [PartOfSpeechLabel(PartOfSpeech.noun, '명')],
-                meaning: '사과',
-                examples: ['An apple a day.'],
-              ),
-            ]),
-            const TextContent('a fruit'),
-            unknown,
-          ],
-          ['Text:apple'],
-          false,
-          [
-            'Meanings',
-            'Text:a fruit',
-            '[Content this version cannot show: mindmap]',
-          ],
-        ),
+      const name = TextContent('Capitals');
+      const table = TableContent(
+        columns: ['Country', 'Capital'],
+        rows: [
+          ['France', 'Paris'],
+        ],
+        blanks: [(row: 0, column: 1)],
+      );
+      for (final (template, front, whole) in <(String, List<Content>, bool)>[
+        ('flip', [const TextContent('apple')], false),
         (
           'cloze',
-          <Content>[
+          [
             const ClozeContent('The ___ is red', ['apple']),
           ],
-          <Content>[const TextContent('The apple is red')],
-          ['Cloze sentence'],
           true,
-          ['Text:The apple is red'],
         ),
-        (
-          'table',
-          <Content>[
-            const TextContent('Capitals'),
-            const TableContent(
-              columns: ['Country', 'Capital'],
-              rows: [
-                ['France', 'Paris'],
-              ],
-              blanks: [(row: 0, column: 1)],
-            ),
-          ],
-          <Content>[
-            const TextContent('Capitals\nCountry Capital\nFrance Paris'),
-          ],
-          ['Text:Capitals', 'Table'],
-          true,
-          ['Text:Capitals\nCountry Capital\nFrance Paris'],
-        ),
-      ];
-      for (final (template, front, back, frontTypes, whole, backTypes)
-          in cards) {
+        ('table', [name, table], true),
+      ]) {
         await tester.runAsync(
           () => screens.repository.addCard(
             screens.deck.id,
             front: front,
-            back: back,
+            back: [const TextContent('a back')],
           ),
         );
         final added = (await screens.cards()).last;
@@ -558,59 +572,107 @@ void main() {
           reason: '$template: the preview draws it as study does',
         );
         await screens.tap(find.byTooltip('Close'));
-        for (final (side, types) in [
-          (CardSide.front, frontTypes),
-          (CardSide.back, backTypes),
-        ]) {
-          final name = side == CardSide.front ? 'Front' : 'Back';
-          expect(
-            [
-              for (var number = 1; number <= types.length; number++)
-                find.byTooltip('$name block $number menu'),
-            ].every((menu) => menu.evaluate().length == 1),
-            isTrue,
-            reason: '$template: a menu for each of ${types.length} blocks',
-          );
-          expect(
-            find.byTooltip('$name block ${types.length + 1} menu'),
-            findsNothing,
-            reason: '$template: no more blocks',
-          );
-          final shown = [
-            for (final type in types)
-              tester
-                  .getTopLeft(
-                    find
-                        .descendant(
-                          of: blockList(side),
-                          matching: type.startsWith('Text:')
-                              ? find.widgetWithText(
-                                  TextField,
-                                  type.substring(5),
-                                )
-                              : find.text(type),
-                        )
-                        .first,
-                  )
-                  .dy,
-          ];
-          expect(
-            shown,
-            [...shown]..sort(),
-            reason: '$template: $name blocks in order, $types',
-          );
-        }
         await tapVisible(screens, find.text('Save'));
         final saved = (await screens.cards()).singleWhere(
           (stored) => stored.id == card.id,
         );
-        expect(
-          (encodeContent(saved.front), encodeContent(saved.back)),
-          (encodeContent(card.front), encodeContent(card.back)),
-          reason: '$template: stored byte for byte',
-        );
-        expect((saved.template, saved.templateVersion), ('free', 1));
+        expect((saved.template, saved.templateVersion), ('free', 2));
+        expect(saved.cells, cellsFromSides(card.front, card.back));
       }
+      await screens.close();
+    },
+  );
+
+  testWidgets(
+    'a card of two side lists holding a block this build cannot read opens read-only, where a framed one keeps the block through a save',
+    (tester) async {
+      final screens = await DeckScreens.open(tester);
+      final unknown =
+          decodeContent(
+                '[{"type":"mindmap","v":1,"id":"m","payload":{"nodes":[1,2]}}]',
+              ).single
+              as UnsupportedContent;
+      await tester.runAsync(
+        () => screens.repository.addCard(
+          screens.deck.id,
+          front: [const TextContent('apple')],
+          back: [unknown],
+        ),
+      );
+      final card = (await screens.cards()).single;
+      await screens.push((deck) => CardEditorScreen(deck: deck, card: card));
+      expect(find.text('Save'), findsNothing);
+      await screens.tap(find.byTooltip('Close'));
+
+      // Control: in the frame the block keeps its place, and a 글 is edited
+      // beside it.
+      final cells = [
+        const TextCell(front: 'pear', back: '배'),
+        UnknownCell(unknown),
+      ];
+      final (:front, :back) = sidesOf(cells);
+      await tester.runAsync(
+        () => screens.repository.addCard(
+          screens.deck.id,
+          front: front,
+          back: back,
+          cells: cells,
+        ),
+      );
+      final framed = (await screens.cards()).firstWhere(
+        (stored) => stored.cells != null,
+      );
+      await screens.push((deck) => CardEditorScreen(deck: deck, card: framed));
+      expect(
+        find.text('[Content this version cannot show: mindmap]'),
+        findsOneWidget,
+      );
+      await typeBlock(tester, '배', 1);
+      await typeBlock(tester, 'pears');
+      await tapVisible(screens, find.text('Save'));
+      final saved = (await screens.cards()).firstWhere(
+        (stored) => stored.id == framed.id,
+      );
+      expect(saved.cells!.first, const TextCell(front: 'pears', back: '배'));
+      expect(
+        encodeContent([(saved.cells!.last as UnknownCell).block]),
+        encodeContent([unknown]),
+        reason: 'kept as it was stored',
+      );
+      await screens.close();
+    },
+  );
+
+  testWidgets(
+    'each 칸 keeps its id through an edit and a move, and a new one takes its own',
+    (tester) async {
+      final screens = await DeckScreens.open(tester);
+      const cells = [
+        TextCell(front: 'a', back: 'b', id: 'first'),
+        TextCell(front: 'c', back: 'd', id: 'second'),
+      ];
+      final (:front, :back) = sidesOf(cells);
+      await tester.runAsync(
+        () => screens.repository.addCard(
+          screens.deck.id,
+          front: front,
+          back: back,
+          cells: cells,
+        ),
+      );
+      final card = (await screens.cards()).single;
+      await screens.push((deck) => CardEditorScreen(deck: deck, card: card));
+      await typeBlock(tester, 'edited');
+      await actOnBlock(screens, 1, 'Move down');
+      await addBlock(screens, 'Text');
+      await typeBlock(tester, 'new', 4);
+      await tapVisible(screens, find.text('Save'));
+      final ids = [
+        for (final cell in (await screens.cards()).single.cells!) cell.id,
+      ];
+      expect(ids.take(2), ['second', 'first']);
+      expect(ids.last, isNotNull);
+      expect(ids.toSet(), hasLength(3));
       await screens.close();
     },
   );
@@ -658,8 +720,8 @@ void main() {
   group('a duplicate front opens the duplicate sheet', () {
     Future<DeckScreens> collide(WidgetTester tester) async {
       final screens = await openNew(tester, cards: {'Chat': 'cat'});
-      await typeBlock(tester, CardSide.front, '  CHAT ');
-      await typeBlock(tester, CardSide.back, 'chat (talk)');
+      await typeBlock(tester, '  CHAT ');
+      await typeBlock(tester, 'chat (talk)', 1);
       await screens.tap(find.text('Save'));
       expect(shownText('This deck already has this card'), findsOneWidget);
       expect(

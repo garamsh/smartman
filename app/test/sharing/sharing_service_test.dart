@@ -2,11 +2,11 @@ import 'dart:io';
 
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/account/account.dart';
-import 'package:smartman/database/database.dart';
-import 'package:smartman/deck/deck.dart';
-import 'package:smartman/media/media.dart';
-import 'package:smartman/sharing/sharing.dart';
+import 'package:knowno/account/account.dart';
+import 'package:knowno/database/database.dart';
+import 'package:knowno/deck/deck.dart';
+import 'package:knowno/media/media.dart';
+import 'package:knowno/sharing/sharing.dart';
 
 import '../media/fakes.dart';
 import 'fakes.dart';
@@ -494,6 +494,85 @@ void main() {
       await sharing.copy(source, CopyIntoDeck(deck.id, DuplicateChoice.addNew));
       expect(await queued(), hasLength(1));
       expect(filesOnDevice(), (await queued()).keys.toSet());
+    });
+
+    group('of a framed card', () {
+      const placed = ImageContent(media: photo, width: 4, height: 4);
+      const voice = AudioContent(media: sound, duration: Duration(seconds: 2));
+      final cells = <Cell>[
+        const TextCell(front: 'name it', back: 'a robin', id: 'text'),
+        BlankCell(placed.withBoxes(const [box]), id: 'boxed'),
+        const PlacedCell(voice, CellSide.back, id: 'voice'),
+      ];
+
+      PublicCard framed(List<Cell> cells) {
+        final sides = sidesOf(cells);
+        return PublicCard(front: sides.front, back: sides.back, cells: cells);
+      }
+
+      setUp(
+        () => server.cards = {
+          source.id: [framed(cells)],
+        },
+      );
+
+      test('a copy keeps the 칸 list and free v2, each photo and sound under '
+          'its new id, and queues them for upload', () async {
+        final copied = await sharing.copy(source, const CopyIntoNewDeck());
+
+        final row = await db.select(db.cards).getSingle();
+        expect(row.template, 'free');
+        expect(row.templateVersion, 2);
+        expect(row.back, '[]');
+        final card = (await decks.listCards(copied.deck.id)).single;
+        final [text, boxed, kept] = card.cells!;
+        expect(text, cells.first);
+        final ownPhoto = (boxed as BlankCell).block as ImageContent;
+        final ownSound = ((kept as PlacedCell).block) as AudioContent;
+        expect(kept.side, CellSide.back);
+        expect(ownPhoto.media, isNot(photo));
+        expect(ownPhoto.boxes.single.answer, 'beak');
+        expect(ownSound.media, isNot(sound));
+        expect(row.front, isNot(contains(photo.value)));
+        expect(row.front, isNot(contains(sound.value)));
+        expect(await queued(), {
+          ownPhoto.media.value: 'image/jpeg',
+          ownSound.media.value: 'audio/mp4',
+        });
+        expect(row.cardKey, frameKey(card.cells!).value);
+      });
+
+      test('a card skipped as a duplicate leaves none of its back\'s files '
+          'queued or on the device', () async {
+        final textOnly = <Cell>[
+          const TextCell(front: 'name it', back: 'a robin'),
+          const PlacedCell(voice, CellSide.back),
+        ];
+        server.cards = {
+          source.id: [framed(textOnly)],
+        };
+        final deck = await decks.createDeck('Mine');
+        await decks.addCard(
+          deck.id,
+          front: const [TextContent('name it')],
+          back: const [TextContent('mine')],
+        );
+
+        final skipped = await sharing.copy(
+          source,
+          CopyIntoDeck(deck.id, DuplicateChoice.skip),
+        );
+
+        expect(skipped.added, 0);
+        expect(await queued(), isEmpty);
+        expect(filesOnDevice(), isEmpty);
+        // Control: the same card added as new stores its file.
+        await sharing.copy(
+          source,
+          CopyIntoDeck(deck.id, DuplicateChoice.addNew),
+        );
+        expect(await queued(), hasLength(1));
+      });
     });
 
     test('a copy whose write fails leaves none of the files it fetched on the '

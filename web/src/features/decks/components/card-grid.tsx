@@ -3,37 +3,39 @@
 import { Search } from "lucide-react";
 import { useId, useState } from "react";
 
-import { describeContent, isWholeCard, spokenContent } from "../card-content";
-import type { Card } from "../library";
+import { describeContent, holdsBlank, spokenCells, spokenContent } from "../card-content";
+import type { Card, Deck } from "../library";
+import { CardEditor } from "./authoring-button";
 import { SideText } from "./side-text";
 import { EmptyDeck } from "./empty-home";
-import { WholeCard } from "./whole-card";
+import { WholeCells } from "./whole-card";
 
 /**
- * A deck's cards as one group of rows under a search that keeps the cards whose drawn faces hold
- * it, ignoring case (ADR 0118): a whole card's front alone, the one face study draws, and
- * otherwise its front and back, so a back study never shows is not searched (ADR 0114). Each row
- * shows its front, and its back muted after it once shown; nothing stands for a hidden back.
- * "뒷면 보기", in a row pinned above the group under the section label "카드", shows or hides
- * every back, starting off each time the page opens. A click on a row sets that card alone apart
- * until the switch next changes. A whole card shows its front with its blanks empty, filled in
- * place where its back shows, and is read the same way.
+ * A deck's cards as one group of rows under a search that keeps the cards whose 칸 hold it,
+ * revealed, ignoring case (ADR 0118, ADR 0137). Each row shows its front, and its back muted
+ * after it once shown; nothing stands for a hidden back. "뒷면 보기", in a row pinned above the
+ * group under the section label "카드", shows or hides every back, starting off each time the
+ * page opens. A click on a row opens the card in the editor, as on the phone (ADR 0143). A whole
+ * card shows its 칸 in place with its blanks empty, revealed in place where its back shows, and
+ * is read the same way.
  */
-export function CardGrid({ cards }: { cards: Card[] }) {
+export function CardGrid({ deck, cards }: { deck: Deck; cards: Card[] }) {
   const [search, setSearch] = useState("");
-  const [all, setAll] = useState(false);
-  const [apart, setApart] = useState<ReadonlySet<string>>(new Set());
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<Card | null>(null);
   const label = useId();
   const rows = cards.map((card) => {
-    const whole = isWholeCard(card.front);
+    const whole = holdsBlank(card.cells);
     return {
       id: card.id,
+      card,
       blocks: card.front,
       backBlocks: card.back,
+      cells: card.cells,
+      front: whole ? spokenCells(card.cells, false) : spokenContent(card.front, false),
       whole,
-      faces: (whole ? [card.front] : [card.front, card.back]).map(describeContent),
-      // A whole card's stored back is never drawn: its front, filled, is read in its place.
-      back: whole ? spokenContent(card.front, true) : describeContent(card.back),
+      faces: [card.front, card.back].map(describeContent),
+      back: whole ? spokenCells(card.cells, true) : describeContent(card.back),
     };
   });
   const needle = search.trim().toLocaleLowerCase();
@@ -72,17 +74,16 @@ export function CardGrid({ cards }: { cards: Card[] }) {
           <button
             type="button"
             role="switch"
-            aria-checked={all}
+            aria-checked={open}
             aria-labelledby={label}
             onClick={() => {
-              setAll(!all);
-              setApart(new Set());
+              setOpen(!open);
             }}
-            className={`pressable relative my-2 h-7 w-12 rounded-full transition-colors before:absolute before:-inset-2 before:content-[''] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${all ? "bg-ink" : "bg-outline"}`}
+            className={`pressable relative my-2 h-7 w-12 rounded-full transition-colors before:absolute before:-inset-2 before:content-[''] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${open ? "bg-ink" : "bg-outline"}`}
           >
             <span
               aria-hidden
-              className={`absolute top-0.5 left-0.5 size-6 rounded-full bg-surface shadow-card transition-transform ${all ? "translate-x-5" : ""}`}
+              className={`absolute top-0.5 left-0.5 size-6 rounded-full bg-surface shadow-card transition-transform ${open ? "translate-x-5" : ""}`}
             />
           </button>
         </span>
@@ -93,45 +94,45 @@ export function CardGrid({ cards }: { cards: Card[] }) {
         </p>
       ) : (
         <ul className="flex flex-col divide-y divide-hairline overflow-hidden rounded-group bg-surface">
-          {shown.map((row) => {
-            const open = all !== apart.has(row.id);
-            return (
-              <li key={row.id} className="flex">
-                <button
-                  type="button"
-                  aria-expanded={open}
-                  aria-label={
-                    open
-                      ? `${spokenContent(row.blocks, false)}, 뒷면 ${row.back}`
-                      : `${spokenContent(row.blocks, false)}, 뒷면 가려짐`
-                  }
-                  onClick={() => {
-                    const next = new Set(apart);
-                    if (next.has(row.id)) next.delete(row.id);
-                    else next.add(row.id);
-                    setApart(next);
-                  }}
-                  className="pressable flex min-h-cta w-full items-center gap-3 px-4 py-3 text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink"
-                >
-                  {row.whole ? (
-                    <WholeCard blocks={row.blocks} revealed={open} inRow />
-                  ) : (
-                    <>
-                      <span className="min-w-0 flex-1 text-body-strong break-words">
-                        <SideText blocks={row.blocks} />
+          {shown.map((row) => (
+            <li key={row.id} className="flex">
+              <button
+                type="button"
+                aria-haspopup="dialog"
+                aria-label={open ? `${row.front}, 뒷면 ${row.back}` : `${row.front}, 뒷면 가려짐`}
+                onClick={() => {
+                  setEditing(row.card);
+                }}
+                className="pressable flex min-h-cta w-full items-center gap-3 px-4 py-3 text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink"
+              >
+                {row.whole ? (
+                  <WholeCells cells={row.cells} revealed={open} inRow />
+                ) : (
+                  <>
+                    <span className="min-w-0 flex-1 text-body-strong break-words">
+                      <SideText blocks={row.blocks} />
+                    </span>
+                    {open && (
+                      <span className="min-w-0 flex-1 text-right text-secondary break-words text-muted">
+                        <SideText blocks={row.backBlocks} />
                       </span>
-                      {open && (
-                        <span className="min-w-0 flex-1 text-right text-secondary break-words text-muted">
-                          <SideText blocks={row.backBlocks} />
-                        </span>
-                      )}
-                    </>
-                  )}
-                </button>
-              </li>
-            );
-          })}
+                    )}
+                  </>
+                )}
+              </button>
+            </li>
+          ))}
         </ul>
+      )}
+      {editing && (
+        <CardEditor
+          key={editing.id}
+          deck={deck}
+          card={editing}
+          close={() => {
+            setEditing(null);
+          }}
+        />
       )}
     </section>
   );

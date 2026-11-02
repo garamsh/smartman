@@ -4,7 +4,7 @@ The scheduling engine: how a card's memory state and next due time are computed 
 
 ## Current decisions
 
-- **Location.** `engine/`, the library crate `smartman_engine`, separate from the Flutter app. The app calls it through the bridge crate in `app/rust/` ([`study.md`](study.md), [ADR 0004](adr/0004-flutter-rust-bridge.md)), and the web app through the WebAssembly crate in `engine-wasm/` (below); both depend on it by path.
+- **Location.** `engine/`, the library crate `knowno_engine`, separate from the Flutter app. The app calls it through the bridge crate in `app/rust/` ([`study.md`](study.md), [ADR 0004](adr/0004-flutter-rust-bridge.md)), and the web app through the WebAssembly crate in `engine-wasm/` (below); both depend on it by path.
 - **Algorithm.** FSRS-6 as py-fsrs v6.3.2 implements it, with its default parameters, desired retention 0.9 and a maximum interval of 36500 days ([ADR 0003](adr/0003-fsrs-engine.md)). The formulas are in `engine/src/fsrs.rs`; no FSRS crate is a dependency.
 - **Pure functions.** The engine reads no clock, does no I/O and stores nothing. The caller passes the time of every review and keeps the history.
   - `review` takes a card's state (none for a new card), a rating, the time and an optional fuzz factor, and returns the new state and the due time.
@@ -30,7 +30,7 @@ The scheduling engine: how a card's memory state and next due time are computed 
 
 ### WebAssembly
 
-- **Crate.** `engine-wasm/`, the crate `smartman_engine_wasm`, built only for `wasm32-unknown-unknown` (`engine-wasm/.cargo/config.toml`) with the Rust release of `engine/rust-toolchain.toml` ([ADR 0018](adr/0018-engine-as-webassembly.md)). It declares its own types, converted to and from the engine's by exhaustive matches, and `engine/` holds no WASM or JS dependency.
+- **Crate.** `engine-wasm/`, the crate `knowno_engine_wasm`, built only for `wasm32-unknown-unknown` (`engine-wasm/.cargo/config.toml`) with the Rust release of `engine/rust-toolchain.toml` ([ADR 0018](adr/0018-engine-as-webassembly.md)). It declares its own types, converted to and from the engine's by exhaustive matches, and `engine/` holds no WASM or JS dependency.
 - **Surface.** `engine-wasm/src/lib.rs` exports the bridge's operations ([`study.md`](study.md)):
   - `reviewNewCard` — a new card's first review, with an optional fuzz factor;
   - `reviewCard` — a review of a card from its persisted state parts, with an optional fuzz factor;

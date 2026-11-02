@@ -5,12 +5,14 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/database/database.dart';
-import 'package:smartman/deck/deck.dart';
-import 'package:smartman/design/app_button.dart';
-import 'package:smartman/design/theme.dart';
-import 'package:smartman/l10n/app_localizations.dart';
-import 'package:smartman/media/media.dart';
+import 'package:knowno/database/database.dart';
+import 'package:knowno/deck/deck.dart';
+import 'package:knowno/deck/src/editor_group.dart';
+import 'package:knowno/design/app_chip.dart';
+import 'package:knowno/design/app_button.dart';
+import 'package:knowno/design/theme.dart';
+import 'package:knowno/l10n/app_localizations.dart';
+import 'package:knowno/media/media.dart';
 
 import '../contrast.dart';
 import '../home/deck_screens.dart';
@@ -190,7 +192,7 @@ void main() {
         await tester.enterText(find.byType(TextField).at(index), text);
       }
       await tester.pump();
-      await tapVisible(tester, find.bySemanticsLabel('Add to front'));
+      await tapVisible(tester, find.bySemanticsLabel('Add block'));
       await tapVisible(tester, find.text('Sound').last);
       return screens;
     }
@@ -221,6 +223,32 @@ void main() {
           (const MediaId('sound0'), const Duration(milliseconds: 3400)),
         );
         expect(await released(tester), isEmpty, reason: 'saved with the card');
+      },
+    );
+
+    testWidgets(
+      'a sound sits on the side its chips choose and is saved there',
+      (tester) async {
+        final screens = await openWithSoundBlock(tester);
+        await tapVisible(tester, find.text('Record'));
+        await tester.pump(const Duration(seconds: 1));
+        await tapVisible(tester, find.text('Stop recording'));
+        await stored(tester);
+        final group = find.ancestor(
+          of: find.text('Sound').first,
+          matching: find.byType(EditorGroup),
+        );
+        Finder side(String name) => find.descendant(
+          of: group,
+          matching: find.widgetWithText(AppChip, name),
+        );
+        expect(tester.widget<AppChip>(side('Front')).selected, isTrue);
+        await tapVisible(tester, side('Back'));
+        await save(tester);
+        final card = (await screens.cards()).single;
+        expect(card.cells!.whereType<PlacedCell>().single.side, CellSide.back);
+        expect(card.back.whereType<AudioContent>(), hasLength(1));
+        expect(card.front.whereType<AudioContent>(), isEmpty);
       },
     );
 
@@ -298,7 +326,7 @@ void main() {
       'while one sound block records, Record is off in every other block, and on again once it has stopped',
       (tester) async {
         await openWithSoundBlock(tester);
-        await tapVisible(tester, find.bySemanticsLabel('Add to front'));
+        await tapVisible(tester, find.bySemanticsLabel('Add block'));
         await tapVisible(tester, find.text('Sound').last);
         final record = find.widgetWithText(AppButton, 'Record');
         bool enabled(int at) =>

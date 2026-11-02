@@ -1,3 +1,4 @@
+import 'card_frame.dart';
 import 'card_key.dart';
 import 'content.dart';
 import 'model.dart';
@@ -31,6 +32,11 @@ final class FromPhoto extends AddSource {
   const FromPhoto();
 }
 
+/// Cards read from a spreadsheet's rows, stored as [CardSource.import].
+final class FromFile extends AddSource {
+  const FromFile();
+}
+
 /// Cards copied from another user's public deck [origin], stored as
 /// [CardSource.copy] with that origin, their photos and sounds copied from
 /// [owner]'s media as the user's own (ADR 0113).
@@ -50,7 +56,7 @@ enum DuplicateChoice {
   skip,
 
   /// Appends the incoming back to the existing card's back on a new line,
-  /// unless a line of that back already holds it.
+  /// unless that back already holds it, as [mergeBack] says.
   mergeBack,
 
   /// Adds the incoming card beside the existing one.
@@ -63,11 +69,30 @@ final class IncomingCard {
   const IncomingCard({
     required this.front,
     required this.back,
+    this.cells,
     required this.onDuplicate,
   });
 
+  /// A card of [cells], its sides their projection.
+  factory IncomingCard.framed(
+    List<Cell> cells, {
+    required DuplicateChoice onDuplicate,
+  }) {
+    final (:front, :back) = sidesOf(cells);
+    return IncomingCard(
+      front: front,
+      back: back,
+      cells: cells,
+      onDuplicate: onDuplicate,
+    );
+  }
+
   final List<Content> front;
   final List<Content> back;
+
+  /// The 칸 of a framed card, written in the frame; [front] and [back] are
+  /// then their projection.
+  final List<Cell>? cells;
   final DuplicateChoice onDuplicate;
 }
 
@@ -84,11 +109,16 @@ final class CardsAdded {
   final int merged;
 }
 
-/// [existing] with [back] appended as a new text block, or null when a line
-/// of [existing] already holds [back] under the card key normalization.
+/// [existing] with [back] appended as a new text block, or null when [back]
+/// is empty, or when under the card key normalization a line of [existing]
+/// holds it or each of its lines is held, as a back of several lines is once
+/// merged.
 List<Content>? mergeBack(List<Content> existing, String back) {
-  final key = CardKey.fromFront(back);
-  final lines = plainText(existing).split('\n').map(CardKey.fromFront);
-  if (lines.contains(key)) return null;
+  if (back.trim().isEmpty) return null;
+  final lines = plainText(existing).split('\n').map(CardKey.fromFront).toSet();
+  if (lines.contains(CardKey.fromFront(back)) ||
+      back.split('\n').map(CardKey.fromFront).every(lines.contains)) {
+    return null;
+  }
   return [...existing, TextContent(back)];
 }

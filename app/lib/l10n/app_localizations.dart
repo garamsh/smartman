@@ -101,7 +101,7 @@ abstract class AppLocalizations {
   /// The app's name, shown by the operating system.
   ///
   /// In ko, this message translates to:
-  /// **'smartman'**
+  /// **'알아몰라'**
   String get appTitle;
 
   /// Title of the new-deck sheet and of the sheet that names a new deck, and the deck choosers' new deck.
@@ -221,7 +221,7 @@ abstract class AppLocalizations {
   /// Shown when a deck has no card.
   ///
   /// In ko, this message translates to:
-  /// **'아직 카드가 없어요. 카드를 추가해 시작해 보세요.'**
+  /// **'아직 카드가 없어요'**
   String get noCards;
 
   /// Bottom-bar button for adding a card, and the title of the sheet of ways to add one.
@@ -314,22 +314,10 @@ abstract class AppLocalizations {
   /// **'줄에서 ___를 빼 주세요'**
   String get clozeBlankMarker;
 
-  /// Title of the sheet of block types the front's add row opens in the card editor, and what a screen reader reads for that row.
+  /// The row after the card editor's last group, after a +, the sheet of 칸 types it opens, and what a screen reader reads for it.
   ///
   /// In ko, this message translates to:
-  /// **'앞면에 추가'**
-  String get addToFront;
-
-  /// Title of the sheet of block types the back's add row opens in the card editor, and what a screen reader reads for that row.
-  ///
-  /// In ko, this message translates to:
-  /// **'뒷면에 추가'**
-  String get addToBack;
-
-  /// The quiet row at the end of each side's group in the card editor, after a +; it opens the sheet of block types.
-  ///
-  /// In ko, this message translates to:
-  /// **'추가'**
+  /// **'칸 추가'**
   String get addBlock;
 
   /// A text block's type, in the add sheet and over the block in the card editor.
@@ -338,22 +326,16 @@ abstract class AppLocalizations {
   /// **'글'**
   String get blockText;
 
-  /// The hint of a 글 block's field in the card editor.
+  /// A 단어 칸's type, in the add sheet and over its group in the card editor.
   ///
   /// In ko, this message translates to:
-  /// **'단어, 문장, 설명'**
-  String get blockTextDescription;
-
-  /// A senses block's type, in the add sheet and over the block in the card editor.
-  ///
-  /// In ko, this message translates to:
-  /// **'뜻 목록'**
+  /// **'단어'**
   String get blockSenses;
 
-  /// The line under 뜻 목록 in the add sheet.
+  /// The line under 단어 in the add sheet.
   ///
   /// In ko, this message translates to:
-  /// **'라벨과 뜻을 여러 개 적어요'**
+  /// **'단어와 뜻을 함께 적어요'**
   String get blockSensesDescription;
 
   /// A table block's type, in the add sheet and over the block in the card editor.
@@ -365,7 +347,7 @@ abstract class AppLocalizations {
   /// The line under 표 in the add sheet.
   ///
   /// In ko, this message translates to:
-  /// **'칸을 골라 가려요'**
+  /// **'가릴 부분을 골라요'**
   String get blockTableDescription;
 
   /// A cloze block's type, in the add sheet and over the block in the card editor.
@@ -590,23 +572,41 @@ abstract class AppLocalizations {
   /// **'앞면 소리 자동 재생'**
   String get autoplayAudio;
 
-  /// Screen-reader name of a block's menu in the card editor, which moves it up or down or deletes it.
+  /// Screen-reader name of a 칸's menu in the card editor, which moves it up or down or deletes it.
   ///
   /// In ko, this message translates to:
-  /// **'{side} {number}번째 블록 메뉴'**
-  String blockMenu(String side, int number);
+  /// **'{number}번째 칸 메뉴'**
+  String blockMenu(int number);
+
+  /// Error under the card editor's column on save when the card shows nothing before the reveal.
+  ///
+  /// In ko, this message translates to:
+  /// **'앞면에 보일 내용을 하나 이상 넣어 주세요'**
+  String get cardNothingBefore;
+
+  /// Error under the card editor's column on save when the reveal adds nothing to the card.
+  ///
+  /// In ko, this message translates to:
+  /// **'뒷면이나 빈칸을 하나 이상 넣어 주세요'**
+  String get cardNothingAdded;
+
+  /// The word field of a 단어 칸, and its chip in 앞면에 보일 것.
+  ///
+  /// In ko, this message translates to:
+  /// **'단어'**
+  String get wordTerm;
+
+  /// The row of a 단어 칸 choosing whether the word or its meanings show before the reveal.
+  ///
+  /// In ko, this message translates to:
+  /// **'앞면에 보일 것'**
+  String get wordAskFirst;
 
   /// Item of a block's menu in the card editor that deletes the block, and of a sense's menu or a preset's menu that deletes it.
   ///
   /// In ko, this message translates to:
   /// **'삭제'**
   String get deleteBlock;
-
-  /// Error under a side of a 자유 card on save while that side holds no block and the card must show it.
-  ///
-  /// In ko, this message translates to:
-  /// **'블록을 하나 이상 넣어 주세요'**
-  String get sideBlockRequired;
 
   /// What a screen reader reads for a 표 block's toolbar over the table.
   ///
@@ -725,7 +725,7 @@ abstract class AppLocalizations {
   /// Hint under the preview's card while it shows a card studied on one face with its blanks empty.
   ///
   /// In ko, this message translates to:
-  /// **'카드를 탭하면 빈칸이 채워져요'**
+  /// **'카드를 탭하면 답이 보여요'**
   String get previewTapToReveal;
 
   /// Hint under the preview's card while it shows a card studied on one face with its blanks filled.
@@ -733,12 +733,6 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'다시 탭하면 빈칸으로 돌아가요'**
   String get previewTapToHide;
-
-  /// Muted line under the back's group in the card editor while the card holds a blank and its back holds nothing to save.
-  ///
-  /// In ko, this message translates to:
-  /// **'빈칸 카드는 앞면에서 바로 답을 맞혀요. 뒷면은 비워 둬도 돼요.'**
-  String get clozeBackHint;
 
   /// Hint inside a sense's label field in a 뜻 목록 block, and what a screen reader reads for it while the block is one meaning.
   ///
@@ -997,18 +991,6 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'앞면: {front}'**
   String currentCardSemantics(String front);
-
-  /// Accessibility hint of tapping a card in the deck's card list while its back is hidden.
-  ///
-  /// In ko, this message translates to:
-  /// **'뒷면 보기'**
-  String get showBack;
-
-  /// Accessibility hint of tapping a card in the deck's card list while its back is shown.
-  ///
-  /// In ko, this message translates to:
-  /// **'뒷면 가리기'**
-  String get hideBack;
 
   /// Accessibility label of a card answered earlier in the session; changed is 'yes' when the answer differs from the one first given.
   ///
@@ -1657,6 +1639,12 @@ abstract class AppLocalizations {
   /// **'다시 시도'**
   String get retry;
 
+  /// Button that sends again every photo of the import whose failure a retry can help.
+  ///
+  /// In ko, this message translates to:
+  /// **'실패한 사진 다시 시도'**
+  String get retryFailedPhotos;
+
   /// Photo import failure: the server could not be reached.
   ///
   /// In ko, this message translates to:
@@ -2041,18 +2029,6 @@ abstract class AppLocalizations {
   /// **'첫 카드를 만들어 볼까요?'**
   String get noCardsTitle;
 
-  /// 오늘 tab line under the no-cards heading.
-  ///
-  /// In ko, this message translates to:
-  /// **'덱에 카드를 추가해 시작해요.'**
-  String get noCardsBody;
-
-  /// Quiet button on the 오늘 tab's no-cards state that opens the user's one deck.
-  ///
-  /// In ko, this message translates to:
-  /// **'덱 열기'**
-  String get openDeck;
-
   /// Button on the 오늘 tab's no-cards state, with several decks, that shows the 덱 tab.
   ///
   /// In ko, this message translates to:
@@ -2064,12 +2040,6 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'첫 덱을 만들어 볼까요?'**
   String get emptyHomeTitle;
-
-  /// Home screen line under the first-deck heading.
-  ///
-  /// In ko, this message translates to:
-  /// **'단어장 사진을 찍으면 카드를 바로 만들어 드려요. 직접 입력해도 돼요.'**
-  String get emptyHomeBody;
 
   /// The new-deck and add-card sheets' row that starts by typing: a deck named by hand, or a card in the editor.
   ///
@@ -2982,6 +2952,210 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'계속 쓰기'**
   String get keepWriting;
+
+  /// The option that adds cards from a spreadsheet file.
+  ///
+  /// In ko, this message translates to:
+  /// **'파일에서 고르기'**
+  String get spreadsheetPick;
+
+  /// The option's second line.
+  ///
+  /// In ko, this message translates to:
+  /// **'엑셀이나 CSV 파일의 행을 카드로 만들어요'**
+  String get spreadsheetPickBody;
+
+  /// The title of the sheet that opens a spreadsheet file.
+  ///
+  /// In ko, this message translates to:
+  /// **'파일에서 카드 추가'**
+  String get spreadsheetStartTitle;
+
+  /// The sheet's body, stating the limits before a file is chosen.
+  ///
+  /// In ko, this message translates to:
+  /// **'엑셀(.xlsx)이나 CSV 파일의 한 행이 카드 한 장이 돼요. 파일은 5MB, 1,000행까지 읽어요.'**
+  String get spreadsheetStartBody;
+
+  /// The button that opens the device's file picker.
+  ///
+  /// In ko, this message translates to:
+  /// **'파일 고르기'**
+  String get spreadsheetChoose;
+
+  /// What a screen reader reads while a file is read.
+  ///
+  /// In ko, this message translates to:
+  /// **'읽는 중'**
+  String get spreadsheetReading;
+
+  /// The action that replaces the file read.
+  ///
+  /// In ko, this message translates to:
+  /// **'다른 파일'**
+  String get spreadsheetAnother;
+
+  /// The title of the screen listing a file's cards.
+  ///
+  /// In ko, this message translates to:
+  /// **'카드 확인'**
+  String get spreadsheetReviewTitle;
+
+  /// The heading over the sheet and column choices.
+  ///
+  /// In ko, this message translates to:
+  /// **'열'**
+  String get spreadsheetColumns;
+
+  /// The row choosing a workbook's sheet.
+  ///
+  /// In ko, this message translates to:
+  /// **'시트'**
+  String get spreadsheetSheet;
+
+  /// The row choosing the label column.
+  ///
+  /// In ko, this message translates to:
+  /// **'라벨'**
+  String get spreadsheetLabelColumn;
+
+  /// The row choosing the example column.
+  ///
+  /// In ko, this message translates to:
+  /// **'예문'**
+  String get spreadsheetExampleColumn;
+
+  /// An optional column left unchosen.
+  ///
+  /// In ko, this message translates to:
+  /// **'없음'**
+  String get spreadsheetNoColumn;
+
+  /// The switch: the first row makes no card.
+  ///
+  /// In ko, this message translates to:
+  /// **'첫 행은 머리글'**
+  String get spreadsheetHeaderRow;
+
+  /// Said when two fields read one column.
+  ///
+  /// In ko, this message translates to:
+  /// **'항목마다 다른 열을 골라 주세요'**
+  String get spreadsheetDistinct;
+
+  /// Leaves every card out.
+  ///
+  /// In ko, this message translates to:
+  /// **'모두 빼기'**
+  String get spreadsheetExcludeAll;
+
+  /// Selects every card.
+  ///
+  /// In ko, this message translates to:
+  /// **'모두 선택'**
+  String get spreadsheetSelectAll;
+
+  /// A row's number in the sheet.
+  ///
+  /// In ko, this message translates to:
+  /// **'{row}행'**
+  String spreadsheetRow(int row);
+
+  /// What a screen reader reads for a card's check.
+  ///
+  /// In ko, this message translates to:
+  /// **'{row}행 {front}'**
+  String spreadsheetRowCard(int row, String front);
+
+  /// Rows that make no card.
+  ///
+  /// In ko, this message translates to:
+  /// **'앞면이나 뒷면이 빈 행 {count}개는 건너뛰어요'**
+  String spreadsheetSkipped(int count);
+
+  /// Rows refused for a long cell.
+  ///
+  /// In ko, this message translates to:
+  /// **'{rows}은 {limit}자가 넘는 칸이 있어 뺐어요'**
+  String spreadsheetTooLong(String rows, int limit);
+
+  /// The first five rows and how many more.
+  ///
+  /// In ko, this message translates to:
+  /// **'{rows} 외 {count}개 행'**
+  String spreadsheetRowsMore(String rows, int count);
+
+  /// A row repeating a stored card.
+  ///
+  /// In ko, this message translates to:
+  /// **'{row}행은 이 덱에 이미 있는 카드예요'**
+  String spreadsheetDuplicateStored(int row);
+
+  /// A row repeating an earlier row.
+  ///
+  /// In ko, this message translates to:
+  /// **'{row}행의 앞면이 {earlier}행과 같아요'**
+  String spreadsheetDuplicateRow(int row, int earlier);
+
+  /// Leaves the repeating row out.
+  ///
+  /// In ko, this message translates to:
+  /// **'{row}행 빼기'**
+  String spreadsheetLeaveOut(int row);
+
+  /// Saves with the repeating row.
+  ///
+  /// In ko, this message translates to:
+  /// **'그래도 추가'**
+  String get spreadsheetAddAnyway;
+
+  /// The sheet asked on leaving with unsaved cards.
+  ///
+  /// In ko, this message translates to:
+  /// **'읽은 카드를 버릴까요?'**
+  String get spreadsheetDiscardTitle;
+
+  /// The sheet's consequence.
+  ///
+  /// In ko, this message translates to:
+  /// **'저장하지 않은 카드는 사라져요.'**
+  String get spreadsheetDiscardBody;
+
+  /// A file of another type.
+  ///
+  /// In ko, this message translates to:
+  /// **'.xlsx나 .csv 파일을 골라 주세요'**
+  String get spreadsheetWrongType;
+
+  /// A file over the limit.
+  ///
+  /// In ko, this message translates to:
+  /// **'파일이 5MB보다 커서 읽지 못했어요. 파일을 나눠 다시 골라 주세요.'**
+  String get spreadsheetTooLarge;
+
+  /// A CSV that is not UTF-8.
+  ///
+  /// In ko, this message translates to:
+  /// **'CSV를 읽지 못했어요. UTF-8 CSV로 저장해 다시 골라 주세요.'**
+  String get spreadsheetNotUtf8;
+
+  /// A workbook that cannot be read.
+  ///
+  /// In ko, this message translates to:
+  /// **'파일을 읽지 못했어요. 엑셀에서 다시 저장해 골라 주세요.'**
+  String get spreadsheetUnreadable;
+
+  /// A sheet over the row limit.
+  ///
+  /// In ko, this message translates to:
+  /// **'행이 1,000개보다 많아 읽지 못했어요. 파일을 나눠 다시 골라 주세요.'**
+  String get spreadsheetTooManyRows;
+
+  /// A file the device could not hand over.
+  ///
+  /// In ko, this message translates to:
+  /// **'파일을 읽지 못했어요. 다시 골라 주세요.'**
+  String get spreadsheetNotRead;
 }
 
 class _AppLocalizationsDelegate

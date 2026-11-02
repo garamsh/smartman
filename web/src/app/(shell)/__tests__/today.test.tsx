@@ -164,10 +164,13 @@ describe("the 오늘 and 덱 pages", () => {
     const card = within(backlog);
     // White with ink accents, as the phone's (ADR 0098).
     expect(backlog).toHaveClass("bg-surface", "shadow-card");
-    expect(card.getByRole("link", { name: "모두 학습" })).toHaveClass("bg-ink", "text-on-primary");
+    expect(card.getByRole("link", { name: "모두 학습" })).toHaveClass(
+      "bg-primary",
+      "text-on-primary",
+    );
     expectTextReadable(backlog);
     // The mascot with no badge: the card's one icon is play, on its button (ADR 0116).
-    expect(backlog.querySelector('img[src*="smartman-symbol"]')).not.toBeNull();
+    expect(backlog.querySelector('img[src*="knowno-thinking"]')).not.toBeNull();
     expect([...backlog.querySelectorAll("svg")].map((icon) => icon.closest("a") !== null)).toEqual([
       true,
     ]);
@@ -534,7 +537,7 @@ describe("the 오늘 and 덱 pages", () => {
     }
   });
 
-  it("with nothing left draws the phone's done card: the next review in its three forms, the goal reached and 학습하기 in the navy fill", async () => {
+  it("with nothing left draws the phone's done card on the surface: the next review in its three forms, the goal reached and 학습하기 in the coral fill", async () => {
     const card = () => screen.getByRole("region", { name: "오늘 할 카드를 다 했어요" });
     // Thursday 15 January 2026 in Seoul. Each card is answered today, so the goal is reached.
     for (const [dueIn, line] of [
@@ -563,12 +566,13 @@ describe("the 오늘 and 덱 pages", () => {
     }
     await render(Today, {});
 
-    expect(card()).toHaveClass("bg-brand-tint");
+    expect(card()).toHaveClass("bg-surface");
+    expect(card()).not.toHaveClass("bg-brand-tint");
     expect(within(card()).getByText("목표 1장 달성")).toBeInTheDocument();
     expect(within(card()).getAllByText("1일 연속")).toHaveLength(1);
-    // The mascot with no z's beside it, the goal's chip its words, and the streak's chip its
-    // flame, the one icon a chip keeps (ADR 0116).
-    expect(card().querySelector('img[src*="smartman-symbol"]')).not.toBeNull();
+    // The happy mascot with no z's beside it, the goal's chip its words, and the streak's chip
+    // its flame, the one icon a chip keeps (ADR 0116, ADR 0141).
+    expect(card().querySelector('img[src*="knowno-happy"]')).not.toBeNull();
     expect(card().textContent).not.toMatch(/z/);
     expect(within(card()).getByText("목표 1장 달성").querySelector("svg")).toBeNull();
     expect(within(card()).getByText("1일 연속").querySelector("svg")).not.toBeNull();
@@ -576,7 +580,7 @@ describe("the 오늘 and 덱 pages", () => {
     expect(chipTone(within(card()).getByText("목표 1장 달성"))).toBe("surface");
     expect(chipTone(within(card()).getByText("1일 연속"))).toBe("surface");
     const study = screen.getByRole("link", { name: "학습하기" });
-    expect(study).toHaveClass("bg-ink");
+    expect(study).toHaveClass("bg-primary");
     expect(study).toHaveAttribute("aria-keyshortcuts", "Enter");
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /하루 학습 시간/ })).not.toBeInTheDocument();
@@ -639,7 +643,7 @@ describe("the 오늘 and 덱 pages", () => {
     expect(bar).toHaveClass("bg-hairline");
     expect(bar.firstElementChild).toHaveClass("bg-ink");
     expect(within(card).getByRole("link", { name: "모두 학습" })).toHaveClass(
-      "bg-ink",
+      "bg-primary",
       "text-on-primary",
     );
     expectTextReadable(card);
@@ -827,7 +831,6 @@ describe("the 오늘 and 덱 pages", () => {
 
   it("shows the first-run invitation in place of the today card on 오늘 and of the list on 덱 when there is no deck", async () => {
     const title = "첫 덱을 만들어 볼까요?";
-    const pointer = "단어장 사진을 찍거나 직접 입력해 시작해 보세요.";
     // Control: a user with one deck, its card not due, sees the done card and the list, and no
     // invitation.
     postgrest.seed("decks", deckRow("d-fr", "French"));
@@ -845,14 +848,15 @@ describe("the 오늘 and 덱 pages", () => {
       await render(page, {});
 
       expect(screen.getByRole("heading", { name: title })).toBeInTheDocument();
-      expect(screen.getByText(pointer)).toBeInTheDocument();
-      // The first-run home is the one empty state the mascot heads (ADR 0116).
-      expect(document.querySelector('img[src*="smartman-symbol"]')).not.toBeNull();
+      // The first-run home is headed by the mark, the thinking mascot.
+      expect(document.querySelector('img[src*="knowno-thinking"]')).not.toBeNull();
       expect(screen.queryByRole("heading", { name: /^오늘 할 카드/ })).not.toBeInTheDocument();
       expect(screen.queryByRole("region", { name: "덱 목록" })).not.toBeInTheDocument();
       // First-run creation is available on the web.
       expect(screen.queryByRole("link")).not.toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "새 덱 만들기" })).toBeInTheDocument();
+      const create = screen.getByRole("button", { name: "새 덱 만들기" });
+      // On 오늘 the first deck is the page's one way on, in the coral fill.
+      if (page === Today) expect(create).toHaveClass("bg-primary");
       cleanup();
     }
   });
@@ -863,20 +867,59 @@ describe("the 오늘 and 덱 pages", () => {
     await render(Today, {});
 
     expect(screen.getByRole("heading", { name: title })).toBeInTheDocument();
-    expect(screen.getByText("카드를 추가해 시작해 보세요.")).toBeInTheDocument();
     expect(
       screen.queryByRole("heading", { name: "오늘 할 카드를 다 했어요" }),
     ).not.toBeInTheDocument();
-    // No mascot: it heads the first-run home alone (ADR 0116).
-    expect(document.querySelector('img[src*="smartman-symbol"]')).toBeNull();
-    // The web adds no card, so it offers no action.
+    // The happy mascot, glad of the deck just made (ADR 0141).
+    expect(document.querySelector('img[src*="knowno-happy"]')).not.toBeNull();
+    // Its one action adds a card to the one deck, in the coral fill.
+    expect(screen.getByRole("button", { name: "카드 추가" })).toHaveClass("bg-primary");
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
+    cleanup();
+
+    // With several decks, it leads to the deck list instead.
+    postgrest.seed("decks", deckRow("d-de", "German"));
+    await render(Today, {});
+    expect(screen.getByRole("link", { name: "덱에서 카드 추가" })).toHaveAttribute(
+      "href",
+      "/decks",
+    );
+    expect(screen.queryByRole("button", { name: "카드 추가" })).not.toBeInTheDocument();
     cleanup();
 
     // Control: with a card in the deck, the day shows.
     postgrest.seed("cards", cardRow("c-chat", "d-fr", "chat"));
     await render(Today, {});
     expect(screen.queryByRole("heading", { name: title })).not.toBeInTheDocument();
+  });
+
+  it("draws today's bar coral and the other days the brand tint, on the last seven days and the catch-up, with no amber", async () => {
+    /** The bars of the page's chart, by fill. */
+    const bars = (fill: string) => document.querySelectorAll(`span.rounded-md.${fill}`).length;
+    postgrest.seed("decks", deckRow("d-fr", "French"));
+    postgrest.seed("cards", cardRow("c-chat", "d-fr", "chat"));
+    await render(Today, {});
+    expect(bars("bg-primary")).toBe(1);
+    expect(bars("bg-brand-tint")).toBe(6);
+    cleanup();
+
+    postgrest = new FakePostgrest();
+    server.use(...postgrest.handlers);
+    postgrest.seed("decks", deckRow("d-fr", "French"));
+    const overdue = {
+      stability: 30,
+      difficulty: 5,
+      lastReview: start - 31 * day,
+      due: start - day,
+    };
+    const names = ["a", "b", "c"];
+    postgrest.seed("cards", ...names.map((name) => cardRow(`c-${name}`, "d-fr", name)));
+    postgrest.seed("card_states", ...names.map((name) => stateRow(`c-${name}`, overdue)));
+    await render(Today, {});
+    expect(screen.getByRole("heading", { name: "다시 시작하면 돼요" })).toBeInTheDocument();
+    expect(bars("bg-primary")).toBe(1);
+    expect(bars("bg-brand-tint")).toBe(6);
+    expect(bars("bg-streak")).toBe(0);
   });
 
   it("draws 오늘 and 덱 in three sizes, the title, the body and the caption, in every state", async () => {
@@ -935,7 +978,11 @@ describe("the 오늘 and 덱 pages", () => {
           expect(screen.getByRole("heading", { name: state })).toBeInTheDocument();
         expect({ state, sizes: typeSizesOf(document.body) }).toEqual({
           state,
-          sizes: [13, 16, 28],
+          // A first run is its heading, one sentence and one action: it draws no caption.
+          sizes:
+            state === "첫 덱을 만들어 볼까요?" || (state.startsWith("첫 ") && page === Today)
+              ? [16, 28]
+              : [13, 16, 28],
         });
         cleanup();
       }

@@ -6,11 +6,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:smartman/database/database.dart';
-import 'package:smartman/deck/deck.dart';
-import 'package:smartman/deck/src/deck_row.dart';
-import 'package:smartman/design/theme.dart';
-import 'package:smartman/media/media.dart';
+import 'package:knowno/database/database.dart';
+import 'package:knowno/deck/deck.dart';
+import 'package:knowno/deck/src/deck_row.dart';
+import 'package:knowno/design/theme.dart';
+import 'package:knowno/media/media.dart';
 import 'package:uuid/uuid.dart';
 
 import '../media/fakes.dart';
@@ -47,16 +47,13 @@ Color? _fill(WidgetTester tester) {
 
 void main() {
   testWidgets(
-    'a deck nobody customised shows the default icon on the colour its id selects, and no initial',
+    'a deck nobody customised shows the default icon on the brand tint, and no initial',
     (tester) async {
       await _pump(tester, DeckTile(deck: _deck()));
 
       expect(find.byIcon(LucideIcons.layers), findsOneWidget);
       expect(find.text('F'), findsNothing);
-      // The id's index over the palette, as deckTintIndex computes it.
-      final selected = DeckColor.values[deckTintIndex(_id, 6)];
-      expect(defaultDeckColor(_id), selected);
-      expect(_fill(tester), deckTileColor(AppColors.light, selected));
+      expect(_fill(tester), AppColors.light.brandTint);
     },
   );
 

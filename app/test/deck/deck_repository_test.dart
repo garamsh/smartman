@@ -3,9 +3,10 @@ import 'dart:io';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/database/database.dart';
-import 'package:smartman/deck/deck.dart';
-import 'package:smartman/media/media.dart';
+import 'package:knowno/database/database.dart';
+import 'package:knowno/deck/deck.dart';
+import 'package:knowno/deck/src/card_template.dart';
+import 'package:knowno/media/media.dart';
 
 import '../media/fakes.dart';
 
@@ -259,12 +260,194 @@ void main() {
         (decks[french.id]!.icon, decks[french.id]!.color),
         (DeckIcon.book, DeckColor.violet),
       );
+
+      // Saving an icon alone stores no colour, so none reads as chosen.
+      await repository.setAppearance(spanish.id, DeckIcon.star, null);
+      final spanishNow = await repository.getDeck(spanish.id);
+      expect(spanishNow.icon, DeckIcon.star);
+      expect(spanishNow.color, isNull);
       expect((decks[spanish.id]!.icon, decks[spanish.id]!.color), (null, null));
       final row = await (db.select(
         db.decks,
       )..where((deck) => deck.id.equals(french.id.value))).getSingle();
       expect((row.icon, row.color, row.dirty), ('book', 'violet', true));
       expect(row.updatedAt.isAfter(french.updatedAt), isTrue);
+    });
+
+    test('listKeys gives the keys of the deck\'s live cards alone', () async {
+      final deck = await repository.createDeck('Colours');
+      final other = await repository.createDeck('Other');
+      Future<Card> add(DeckId into, String front) async {
+        final saved = await repository.addCard(
+          into,
+          front: [TextContent(front)],
+          back: const [TextContent('back')],
+        );
+        return (saved as CardSaved).card;
+      }
+
+      await add(deck.id, ' Rose  Red ');
+      final deleted = await add(deck.id, 'Gone');
+      await add(other.id, 'Elsewhere');
+      expect(await repository.listKeys(deck.id), {
+        CardKey.fromFront('rose red'),
+        CardKey.fromFront('gone'),
+      });
+      await repository.deleteCard(deleted.id);
+      expect(await repository.listKeys(deck.id), {
+        CardKey.fromFront('rose red'),
+      });
+    });
+
+    group('adding a framed card', () {
+      const cloze = ClozeContent('___ is red.', ['Rose']);
+      const cells = [BlankCell(cloze), TextCell(back: 'A flower.')];
+      final sides = sidesOf(cells);
+      final incoming = IncomingCard(
+        front: sides.front,
+        back: sides.back,
+        cells: cells,
+        onDuplicate: DuplicateChoice.mergeBack,
+      );
+
+      Future<CardRow> row(DeckId deck) => (db.select(
+        db.cards,
+      )..where((card) => card.deckId.equals(deck.value))).getSingle();
+
+      test('stores its 칸 list in free v2, each block with an id, its back '
+          'empty', () async {
+        final deck = await repository.createDeck('Colours');
+        await repository.addCards(AddToDeck(deck.id), [incoming]);
+
+        final stored = await row(deck.id);
+        expect(stored.template, 'free');
+        expect(stored.templateVersion, 2);
+        expect(stored.back, '[]');
+        expect(decodeCells(stored.front), cells);
+        expect(
+          decodeCells(stored.front).every((cell) => cell.id != null),
+          isTrue,
+        );
+        expect(stored.cardKey, frameKey(cells).value);
+        expect((await cardsOf(deck.id)).single.cells, cells);
+
+        // Control: a card of two sides stays at free v1.
+        final other = await repository.createDeck('Other');
+        await repository.addCards(AddToDeck(other.id), [
+          IncomingCard(
+            front: sides.front,
+            back: sides.back,
+            onDuplicate: DuplicateChoice.addNew,
+          ),
+        ]);
+        expect((await row(other.id)).templateVersion, 1);
+      });
+
+      test('a merged back joins a stored 칸 list as a 글 with a back alone, '
+          'never in the back column', () async {
+        final deck = await repository.createDeck('Colours');
+        await repository.addCards(AddToDeck(deck.id), [incoming]);
+
+        final added = await repository.addCards(AddToDeck(deck.id), [
+          IncomingCard(
+            front: sides.front,
+            back: const [TextContent('Also a colour.')],
+            onDuplicate: DuplicateChoice.mergeBack,
+          ),
+        ]);
+
+        expect(added.merged, 1);
+        final stored = await row(deck.id);
+        expect(stored.back, '[]');
+        expect(stored.templateVersion, 2);
+        expect(decodeCells(stored.front), [
+          ...cells,
+          const TextCell(back: 'Also a colour.'),
+        ]);
+      });
+
+      test('a merge onto a framed card the editor can edit keeps it in the '
+          'frame, which the editor then opens with the merged 글', () async {
+        final deck = await repository.createDeck('Colours');
+        await repository.addCards(AddToDeck(deck.id), [incoming]);
+        final before = (await cardsOf(deck.id)).single;
+        expect(canEdit(before), isTrue, reason: 'the setup: editable');
+
+        await repository.addCards(AddToDeck(deck.id), [
+          IncomingCard(
+            front: sides.front,
+            back: const [TextContent('Also a colour.')],
+            onDuplicate: DuplicateChoice.mergeBack,
+          ),
+        ]);
+
+        final stored = await row(deck.id);
+        expect((stored.template, stored.templateVersion), ('free', 2));
+        final card = (await cardsOf(deck.id)).single;
+        expect(card.cells, [...cells, const TextCell(back: 'Also a colour.')]);
+        expect(cellsOf(card), card.cells);
+      });
+
+      test('the editor\'s save writes its 칸 in free v2 with the back empty, '
+          'keyed by what shows before the reveal, and a card of two sides '
+          'is taken into the frame', () async {
+        final deck = await repository.createDeck('Colours');
+        const saved = [TextCell(front: 'Rose', back: 'A flower.')];
+        final projection = sidesOf(saved);
+        final added = await repository.addCard(
+          deck.id,
+          front: projection.front,
+          back: projection.back,
+          cells: saved,
+        );
+        expect(added, isA<CardSaved>());
+        final stored = await row(deck.id);
+        expect((stored.template, stored.templateVersion), ('free', 2));
+        expect(stored.back, '[]');
+        expect(stored.cardKey, frameKey(saved).value);
+        expect(decodeCells(stored.front), saved);
+
+        final other = await repository.createDeck('Other');
+        await repository.addCard(
+          other.id,
+          front: const [TextContent('Rose')],
+          back: const [TextContent('A flower.')],
+        );
+        final card = (await cardsOf(other.id)).single;
+        expect(card.templateVersion, 1, reason: 'the setup: two side lists');
+        await repository.editCard(
+          card,
+          front: projection.front,
+          back: projection.back,
+          cells: saved,
+        );
+        final edited = await row(other.id);
+        expect((edited.template, edited.templateVersion), ('free', 2));
+        expect(edited.back, '[]');
+        expect(decodeCells(edited.front), saved);
+      });
+
+      test('a back already on the card, or none, merges nothing into a stored '
+          '칸 list', () async {
+        final deck = await repository.createDeck('Colours');
+        await repository.addCards(AddToDeck(deck.id), [incoming]);
+
+        final added = await repository.addCards(AddToDeck(deck.id), [
+          IncomingCard(
+            front: sides.front,
+            back: const [TextContent('A flower.')],
+            onDuplicate: DuplicateChoice.mergeBack,
+          ),
+          IncomingCard(
+            front: sides.front,
+            back: const [],
+            onDuplicate: DuplicateChoice.mergeBack,
+          ),
+        ]);
+
+        expect(added.merged, 0);
+        expect(decodeCells((await row(deck.id)).front), cells);
+      });
     });
 
     group("a deck's image", () {
@@ -747,9 +930,9 @@ void main() {
   test(
     'data written before closing the database is read after reopening',
     () async {
-      final dir = await Directory.systemTemp.createTemp('smartman_db');
+      final dir = await Directory.systemTemp.createTemp('knowno_db');
       addTearDown(() => dir.delete(recursive: true));
-      final file = File('${dir.path}/smartman.sqlite');
+      final file = File('${dir.path}/knowno.sqlite');
 
       final before = AppDatabase(NativeDatabase(file));
       final writer = _repository(before);

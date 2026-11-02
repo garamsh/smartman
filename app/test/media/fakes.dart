@@ -4,7 +4,7 @@ import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 import 'package:image/image.dart' as img;
-import 'package:smartman/media/media.dart';
+import 'package:knowno/media/media.dart';
 
 /// The media server in memory: one account's rows and files, by id. Shared
 /// by two stores, it is that account on two devices.
@@ -91,7 +91,7 @@ PreparedImage preparedWholeImage(int width, int height) {
 /// A new, empty directory under the system's temporary one, deleted by
 /// [deleteMediaDirectory].
 Directory newMediaDirectory() =>
-    Directory.systemTemp.createTempSync('smartman_media_');
+    Directory.systemTemp.createTempSync('knowno_media_');
 
 Future<void> deleteMediaDirectory(Directory directory) async {
   if (await directory.exists()) await directory.delete(recursive: true);
@@ -100,7 +100,7 @@ Future<void> deleteMediaDirectory(Directory directory) async {
 /// Where an app a test composes keeps images it never stores; nothing
 /// creates it.
 final unusedMediaDirectory = Directory(
-  '${Directory.systemTemp.path}/smartman_media_unused',
+  '${Directory.systemTemp.path}/knowno_media_unused',
 );
 
 /// A 4 px JPEG, prepared, of one red, 40 times [shade] modulo 256, so the

@@ -6,9 +6,9 @@ library;
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/account/account.dart';
-import 'package:smartman/database/database.dart';
-import 'package:smartman/sync/sync.dart';
+import 'package:knowno/account/account.dart';
+import 'package:knowno/database/database.dart';
+import 'package:knowno/sync/sync.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
@@ -16,9 +16,9 @@ import '../sync/bounded_auth.dart';
 
 /// The local Supabase stack `scripts/test-sync.sh` starts, named by the
 /// environment it runs this file in.
-const _urlVariable = 'SMARTMAN_SYNC_TEST_URL';
-const _keyVariable = 'SMARTMAN_SYNC_TEST_KEY';
-const _dbVariable = 'SMARTMAN_SYNC_TEST_DB_CONTAINER';
+const _urlVariable = 'KNOWNO_SYNC_TEST_URL';
+const _keyVariable = 'KNOWNO_SYNC_TEST_KEY';
+const _dbVariable = 'KNOWNO_SYNC_TEST_DB_CONTAINER';
 
 /// An admin suspending a user through the admin area's function, against the
 /// real Supabase Auth and PostgREST (ADR 0072): the suspended user can neither

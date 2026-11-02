@@ -1,8 +1,8 @@
 import 'dart:async';
 
-import 'package:smartman/account/account.dart';
-import 'package:smartman/database/database.dart';
-import 'package:smartman/sync/sync.dart';
+import 'package:knowno/account/account.dart';
+import 'package:knowno/database/database.dart';
+import 'package:knowno/sync/sync.dart';
 
 /// A stored row, the account it belongs to, and its revision.
 typedef _Stored<R> = ({R row, UserId owner, int revision});

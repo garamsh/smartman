@@ -1,5 +1,5 @@
 [package]
-name = "rust_lib_smartman"
+name = "rust_lib_knowno"
 version = "0.1.0"
 edition = "2021"
 publish = false
@@ -9,7 +9,7 @@ crate-type = ["cdylib", "staticlib"]
 
 [dependencies]
 flutter_rust_bridge = "=2.13.0"
-smartman_engine = { path = "../../engine" }
+knowno_engine = { path = "../../engine" }
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(frb_expand)'] }

@@ -5,7 +5,7 @@ import init, {
   reviewCard,
   reviewNewCard,
   type Scheduled,
-} from "./engine-wasm/smartman_engine_wasm.js";
+} from "./engine-wasm/knowno_engine_wasm.js";
 import type { Answer } from "./answer-write";
 import type { CardState } from "./queue";
 

@@ -73,12 +73,20 @@ final class CandidateCard {
 /// against it in the current one.
 typedef ExtractionAllowance = ({int limit, LimitPeriod period, int used});
 
+/// The cards one request read off a page, and the [cursor] to send back with
+/// the same photo to read on; null once the page is read to its end, or when
+/// the function lets it go no further (ADR 0138).
+typedef Extracted = ({List<CandidateCard> cards, String? cursor});
+
 /// Sends a photo to `extract-cards` and returns the cards it found.
 abstract interface class ExtractionClient {
-  /// The cards on [photo]'s page, or null once [cancel] completes before the
-  /// answer arrives. Throws a [PhotoImportFailure] for each refusal.
-  Future<List<CandidateCard>?> extract(
+  /// The cards on [photo]'s page, read on from [cursor] when given, or null
+  /// once [cancel] completes before the answer arrives. Throws a
+  /// [PhotoImportFailure] for each refusal; a [cursor] the function no longer
+  /// takes (`410`) is a [ServiceFailed].
+  Future<Extracted?> extract(
     JpegPhoto photo, {
+    String? cursor,
     required Future<void> cancel,
   });
 
@@ -121,8 +129,9 @@ final class HttpExtractionClient implements ExtractionClient {
   final Future<String?> Function() accessToken;
 
   @override
-  Future<List<CandidateCard>?> extract(
+  Future<Extracted?> extract(
     JpegPhoto photo, {
+    String? cursor,
     required Future<void> cancel,
   }) async {
     final token = await accessToken();
@@ -134,7 +143,10 @@ final class HttpExtractionClient implements ExtractionClient {
     );
     request.headers['authorization'] = 'Bearer $token';
     request.headers['content-type'] = 'application/json';
-    request.body = jsonEncode({'image': base64Encode(photo.bytes)});
+    request.body = jsonEncode({
+      'image': base64Encode(photo.bytes),
+      'cursor': ?cursor,
+    });
     final http.Response response;
     try {
       response = await http.Response.fromStream(await _http.send(request));
@@ -143,15 +155,21 @@ final class HttpExtractionClient implements ExtractionClient {
     } on http.ClientException catch (cause) {
       throw ExtractionOffline(cause);
     }
-    return parseExtraction(response.statusCode, response.body);
+    return parseExtraction(
+      response.statusCode,
+      response.body,
+      resumed: cursor != null,
+    );
   }
 }
 
-/// The cards a `200` [body] holds, or the failure [status] means, per the
-/// contract in `docs/architecture/ai-extraction.md`.
-List<CandidateCard> parseExtraction(int status, String body) =>
+/// The cards a `200` [body] holds with its cursor, or the failure [status]
+/// means, per the contract in `docs/architecture/ai-extraction.md`. A
+/// [resumed] request, one that sent a cursor, may answer no card: the page
+/// ended where the cursor left off.
+Extracted parseExtraction(int status, String body, {bool resumed = false}) =>
     switch (status) {
-      200 => _parseCards(body),
+      200 => _parseCards(body, resumed: resumed),
       401 => throw const SignInRequired(),
       403 when _errorCode(body) == 'suspended' =>
         throw const AccountSuspendedFailure(),
@@ -195,15 +213,26 @@ PhotoLimitReached? _photoLimit(String body) {
   }
 }
 
-List<CandidateCard> _parseCards(String body) {
+/// A `200`'s cards, and its `cursor` when it says the page was left unread
+/// past them (`partial`).
+Extracted _parseCards(String body, {required bool resumed}) {
   final Object? decoded;
   try {
     decoded = jsonDecode(body);
   } on FormatException {
     throw const ServiceFailed('the success body is not JSON');
   }
-  if (decoded case {'cards': final List<Object?> cards} when cards.isNotEmpty) {
-    return [for (final card in cards) _parseCard(card)];
+  if (decoded case {'cards': final List<Object?> cards}
+      when resumed || cards.isNotEmpty) {
+    return (
+      cards: [for (final card in cards) _parseCard(card)],
+      cursor: switch (decoded) {
+        {'partial': true, 'cursor': final String cursor}
+            when cursor.isNotEmpty =>
+          cursor,
+        _ => null,
+      },
+    );
   }
   throw const ServiceFailed('the success body holds no card list');
 }

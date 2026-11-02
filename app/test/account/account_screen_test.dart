@@ -4,14 +4,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
-import 'package:smartman/account/account.dart';
-import 'package:smartman/account/src/legal.dart';
-import 'package:smartman/design/app_button.dart';
-import 'package:smartman/design/app_list_row.dart';
-import 'package:smartman/design/app_sheet.dart';
-import 'package:smartman/design/theme.dart';
-import 'package:smartman/design/theme_choice.dart';
-import 'package:smartman/l10n/app_localizations.dart';
+import 'package:knowno/account/account.dart';
+import 'package:knowno/account/src/legal.dart';
+import 'package:knowno/design/app_button.dart';
+import 'package:knowno/design/app_list_row.dart';
+import 'package:knowno/design/app_sheet.dart';
+import 'package:knowno/design/theme.dart';
+import 'package:knowno/design/theme_choice.dart';
+import 'package:knowno/l10n/app_localizations.dart';
 
 import '../contrast.dart';
 import 'fake_account_data.dart';
@@ -634,8 +634,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(opened, [
-        Uri.parse('https://smartman.garam.sh/terms'),
-        Uri.parse('https://smartman.garam.sh/privacy'),
+        Uri.parse('https://knowno.app/terms'),
+        Uri.parse('https://knowno.app/privacy'),
       ]);
       expect(find.byType(SnackBar), findsNothing);
     },

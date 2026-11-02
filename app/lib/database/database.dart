@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 
 import 'database.steps.dart';
@@ -224,7 +226,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
   @override
-  int get schemaVersion => 13;
+  int get schemaVersion => 14;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -408,10 +410,257 @@ class AppDatabase extends _$AppDatabase {
           "(template IN ('flip', 'cloze', 'table') AND template_version = 1))",
         );
       },
+      // Every live card moves to the 칸 frame (ADR 0137), as the server's
+      // migration does. Its key, edit time and dirty flag are kept, so a
+      // synced card takes the server's copy on the tie and an unsynced edit
+      // wins it, already in the frame. A card [frameSides] cannot convert, a
+      // tombstone and a template no build wrote are left as they are.
+      from13To14: (m, schema) async {
+        final cards = await m.database
+            .customSelect(
+              'SELECT id, front, back FROM cards '
+              'WHERE deleted_at IS NULL AND (template IS NULL OR '
+              "(template IN ('free', 'flip', 'cloze', 'table') "
+              'AND template_version = 1))',
+            )
+            .get();
+        for (final card in cards) {
+          final framed = frameSides(
+            card.read<String>('front'),
+            card.read<String>('back'),
+          );
+          if (framed == null) continue;
+          await m.database.customStatement(
+            "UPDATE cards SET front = ?, back = '[]', template = 'free', "
+            'template_version = 2 WHERE id = ?',
+            [framed, card.read<String>('id')],
+          );
+        }
+      },
     ),
     // SQLite leaves foreign keys off per connection; deck deletion cascades only with them on.
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
     },
   );
+}
+
+/// The stored block of [type] at version 2 with [fields], taking [owner]'s id
+/// when it has one.
+Map<String, Object?> _frameBlock(
+  String type,
+  Map<String, Object?> fields, [
+  Map<String, Object?> owner = const {},
+]) => {'type': type, 'v': 2, 'id': ?owner['id'], 'payload': fields};
+
+bool _allStrings(Object? value) =>
+    value is List<Object?> && value.every((item) => item is String);
+
+/// Whether step 14 can read [block]: a type at a version some build wrote,
+/// holding the fields the step reads, as `decodeBlock` reads them.
+bool _frameReads(Object? block) {
+  if (block is! Map<String, Object?>) return false;
+  final type = block['type'];
+  final version = block['v'] ?? 1;
+  final id = block['id'];
+  if (id != null && id is! String) return false;
+  if (version is! int || version < 1) return false;
+  if (version > (type == 'table' ? 2 : 1)) return false;
+  return switch ((type, block['payload'])) {
+    ('text', {'text': String()}) => true,
+    (
+      'cloze',
+      {'text': final String text, 'answers': final List<Object?> answers},
+    ) =>
+      _allStrings(answers) &&
+          answers.isNotEmpty &&
+          text.split('___').length - 1 == answers.length,
+    (
+      'table',
+      {
+        'columns': final List<Object?> columns,
+        'rows': final List<Object?> rows,
+      },
+    ) =>
+      columns.isNotEmpty &&
+          rows.isNotEmpty &&
+          _allStrings(columns) &&
+          rows.every(_allStrings),
+    ('senses', {'senses': final List<Object?> senses}) => senses.isNotEmpty,
+    ('image', {'media': String(), 'boxes': final List<Object?> boxes}) =>
+      boxes.every((box) => box is Map<String, Object?>),
+    ('audio', {'media': String()}) => true,
+    _ => false,
+  };
+}
+
+bool _frameBlank(Map<String, Object?> block) => switch (block['type']) {
+  'cloze' || 'table' => true,
+  'image' => ((block['payload'] as Map)['boxes'] as List).isNotEmpty,
+  _ => false,
+};
+
+/// A cloze with each blank filled, or a table as text.
+String _frameFilled(Map<String, Object?> block) {
+  final payload = block['payload'] as Map<String, Object?>;
+  if (block['type'] == 'cloze') {
+    final answers = payload['answers'] as List<Object?>;
+    final parts = (payload['text'] as String).split('___');
+    return [
+      for (final (index, part) in parts.indexed) ...[
+        part,
+        if (index < answers.length) answers[index],
+      ],
+    ].join();
+  }
+  return [
+    payload['columns'] as List<Object?>,
+    ...(payload['rows'] as List<Object?>).cast<List<Object?>>(),
+  ].map((cells) => cells.join(' | ')).join('\n');
+}
+
+String _textFront(Map<String, Object?> cell) =>
+    (cell['payload'] as Map)[cell['v'] == 2 ? 'front' : 'text'] as String;
+
+String _textBack(Map<String, Object?> cell) =>
+    cell['v'] == 2 ? (cell['payload'] as Map)['back'] as String : '';
+
+/// A card's stored sides as its stored 칸 list, the rule of ADR 0137 as
+/// amended by ADR 0140, for schema step 14: a migration keeps what it did when
+/// it shipped, and `database/` sits below `deck`, whose `cellsFromSides` holds
+/// the same rule. Null when the card stays as it is: it does not decode, it
+/// holds a block the step cannot read, or it would write a 글 of no text.
+String? frameSides(String storedFront, String storedBack) {
+  final Object? decodedFront;
+  final Object? decodedBack;
+  try {
+    decodedFront = jsonDecode(storedFront);
+    decodedBack = jsonDecode(storedBack);
+  } on FormatException {
+    return null;
+  }
+  if (decodedFront is! List<Object?> || decodedBack is! List<Object?>) {
+    return null;
+  }
+  if (![...decodedFront, ...decodedBack].every(_frameReads)) return null;
+  final front = decodedFront.cast<Map<String, Object?>>();
+  final back = decodedBack.cast<Map<String, Object?>>();
+
+  final cells = [...front];
+  final frontBlank = front.any(_frameBlank);
+  final oneText = back.length == 1 && back.single['type'] == 'text';
+  final backText = oneText ? (back.single['payload'] as Map)['text'] : null;
+
+  // The derived back: the front's filled text, exactly (ADR 0140).
+  if (frontBlank &&
+      oneText &&
+      front.every(
+        (block) => const {'text', 'cloze', 'table'}.contains(block['type']),
+      ) &&
+      backText ==
+          front
+              .map(
+                (block) => block['type'] == 'text'
+                    ? (block['payload'] as Map)['text']
+                    : _frameFilled(block),
+              )
+              .join('\n')) {
+    return jsonEncode(cells);
+  }
+
+  final words = front.where((block) => block['type'] == 'senses').toList();
+  if (oneText && words.length == 1) {
+    final word = words.single;
+    cells[cells.indexOf(word)] = _frameBlock('senses', {
+      ...word['payload'] as Map<String, Object?>,
+      'term': backText,
+      'ask': 'meaning',
+    }, word);
+    return jsonEncode(cells);
+  }
+
+  for (final block in back) {
+    final payload = block['payload'] as Map<String, Object?>;
+    switch (block['type']) {
+      case 'text':
+        final at = cells.indexWhere(
+          (cell) =>
+              cell['type'] == 'text' &&
+              _textFront(cell).isNotEmpty &&
+              _textBack(cell).isEmpty,
+        );
+        if (at < 0) {
+          cells.add(
+            _frameBlock('text', {'front': '', 'back': payload['text']}, block),
+          );
+        } else {
+          cells[at] = _frameBlock('text', {
+            'front': _textFront(cells[at]),
+            'back': payload['text'],
+          }, cells[at]);
+        }
+      case 'senses':
+        if (cells.length == 1 &&
+            cells.single['type'] == 'text' &&
+            _textBack(cells.single).isEmpty) {
+          cells[0] = _frameBlock('senses', {
+            ...payload,
+            'term': _textFront(cells.single),
+            'ask': 'term',
+          }, cells.single);
+        } else {
+          cells.add(
+            _frameBlock('senses', {
+              ...payload,
+              'term': '',
+              'ask': 'term',
+            }, block),
+          );
+        }
+      case 'cloze' || 'table' when frontBlank:
+        cells.add(
+          _frameBlock('text', {
+            'front': '',
+            'back': _frameFilled(block),
+          }, block),
+        );
+      case 'image' when frontBlank && _frameBlank(block):
+        final boxes = (payload['boxes'] as List<Object?>)
+            .cast<Map<String, Object?>>();
+        final answers = [
+          for (final box in boxes)
+            if (box['answer'] case final String answer) answer,
+        ];
+        cells.add(
+          _frameBlock('image', {
+            ...payload,
+            'boxes': [],
+            'side': 'back',
+          }, block),
+        );
+        if (answers.isNotEmpty) {
+          cells.add(
+            _frameBlock('text', {'front': '', 'back': answers.join('\n')}),
+          );
+        }
+      case _ when _frameBlank(block):
+        cells.add(block);
+      default:
+        cells.add(
+          _frameBlock(block['type'] as String, {
+            ...payload,
+            'side': 'back',
+          }, block),
+        );
+    }
+  }
+
+  final empty = cells.any(
+    (cell) =>
+        cell['type'] == 'text' &&
+        cell['v'] == 2 &&
+        _textFront(cell).trim().isEmpty &&
+        _textBack(cell).trim().isEmpty,
+  );
+  return empty ? null : jsonEncode(cells);
 }

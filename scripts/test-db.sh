@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Runs the pgTAP tests in supabase/tests/ against a local stack of its own, or says why it did not.
 # The stack gets its own project id and database port, so concurrent runs and the shared
-# smartman stack never meet; it is stopped, with its data, however the run ends.
+# knowno stack never meet; it is stopped, with its data, however the run ends.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 . scripts/skip.sh
@@ -19,7 +19,7 @@ stack="the test stack"
 . scripts/test-stack.sh
 reserve port 54400 54499 || exit 1
 
-export SUPABASE_PROJECT_ID="smartman_test_$port" SUPABASE_DB_PORT="$port"
+export SUPABASE_PROJECT_ID="knowno_test_$port" SUPABASE_DB_PORT="$port"
 
 trap 'stop_stack $?' EXIT
 trap 'exit 130' INT
@@ -28,6 +28,15 @@ trap 'exit 143' TERM
 # The tests need only Postgres. Start applies the migrations; its output, which carries the local
 # keys, is not printed.
 supabase start --exclude gotrue,realtime,storage-api,imgproxy,kong,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor >/dev/null
+# `supabase test db` mounts supabase/tests/ alone, so the dry run's file reaches its test,
+# card_frame_dry_run_test.sql, and the frame's fixtures card_frame_migration_test.sql, as database
+# settings each test's session reads.
+docker exec -i "supabase_db_$SUPABASE_PROJECT_ID" psql -U supabase_admin -d postgres -X -q -v ON_ERROR_STOP=1 \
+  -v query="$(cat supabase/card-frame-dry-run.sql)" \
+  -v fixtures="$(cat supabase/fixtures/card-frame/conversion.json)" <<'SQL'
+alter database postgres set knowno.card_frame_dry_run = :'query';
+alter database postgres set knowno.card_frame_fixtures = :'fixtures';
+SQL
 output=$(supabase test db --local) || { echo "$output"; exit 1; }
 echo "$output"
 

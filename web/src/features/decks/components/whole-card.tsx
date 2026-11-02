@@ -1,9 +1,12 @@
 import {
   audioLength,
+  type Cell,
+  type CellPart,
   type Content,
   type ImageBox,
   cellRuns,
   clozeBlank,
+  shownParts,
   spokenContent,
 } from "../card-content";
 import { SensesText } from "./side-text";
@@ -29,17 +32,56 @@ export function WholeCard({
   revealed: boolean;
   inRow?: boolean;
 }) {
+  const parts = blocks.map((block) => ({ block, added: false }));
+  return <WholeParts parts={parts} revealed={revealed} inRow={inRow} />;
+}
+
+/**
+ * A card of [cells] drawn whole, each 칸 in place (ADR 0137): before the reveal a 글's front as
+ * its title, a 단어's asked side, each blank empty and a front photo or sound, a 칸 with nothing
+ * before it drawing nothing; [revealed], every 칸 revealed, a blank filled, an added part under
+ * its first part at the back's size and colour, and a back photo or sound in its place.
+ */
+export function WholeCells({
+  cells,
+  revealed,
+  inRow = false,
+}: {
+  cells: Cell[];
+  revealed: boolean;
+  inRow?: boolean;
+}) {
+  return <WholeParts parts={shownParts(cells, revealed)} revealed={revealed} inRow={inRow} />;
+}
+
+function WholeParts({
+  parts,
+  revealed,
+  inRow,
+}: {
+  parts: CellPart[];
+  revealed: boolean;
+  inRow: boolean;
+}) {
+  const addedStyle = inRow ? "font-normal text-ink-2" : "text-whole-added text-ink-2";
   return (
     <span
       role="group"
-      aria-label={spokenContent(blocks, revealed)}
+      aria-label={spokenContent(
+        parts.map(({ block }) => block),
+        revealed,
+      )}
       className={`flex w-full flex-col gap-3 break-words whitespace-pre-wrap ${inRow ? "text-left text-body-strong" : "text-center"}`}
     >
-      {blocks.map((block, index) => {
+      {parts.map(({ block, added }, index) => {
         switch (block.kind) {
           case "text":
             return (
-              <span key={index} aria-hidden className={inRow ? "" : "text-headline"}>
+              <span
+                key={index}
+                aria-hidden
+                className={added ? addedStyle : inRow ? "" : "text-whole-front"}
+              >
                 {block.text}
               </span>
             );
@@ -93,7 +135,7 @@ export function WholeCard({
             );
           case "senses":
             return (
-              <span key={index} aria-hidden>
+              <span key={index} aria-hidden className={added ? addedStyle : ""}>
                 <SensesText senses={block.senses} />
               </span>
             );

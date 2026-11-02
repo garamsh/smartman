@@ -1,4 +1,4 @@
-.PHONY: lint format test build ci lint-repo lint-code bridge test-app test-db test-sync test-web build-ios build-apk build-engine-web preview-migrations
+.PHONY: lint format test build ci lint-repo lint-code bridge test-app test-db test-sync test-web build-ios build-apk build-engine-web preview-migrations brand
 
 # lint and test are each the sum of their parts, run in this order. CI runs the parts as parallel
 # jobs; lint-repo reads only the repository's files and needs no toolchain, so CI runs it on every
@@ -26,7 +26,7 @@ APP_CONFIG := --dart-define-from-file=config/dev.json
 # What make build produces, relative to app/, and the bridge crate library each must hold.
 APK := build/app/outputs/flutter-apk/app-debug.apk
 IOS_APP := build/ios/iphonesimulator/Runner.app
-BRIDGE_LIB := rust_lib_smartman
+BRIDGE_LIB := rust_lib_knowno
 # What make build builds, set on the command line: all (the default), or ios for the iOS simulator
 # app alone, which CI's macOS job builds; CI's ubuntu jobs build the rest.
 BUILD := all
@@ -90,6 +90,13 @@ test-db:
 	scripts/migration-preview.test.sh
 	scripts/deno.sh test
 
+# Writes the brand's SVGs and PNGs from tools/brand/, then the launcher icons and the splash from
+# them. Not part of make ci, which checks them through scripts/web.sh lint. Revert the two edits the
+# generators make beyond their output (design.md §Brand).
+brand:
+	node tools/brand/generate.mjs
+	cd app && dart run flutter_launcher_icons && dart run flutter_native_splash:create
+
 # Writes $(PREVIEW).json and $(PREVIEW).md: what the migrations this branch adds do to main's
 # schema holding supabase/preview-seed.sql (server.md). Not part of make ci: it reports, it checks nothing.
 PREVIEW := $(or $(TMPDIR),/tmp)/migration-preview
@@ -132,10 +139,10 @@ build-apk:
 build-engine-web:
 	cd engine && cargo build --locked && \
 	RUSTDOCFLAGS='-D warnings' cargo doc --locked --no-deps && \
-	echo "built the library crate smartman_engine and its rustdoc from engine/Cargo.toml"
+	echo "built the library crate knowno_engine and its rustdoc from engine/Cargo.toml"
 	cd engine-wasm && cargo build --locked --release && \
 	RUSTDOCFLAGS='-D warnings' cargo doc --locked --no-deps && \
-	echo "built the crate smartman_engine_wasm for wasm32-unknown-unknown and its rustdoc from engine-wasm/Cargo.toml"
+	echo "built the crate knowno_engine_wasm for wasm32-unknown-unknown and its rustdoc from engine-wasm/Cargo.toml"
 	scripts/web.sh build
 
 ci: lint format test build

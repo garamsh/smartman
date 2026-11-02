@@ -105,6 +105,96 @@
       "date": "2026-10-26",
       "spentUsd": 0.661814,
       "note": "two-stage eval (#414)"
+    },
+    {
+      "date": "2026-10-28",
+      "spentUsd": 0.309944,
+      "note": "prompt version 3"
+    },
+    {
+      "date": "2026-10-29",
+      "spentUsd": 0.5672,
+      "note": "prompt v9 and v10, stopped at a call that hung (no timeout)"
+    },
+    {
+      "date": "2026-10-30",
+      "spentUsd": 0.055,
+      "note": "prompt v9 and v10, stopped by host sleep"
+    },
+    {
+      "date": "2026-10-30",
+      "spentUsd": 0.0443,
+      "note": "prompt v9 and v10, stopped by host sleep"
+    },
+    {
+      "date": "2026-11-01",
+      "spentUsd": 0.3786,
+      "note": "prompt v9 and v10, stopped for the scope change"
+    },
+    {
+      "date": "2026-10-31",
+      "spentUsd": 0.792989,
+      "note": "prompt v9 and v10"
+    },
+    {
+      "date": "2026-11-01",
+      "spentUsd": 0.02763,
+      "note": "prompt v9, today, lean, cap, continue"
+    },
+    {
+      "date": "2026-11-01",
+      "spentUsd": 0.039773,
+      "note": "prompt v9, today, lean, cap, continue"
+    },
+    {
+      "date": "2026-11-01",
+      "spentUsd": 0.003312,
+      "note": "prompt v9"
+    },
+    {
+      "date": "2026-11-01",
+      "spentUsd": 0.411494,
+      "note": "prompt v9, today, lean"
+    },
+    {
+      "date": "2026-11-01",
+      "spentUsd": 0.2075,
+      "note": "prompt v9 and v11, stopped by OpenRouter 402"
+    },
+    {
+      "date": "2026-11-01",
+      "spentUsd": 0.4129,
+      "note": "prompt v9 and v11"
+    },
+    {
+      "date": "2026-11-01",
+      "spentUsd": 0.033349,
+      "note": "prompt v9"
+    },
+    {
+      "date": "2026-11-01",
+      "spentUsd": 0.013158,
+      "note": "prompt v9"
+    },
+    {
+      "date": "2026-11-01",
+      "spentUsd": 0.014,
+      "note": "prompt v9 (samples 90, 91; #536 d354b1e)"
+    },
+    {
+      "date": "2026-11-01",
+      "spentUsd": 0.0125,
+      "note": "prompt v9 (owner's photo as sample 90; #536 d354b1e)"
+    },
+    {
+      "date": "2026-11-01",
+      "spentUsd": 0.0306,
+      "note": "prompt v9 (samples 01, 13, 90, 91; #536 ab84c4b)"
+    },
+    {
+      "date": "2026-11-01",
+      "spentUsd": 0.0125,
+      "note": "prompt v9 (owner's photo as sample 90; #536 ab84c4b)"
     }
   ]
 }

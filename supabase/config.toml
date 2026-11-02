@@ -2,7 +2,7 @@
 # https://supabase.com/docs/guides/local-development/cli/config
 # A string used to distinguish different Supabase projects on the same host. Defaults to the
 # working directory name when running `supabase init`.
-project_id = "smartman"
+project_id = "knowno"
 
 [api]
 enabled = true
@@ -126,12 +126,12 @@ file_size_limit = "50MiB"
 # objects_path = "./images"
 
 # The private media bucket (ADR 0107); the migration 20261026140000_media.sql creates the same
-# in every project, with the same limits, and 20261027120000_media_audio.sql adds the audio types
-# (ADR 0112).
+# in every project, with the same limits, 20261027120000_media_audio.sql adds the audio types
+# (ADR 0112), and 20261102090000_media_image_types.sql adds PNG and WebP (ADR 0144).
 [storage.buckets.media]
 public = false
 file_size_limit = "10MiB"
-allowed_mime_types = ["image/jpeg", "audio/mp4", "audio/mpeg"]
+allowed_mime_types = ["image/jpeg", "image/png", "image/webp", "audio/mp4", "audio/mpeg"]
 
 # Allow connections via S3 compatible clients
 [storage.s3_protocol]
@@ -374,11 +374,11 @@ enabled = false
 # OAuth server configuration
 [auth.oauth_server]
 # Enable OAuth server functionality
-enabled = false
+enabled = true
 # Path for OAuth consent flow UI
 authorization_url_path = "/oauth/consent"
 # Allow dynamic client registration
-allow_dynamic_registration = false
+allow_dynamic_registration = true
 
 [edge_runtime]
 enabled = true
@@ -403,6 +403,11 @@ verify_jwt = true
 # the anon key and anonymous sign-ins itself, and deletes only the token's user.
 [functions.delete-account]
 verify_jwt = true
+
+# Lets an unauthenticated request through, so the function answers it with the 401 challenge
+# and serves its protected resource metadata; it verifies every MCP request's token itself.
+[functions.mcp]
+verify_jwt = false
 
 [analytics]
 enabled = true

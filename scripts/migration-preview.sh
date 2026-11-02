@@ -49,7 +49,7 @@ fi
 stack="the migration preview stack"
 . scripts/test-stack.sh
 reserve port 54400 54499 || exit 1
-export SUPABASE_PROJECT_ID="smartman_preview_$port" SUPABASE_DB_PORT="$port"
+export SUPABASE_PROJECT_ID="knowno_preview_$port" SUPABASE_DB_PORT="$port"
 work=$(mktemp -d "${TMPDIR:-/tmp}/migration-preview.XXXXXX")
 trap 'status=$?; rm -rf "${work:?}"; stop_stack "$status"' EXIT
 trap 'exit 130' INT

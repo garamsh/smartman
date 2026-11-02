@@ -20,7 +20,7 @@ describe("the one chip", () => {
         expect.arrayContaining([
           "rounded-chip",
           "text-section",
-          "px-2",
+          "px-3",
           "py-1",
           "border",
           ...colours,

@@ -3,9 +3,9 @@ import 'dart:convert';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/database/database.dart';
-import 'package:smartman/deck/deck.dart';
-import 'package:smartman/deck/src/card_template.dart';
+import 'package:knowno/database/database.dart';
+import 'package:knowno/deck/deck.dart';
+import 'package:knowno/deck/src/card_template.dart';
 
 /// A card's stored template, its version, and its sides as stored.
 typedef _Stored = ({
@@ -248,6 +248,30 @@ void main() {
         isFalse,
         reason: 'a known template at a later version is read-only too',
       );
+      for (final (template, version, editable) in [
+        ('free', 2, true),
+        ('free', 3, false),
+        ('cloze', 2, false),
+      ]) {
+        expect(
+          canEdit(
+            Card(
+              id: card.id,
+              deckId: card.deckId,
+              front: card.front,
+              back: card.back,
+              cardKey: card.cardKey,
+              source: card.source,
+              createdAt: card.createdAt,
+              updatedAt: card.updatedAt,
+              template: template,
+              templateVersion: version,
+            ),
+          ),
+          editable,
+          reason: 'the frame is free v2 alone: $template v$version',
+        );
+      }
       // Control: every template a build of this app wrote, at v1, and none.
       for (final template in ['flip', 'cloze', 'table', 'free', null]) {
         expect(
@@ -313,10 +337,11 @@ void main() {
     expect((after.template, after.templateVersion), ('free', 1));
   });
 
-  test('a photo-imported card and a copied one are stored with v1 on every '
+  test('a photo-imported card, one from a file and a copied one are stored with v1 on every '
       'block and the free template', () async {
     for (final source in [
       const FromPhoto(),
+      const FromFile(),
       FromCopy(deck.id, owner: 'owner'),
     ]) {
       await repository.addCards(AddToDeck(deck.id), source: source, [
@@ -330,7 +355,7 @@ void main() {
       ]);
     }
     final rows = await db.select(db.cards).get();
-    expect([for (final row in rows) row.source], ['import', 'copy']);
+    expect([for (final row in rows) row.source], ['import', 'import', 'copy']);
     for (final row in rows) {
       expect((row.template, row.templateVersion), ('free', 1));
       for (final side in [row.front, row.back]) {

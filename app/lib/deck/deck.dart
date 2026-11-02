@@ -6,6 +6,7 @@ export 'src/add_cards.dart'
     show
         CardsAdded,
         DuplicateChoice,
+        FromFile,
         FromPhoto,
         FromCopy,
         IncomingCard,
@@ -16,9 +17,28 @@ export 'src/add_cards.dart'
         mergeBack;
 export 'src/audio_block.dart' show playAudio;
 export 'src/card_editor_screen.dart' show CardEditorScreen;
+export 'src/card_frame.dart'
+    show
+        BlankCell,
+        Cell,
+        CellSide,
+        FrameProblem,
+        PlacedCell,
+        TextCell,
+        UnknownCell,
+        WordAsk,
+        WordCell,
+        cellsFromSides,
+        cellsOf,
+        decodeCells,
+        encodeCells,
+        frameKey,
+        frameProblem,
+        sidesOf;
 export 'src/card_key.dart' show CardKey;
 export 'src/card_list.dart'
-    show CardBackRow, CardSplitRow, describeContent, spokenContent;
+    show CardBackRow, CardSplitRow, describeContent, spokenCells, spokenContent;
+export 'src/card_template.dart' show isFramed;
 export 'src/content.dart'
     show
         AudioContent,
@@ -41,10 +61,10 @@ export 'src/content.dart'
         decodeContent,
         encodeContent,
         decodeSense,
-        isWholeCard,
-        oneFaceOf,
         plainText;
-export 'src/content_view.dart' show ContentView, contentSpan, sensesSpan;
+export 'src/card_text.dart' show CardScroll;
+export 'src/content_view.dart'
+    show CardFit, ContentView, ShrinkFit, StepFit, contentSpan, sensesSpan;
 export 'src/deck_repository.dart'
     show CardSaved, DeckRepository, DuplicateFront, SaveCardResult;
 export 'src/deck_row.dart' show DeckRow, DeckTile;
@@ -76,4 +96,19 @@ export 'src/providers.dart'
         deckRepositoryProvider,
         decksProvider;
 export 'src/split_card.dart' show SideBuilder, SplitCard;
-export 'src/whole_card_view.dart' show WholeCardView;
+export 'src/spreadsheet.dart'
+    show
+        OpenedFile,
+        RefusedFile,
+        Spreadsheet,
+        SpreadsheetRefusal,
+        parseSpreadsheet;
+export 'src/spreadsheet_import.dart'
+    show SpreadsheetPick, importFromSpreadsheet, spreadsheetPickProvider;
+export 'src/whole_card_view.dart'
+    show
+        SteppedWholeCardView,
+        WholeCardView,
+        cellsToDraw,
+        drawnCellsOf,
+        isDrawnWhole;
