@@ -1,7 +1,7 @@
 //! The engine against reference values from py-fsrs, written by `fixtures/generate.py`.
 
-use serde::Deserialize;
 use knowno_engine::{FuzzFactor, MemoryState, Rating, Review, Timestamp, replay, review};
+use serde::Deserialize;
 
 /// Relative tolerance for stability, difficulty, and retrievability.
 ///

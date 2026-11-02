@@ -13,8 +13,8 @@
     clippy::indexing_slicing
 )]
 
-use serde::{Deserialize, Serialize};
 use knowno_engine as engine;
+use serde::{Deserialize, Serialize};
 use tsify::{Ts, Tsify};
 use wasm_bindgen::prelude::*;
 

@@ -343,8 +343,7 @@ void main() {
         'sync/answer_path_test.dart':
             "import 'package:knowno/study/src/providers.dart';",
         'widget_test.dart': "import 'package:knowno/study/src/model.dart';",
-        'home/home_data.dart':
-            "import 'package:knowno/study/src/model.dart';",
+        'home/home_data.dart': "import 'package:knowno/study/src/model.dart';",
       }),
       [
         'test/sync/answer_path_test.dart imports study/src/providers.dart, inside study/src/',
