@@ -124,7 +124,7 @@ export function GradedCard({
         style={{
           transform: `translateX(${String(offset)}px) rotate(${String(offset * tiltPerPixel)}rad)`,
         }}
-        className={`pressable relative grid w-full grid-cols-[1fr_auto_1fr] rounded-previous border-[1.5px] text-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${grade.card} ${dragging ? "" : "motion-safe:transition-transform motion-safe:duration-300"}`}
+        className={`pressable relative grid w-full grid-cols-[1fr_auto_1fr] rounded-previous border-[1.5px] text-center focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink ${grade.card} ${dragging ? "" : "motion-safe:transition-transform motion-safe:duration-300"}`}
       >
         {label && (
           <span aria-hidden className="absolute top-3 left-4 text-micro text-muted">
