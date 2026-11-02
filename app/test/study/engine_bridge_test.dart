@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/study/src/rust/api/engine.dart';
+import 'package:knowno/study/src/rust/api/engine.dart';
 
 /// The engine's own reference values, written by `engine/tests/fixtures/generate.py`.
 const _fixtures = '../engine/tests/fixtures/reference.json';

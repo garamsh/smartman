@@ -4,7 +4,7 @@
 
 # A port is this run's once mkdir creates its directory, which is atomic between concurrent runs,
 # and nothing on the host listens on it.
-reservations="${TMPDIR:-/tmp}/smartman-test-db"
+reservations="${TMPDIR:-/tmp}/knowno-test-db"
 mkdir -p "$reservations"
 reserved=()
 

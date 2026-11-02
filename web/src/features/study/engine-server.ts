@@ -11,7 +11,7 @@ import init, {
   reviewCard,
   reviewNewCard,
   type Scheduled,
-} from "./engine-wasm/smartman_engine_wasm.js";
+} from "./engine-wasm/knowno_engine_wasm.js";
 import type { CardState } from "./queue";
 
 // The engine on the server, for the 기록 page's recall and mastered weeks (ADR 0047): the same
@@ -26,7 +26,7 @@ export type FoldedAnswer = { know: boolean; reviewedAt: number; fuzzFactor: numb
  * web/, and the standalone server in its own copy of it. next.config.ts traces this file into the
  * standalone output and into every serverless function by `outputFileTracingIncludes`.
  */
-export const wasmPath = "src/features/study/engine-wasm/smartman_engine_wasm_bg.wasm";
+export const wasmPath = "src/features/study/engine-wasm/knowno_engine_wasm_bg.wasm";
 
 let loaded: Promise<void> | undefined;
 

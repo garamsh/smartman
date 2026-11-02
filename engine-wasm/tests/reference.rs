@@ -4,7 +4,7 @@
 //! rating is Again or Good; the Hard and Easy sequences are checked by `engine/tests/reference.rs`.
 
 use serde::Deserialize;
-use smartman_engine_wasm::{
+use knowno_engine_wasm::{
     Answer, MemoryStateParts, Outcome, ReviewRecord, Scheduled, replay, retrievability,
     review_card, review_new_card,
 };

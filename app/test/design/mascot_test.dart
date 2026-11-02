@@ -2,8 +2,8 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/design/mascot.dart';
-import 'package:smartman/design/theme.dart';
+import 'package:knowno/design/mascot.dart';
+import 'package:knowno/design/theme.dart';
 
 void main() {
   for (final expression in MascotExpression.values) {

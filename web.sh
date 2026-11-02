@@ -14,7 +14,7 @@ scope="git ls-files --cached --others --exclude-standard -- 'web/*.ts' 'web/*.ts
 format_scope="git ls-files --cached --others --exclude-standard -- 'web/*.ts' 'web/*.tsx' 'web/*.mjs' 'web/*.json' 'web/*.css' ':!web/package-lock.json'"
 # Vercel-only code: an @vercel/ package, or a route on the edge runtime (docs/architecture/web.md).
 portability="@vercel/|runtime[[:space:]]*=[[:space:]]*[\"']edge[\"']"
-image=smartman-web:local
+image=knowno-web:local
 
 if ! command -v node >/dev/null 2>&1; then
 	echo "skipped web $1 over web/: this host has no node command"

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/deck/src/card_frame.dart';
-import 'package:smartman/deck/src/content.dart';
-import 'package:smartman/deck/src/whole_card_view.dart';
-import 'package:smartman/design/theme.dart';
-import 'package:smartman/media/media.dart';
+import 'package:knowno/deck/src/card_frame.dart';
+import 'package:knowno/deck/src/content.dart';
+import 'package:knowno/deck/src/whole_card_view.dart';
+import 'package:knowno/design/theme.dart';
+import 'package:knowno/media/media.dart';
 
 import '../design/harness.dart';
 import 'whole_cards.dart';

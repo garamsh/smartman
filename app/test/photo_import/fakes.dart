@@ -7,11 +7,11 @@ import 'package:image/image.dart' as img;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
-import 'package:smartman/deck/deck.dart'
+import 'package:knowno/deck/deck.dart'
     show CardSense, OtherLabel, PartOfSpeech, PartOfSpeechLabel;
-import 'package:smartman/design/theme_choice.dart';
-import 'package:smartman/photo_import/photo_import.dart';
-import 'package:smartman/photo_import/src/photo.dart';
+import 'package:knowno/design/theme_choice.dart';
+import 'package:knowno/photo_import/photo_import.dart';
+import 'package:knowno/photo_import/src/photo.dart';
 
 /// A small prepared photo.
 final testPhoto = downscalePhoto(img.encodePng(img.Image(width: 8, height: 6)));

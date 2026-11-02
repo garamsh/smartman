@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'dart:math';
 
-import 'package:smartman/deck/deck.dart';
-import 'package:smartman/study/src/model.dart';
-import 'package:smartman/study/src/queue.dart';
-import 'package:smartman/study/src/session.dart';
+import 'package:knowno/deck/deck.dart';
+import 'package:knowno/study/src/model.dart';
+import 'package:knowno/study/src/queue.dart';
+import 'package:knowno/study/src/session.dart';
 
 /// A text card named [name] created at [createdAt]; its front reads
 /// "[name] front" and its back "[name] back".

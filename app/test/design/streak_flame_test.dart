@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/design/streak_flame.dart';
+import 'package:knowno/design/streak_flame.dart';
 
 import 'harness.dart';
 

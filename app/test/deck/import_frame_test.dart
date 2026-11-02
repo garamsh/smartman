@@ -3,10 +3,10 @@ import 'dart:io';
 
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/database/database.dart';
-import 'package:smartman/deck/deck.dart';
-import 'package:smartman/deck/src/spreadsheet.dart';
-import 'package:smartman/deck/src/spreadsheet_cards.dart';
+import 'package:knowno/database/database.dart';
+import 'package:knowno/deck/deck.dart';
+import 'package:knowno/deck/src/spreadsheet.dart';
+import 'package:knowno/deck/src/spreadsheet_cards.dart';
 
 /// The sheet's and the merge's cases of the file
 /// `web/src/features/decks/__tests__/import-frame.test.ts` reads (ADR 0137).

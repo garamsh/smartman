@@ -3,11 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:smartman/deck/deck.dart';
-import 'package:smartman/deck/src/label_presets.dart';
-import 'package:smartman/deck/src/label_presets_screen.dart';
-import 'package:smartman/design/theme.dart';
-import 'package:smartman/l10n/app_localizations.dart';
+import 'package:knowno/deck/deck.dart';
+import 'package:knowno/deck/src/label_presets.dart';
+import 'package:knowno/deck/src/label_presets_screen.dart';
+import 'package:knowno/design/theme.dart';
+import 'package:knowno/l10n/app_localizations.dart';
 
 import '../contrast.dart';
 import '../study/study_storage.dart';

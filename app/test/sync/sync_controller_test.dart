@@ -3,9 +3,9 @@ import 'dart:async';
 import 'package:drift/drift.dart' show TableUpdateQuery;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/account/account.dart';
-import 'package:smartman/study/study.dart';
-import 'package:smartman/sync/sync.dart';
+import 'package:knowno/account/account.dart';
+import 'package:knowno/study/study.dart';
+import 'package:knowno/sync/sync.dart';
 
 import '../account/fake_account_service.dart';
 import '../media/fakes.dart';

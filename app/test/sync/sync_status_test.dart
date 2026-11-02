@@ -6,12 +6,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
-import 'package:smartman/account/account.dart';
-import 'package:smartman/design/theme.dart';
-import 'package:smartman/design/theme_choice.dart';
-import 'package:smartman/l10n/app_localizations.dart';
-import 'package:smartman/study/study.dart';
-import 'package:smartman/sync/sync.dart';
+import 'package:knowno/account/account.dart';
+import 'package:knowno/design/theme.dart';
+import 'package:knowno/design/theme_choice.dart';
+import 'package:knowno/l10n/app_localizations.dart';
+import 'package:knowno/study/study.dart';
+import 'package:knowno/sync/sync.dart';
 
 import '../contrast.dart';
 import '../account/fake_account_service.dart';

@@ -15,7 +15,7 @@ fi
 stack="the senses dry-run test stack"
 . supabase/test-stack.sh
 reserve port 54400 54499 || exit 1
-export SUPABASE_PROJECT_ID="smartman_dryrun_$port" SUPABASE_DB_PORT="$port"
+export SUPABASE_PROJECT_ID="knowno_dryrun_$port" SUPABASE_DB_PORT="$port"
 report=$(mktemp -d)
 trap 'status=$?; rm -rf "${report:?}"; stop_stack "$status"' EXIT
 trap 'exit 130' INT

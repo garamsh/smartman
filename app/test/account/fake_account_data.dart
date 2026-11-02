@@ -1,4 +1,4 @@
-import 'package:smartman/account/account.dart';
+import 'package:knowno/account/account.dart';
 
 /// Stands in for the sync domain's [AccountData]. [push] reports
 /// [pushSucceeds]; [clear] records that it ran, or throws [clearFailure].

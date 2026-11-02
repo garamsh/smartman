@@ -3,13 +3,13 @@ import 'dart:math';
 import 'package:drift/drift.dart' show OrderingTerm, driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/database/database.dart';
-import 'package:smartman/deck/deck.dart';
-import 'package:smartman/study/src/model.dart';
-import 'package:smartman/study/src/rust/api/engine.dart';
-import 'package:smartman/study/src/scheduler.dart';
-import 'package:smartman/study/src/session.dart';
-import 'package:smartman/study/src/study_repository.dart';
+import 'package:knowno/database/database.dart';
+import 'package:knowno/deck/deck.dart';
+import 'package:knowno/study/src/model.dart';
+import 'package:knowno/study/src/rust/api/engine.dart';
+import 'package:knowno/study/src/scheduler.dart';
+import 'package:knowno/study/src/session.dart';
+import 'package:knowno/study/src/study_repository.dart';
 
 import 'fixtures.dart';
 

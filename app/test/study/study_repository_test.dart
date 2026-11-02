@@ -1,9 +1,9 @@
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/database/database.dart';
-import 'package:smartman/deck/deck.dart' show CardId;
-import 'package:smartman/study/src/study_repository.dart';
+import 'package:knowno/database/database.dart';
+import 'package:knowno/deck/deck.dart' show CardId;
+import 'package:knowno/study/src/study_repository.dart';
 
 void main() {
   late AppDatabase db;

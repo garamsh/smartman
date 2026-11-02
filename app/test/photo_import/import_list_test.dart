@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/deck/deck.dart';
-import 'package:smartman/photo_import/photo_import.dart';
-import 'package:smartman/photo_import/src/import_list.dart';
+import 'package:knowno/deck/deck.dart';
+import 'package:knowno/photo_import/photo_import.dart';
+import 'package:knowno/photo_import/src/import_list.dart';
 
 /// The parts of speech these tests print, as a page prints them.
 const _printed = {'[동]': PartOfSpeech.verb, '[명]': PartOfSpeech.noun};

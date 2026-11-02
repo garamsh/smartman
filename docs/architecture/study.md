@@ -149,7 +149,7 @@ How the setting the day's new cards fill is changed: in the first-run step, and 
 ### The bridge to the engine
 
 - The app calls the engine ([`engine.md`](engine.md)) through flutter_rust_bridge 2.13.0, built with its native-assets backend ([ADR 0004](adr/0004-flutter-rust-bridge.md)).
-- The bridge crate is `rust_lib_smartman` in `app/rust/`. It depends on `engine/` by path and declares the Dart surface in `app/rust/src/api/engine.rs`:
+- The bridge crate is `rust_lib_knowno` in `app/rust/`. It depends on `engine/` by path and declares the Dart surface in `app/rust/src/api/engine.rs`:
   - `review_new_card` — a new card's first review, with an optional fuzz factor;
   - `review_card` — a review of a card from its persisted state parts, with an optional fuzz factor;
   - `replay` — a history folded into a state;
@@ -214,7 +214,7 @@ How the setting the day's new cards fill is changed: in the first-run step, and 
 - [ADR 0025](adr/0025-order-a-review-backlog-by-due-date-and-pause-new-cards.md) records the simulation, its results, and why a backlog is ordered earliest due first in shuffled runs of ten and pauses new cards above three days of reviews due.
 - [ADR 0007](adr/0007-study-swipe-screen-and-session-toggle.md) records the swipe screen, the toggleable stack, and why a toggle replays the card's session answers in Dart rather than through the bridge's `replay`.
 - [ADR 0023](adr/0023-scroll-the-current-study-card-with-the-stack-and-centre-each-half.md) records why the current card scrolls with the stack, what an answer or a toggle does while the view is scrolled back, and why each half of the card centres its content.
-- [ADR 0027](adr/0027-draw-both-clients-in-the-smartman-brand-and-the-v2-screens.md) records the study screen's v2 look, the hint row, the summary's next review and why the today count carries the user's pace.
+- [ADR 0027](adr/0027-draw-both-clients-in-the-knowno-brand-and-the-v2-screens.md) records the study screen's v2 look, the hint row, the summary's next review and why the today count carries the user's pace.
 - [ADR 0043](adr/0043-set-each-day-s-new-cards-from-the-user-s-recency-weighted-study-time-and-pace-and-count-an-answer-s-time-only-in-the-foreground.md) records a day's new cards from the user's recency-weighted study time and pace, the simulation and production read that chose its constants, the alternatives, and the foreground clock; issue #141 records the owner's decisions.
 - [ADR 0035](adr/0035-show-the-previous-and-current-study-card-reach-earlier-cards-three-at-a-time-re-decide-the-centred-card-and-grade-each-card-by-its-colour-and-a-chip.md) records the resting view of two cards, the column that comes to rest three cards at a time, why a drag on the centred card replaces the tap that toggled, the grades by colour and chip, the answer buttons, the first-run guide and the split card drawn once in `deck`; issue #88 records the owner's model.
 - [ADR 0042](adr/0042-show-only-the-previous-and-the-current-study-card-at-one-size-re-decide-the-previous-card-by-a-swipe-and-open-it-on-a-tap.md) records why only the previous and the current card are on screen, at one size, why the previous card is re-decided by a swipe and opened on a tap, and how the card size was chosen; issue #140 records the owner's decisions.

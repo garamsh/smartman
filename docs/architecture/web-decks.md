@@ -85,7 +85,7 @@ Each line names a file and what it covers; the file holds the cases. The deck li
 - [ADR 0040](adr/0040-keep-every-study-button-enabled-at-zero-cards-left.md) records why the deck page's study link opens the study page at zero cards left.
 - [ADR 0096](adr/0096-state-a-deck-s-mastered-of-all-cards-under-its-name-over-its-bar-on-the-row-and-the-deck-page-and-an-empty-deck-as-0-cards.md) records the row's and the deck page's progress line, which the web follows (#369).
 - [ADR 0103](adr/0103-give-each-deck-an-icon-and-a-colour-stored-as-two-unchecked-keys-and-drawn-on-its-tile-in-place-of-the-initial.md) records a deck's tile, its keys, icons, palette and default, which the web follows (#369).
-- [ADR 0027](adr/0027-draw-both-clients-in-the-smartman-brand-and-the-v2-screens.md) records why the public chip waited for #69.
+- [ADR 0027](adr/0027-draw-both-clients-in-the-knowno-brand-and-the-v2-screens.md) records why the public chip waited for #69.
 - [ADR 0066](adr/0066-open-a-deck-made-by-hand-and-lead-an-empty-deck-and-a-cardless-today-tab-to-adding-cards.md) records why a deck with no card offers no study button.
 - [ADR 0068](adr/0068-store-a-table-or-cloze-card-as-typed-content-blocks-and-draw-it-whole-its-blanks-filled-in-place-once-answered.md) records the table and cloze blocks and how the deck page draws them whole, as the phone does.
 - [ADR 0110](adr/0110-blank-a-span-of-a-table-cell-s-text-stored-at-table-block-v2-beside-whole-cell-blanks.md) records a table's span blanks at table v2 and how both clients read and draw them.

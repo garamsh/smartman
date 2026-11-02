@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/deck/deck.dart';
-import 'package:smartman/home/src/deck_screen.dart';
+import 'package:knowno/deck/deck.dart';
+import 'package:knowno/home/src/deck_screen.dart';
 
 import 'deck_screens.dart';
 

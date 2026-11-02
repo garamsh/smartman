@@ -1,11 +1,11 @@
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/deck/deck.dart';
-import 'package:smartman/deck/src/card_preview_screen.dart';
-import 'package:smartman/deck/src/table_block.dart';
-import 'package:smartman/design/app_chip.dart';
-import 'package:smartman/design/theme.dart';
+import 'package:knowno/deck/deck.dart';
+import 'package:knowno/deck/src/card_preview_screen.dart';
+import 'package:knowno/deck/src/table_block.dart';
+import 'package:knowno/design/app_chip.dart';
+import 'package:knowno/design/theme.dart';
 
 import '../contrast.dart';
 import '../home/deck_screens.dart';

@@ -3,8 +3,8 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
-import 'package:smartman/photo_import/photo_import.dart';
-import 'package:smartman/photo_import/src/photo.dart';
+import 'package:knowno/photo_import/photo_import.dart';
+import 'package:knowno/photo_import/src/photo.dart';
 
 /// A [width] × [height] image of seeded noise, the hardest case for JPEG, so
 /// the size limit is tested on the largest output a photo can make.

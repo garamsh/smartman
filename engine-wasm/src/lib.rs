@@ -14,7 +14,7 @@
 )]
 
 use serde::{Deserialize, Serialize};
-use smartman_engine as engine;
+use knowno_engine as engine;
 use tsify::{Ts, Tsify};
 use wasm_bindgen::prelude::*;
 

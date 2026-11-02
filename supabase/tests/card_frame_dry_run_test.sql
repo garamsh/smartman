@@ -5,7 +5,7 @@
 -- 8 for no blank, 9 for a card the migration leaves, 0 for a tombstone.
 --
 -- `supabase test db` mounts this directory alone, so supabase/test-db.sh hands this test the
--- query's file as the database setting `smartman.card_frame_dry_run`.
+-- query's file as the database setting `knowno.card_frame_dry_run`.
 begin;
 select plan(35);
 
@@ -24,7 +24,7 @@ create function pg_temp.dry_run() returns jsonb language plpgsql as $$
 declare
   report jsonb;
 begin
-  execute current_setting('smartman.card_frame_dry_run') into report;
+  execute current_setting('knowno.card_frame_dry_run') into report;
   return report;
 end;
 $$;

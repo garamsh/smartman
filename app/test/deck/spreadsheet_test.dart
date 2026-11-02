@@ -3,10 +3,10 @@ import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/deck/deck.dart';
-import 'package:smartman/deck/src/spreadsheet.dart';
-import 'package:smartman/deck/src/spreadsheet_cards.dart';
-import 'package:smartman/deck/src/spreadsheet_format.dart';
+import 'package:knowno/deck/deck.dart';
+import 'package:knowno/deck/src/spreadsheet.dart';
+import 'package:knowno/deck/src/spreadsheet_cards.dart';
+import 'package:knowno/deck/src/spreadsheet_format.dart';
 
 import 'xlsx.dart';
 

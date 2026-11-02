@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'dart:ui' show Rect, Size;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/deck/src/content.dart';
-import 'package:smartman/deck/src/whole_card_view.dart';
-import 'package:smartman/media/media.dart';
+import 'package:knowno/deck/src/content.dart';
+import 'package:knowno/deck/src/whole_card_view.dart';
+import 'package:knowno/media/media.dart';
 
 /// Whether a card of [front] and [back] is drawn whole.
 bool _whole(List<Content> front, [List<Content> back = const []]) =>

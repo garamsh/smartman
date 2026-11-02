@@ -3,10 +3,10 @@ import 'dart:io';
 
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/database/database.dart';
-import 'package:smartman/deck/deck.dart';
-import 'package:smartman/photo_import/src/extraction_client.dart';
-import 'package:smartman/photo_import/src/import_list.dart';
+import 'package:knowno/database/database.dart';
+import 'package:knowno/deck/deck.dart';
+import 'package:knowno/photo_import/src/extraction_client.dart';
+import 'package:knowno/photo_import/src/import_list.dart';
 
 /// The cases `web/src/features/decks/__tests__/import-frame.test.ts` reads, so
 /// the app and the web save equal 칸 for the same candidates (ADR 0137);

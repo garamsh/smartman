@@ -74,8 +74,8 @@ The image, built from the repository root:
 ```sh
 docker build -f web/Dockerfile \
   --build-arg NEXT_PUBLIC_SUPABASE_URL=... --build-arg NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=... \
-  -t smartman-web .
-docker run --rm -p 3000:3000 smartman-web
+  -t knowno-web .
+docker run --rm -p 3000:3000 knowno-web
 ```
 
 - It is built from the root because it bundles the fonts in `app/assets/fonts/`.

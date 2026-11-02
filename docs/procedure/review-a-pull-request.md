@@ -30,7 +30,7 @@ The two checks this section serves are `review.md` §Submitting a review, "Confi
 1. Write the body in a file, holding what `review.md` §Submitting a review names.
 2. Where the reviewer opened the pull request from the same account, the state to submit is the one `review.md` §Single-account setups names. Where the reviewer also wrote the change, `review.md` §Reviewing your own change applies.
 3. Submit it: `gh pr review <n> --comment --body-file <file>`, or `--approve` / `--request-changes` where the state allows it, per `gh pr review --help` in gh 2.102.0.
-4. To merge, the method and the commit it leaves are `docs/convention/git.md` §PRs and §Commits, the second paragraph of §Commits, beginning "An author is a person", naming what the subject must carry: `gh pr merge <n> --squash --body-file <file>`, then read the commit on `main` against the squashed commits. `gh api repos/garamsh/smartman --jq .squash_merge_commit_title` reads `COMMIT_OR_PR_TITLE`, and the subject lands as the title with the number: `git show -s --format=%s cf494ca6fcc4fbd2e934f3ad5acdcfd191d141f4` reads #95's title followed by `(#95)`.
+4. To merge, the method and the commit it leaves are `docs/convention/git.md` §PRs and §Commits, the second paragraph of §Commits, beginning "An author is a person", naming what the subject must carry: `gh pr merge <n> --squash --body-file <file>`, then read the commit on `main` against the squashed commits. `gh api repos/garamsh/knowno --jq .squash_merge_commit_title` reads `COMMIT_OR_PR_TITLE`, and the subject lands as the title with the number: `git show -s --format=%s cf494ca6fcc4fbd2e934f3ad5acdcfd191d141f4` reads #95's title followed by `(#95)`.
 
 ## Host facts
 

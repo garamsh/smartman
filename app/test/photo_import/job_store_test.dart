@@ -2,7 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/photo_import/photo_import.dart';
+import 'package:knowno/photo_import/photo_import.dart';
 
 void main() {
   late Directory temp;

@@ -3,12 +3,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/account/account.dart';
-import 'package:smartman/account/src/google_button.dart';
-import 'package:smartman/account/src/legal.dart';
-import 'package:smartman/account/src/sign_in_screen.dart';
-import 'package:smartman/design/theme.dart';
-import 'package:smartman/l10n/app_localizations.dart';
+import 'package:knowno/account/account.dart';
+import 'package:knowno/account/src/google_button.dart';
+import 'package:knowno/account/src/legal.dart';
+import 'package:knowno/account/src/sign_in_screen.dart';
+import 'package:knowno/design/theme.dart';
+import 'package:knowno/l10n/app_localizations.dart';
 
 import '../contrast.dart';
 import 'fake_account_service.dart';

@@ -12,7 +12,7 @@ const nextConfig: NextConfig = {
   // The 기록 page runs the engine on the server from its WebAssembly file (ADR 0047), read at
   // src/features/study/engine-server.ts's wasmPath, which no import names.
   outputFileTracingIncludes: {
-    "/record": ["./src/features/study/engine-wasm/smartman_engine_wasm_bg.wasm"],
+    "/record": ["./src/features/study/engine-wasm/knowno_engine_wasm_bg.wasm"],
   },
   experimental: {
     serverActions: { bodySizeLimit: "4mb" },

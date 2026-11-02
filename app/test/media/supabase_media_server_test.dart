@@ -4,8 +4,8 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:smartman/media/media.dart';
-import 'package:smartman/media/src/model.dart' show MediaKind;
+import 'package:knowno/media/media.dart';
+import 'package:knowno/media/src/model.dart' show MediaKind;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 const _owner = '00000000-0000-4000-8000-00000000000a';

@@ -3,8 +3,8 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:smartman/deck/deck.dart';
-import 'package:smartman/sharing/sharing.dart';
+import 'package:knowno/deck/deck.dart';
+import 'package:knowno/sharing/sharing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 void main() {

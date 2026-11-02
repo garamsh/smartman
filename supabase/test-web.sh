@@ -28,7 +28,7 @@ stack="the web e2e stack"
 reserve db_port 54400 54499 || exit 1
 reserve api_port 54500 54599 || exit 1
 
-export SUPABASE_PROJECT_ID="smartman_web_$db_port" SUPABASE_DB_PORT="$db_port" SUPABASE_API_PORT="$api_port"
+export SUPABASE_PROJECT_ID="knowno_web_$db_port" SUPABASE_DB_PORT="$db_port" SUPABASE_API_PORT="$api_port"
 
 server=""
 stop() {

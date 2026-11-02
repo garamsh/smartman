@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/database/database.dart';
-import 'package:smartman/sync/src/merge.dart';
+import 'package:knowno/database/database.dart';
+import 'package:knowno/sync/src/merge.dart';
 
 final _t0 = DateTime.utc(2026, 10, 15, 9);
 final _t1 = _t0.add(const Duration(minutes: 1));

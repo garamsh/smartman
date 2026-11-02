@@ -1,6 +1,6 @@
 //! Today's list reaches JavaScript as one value per card, in the order given.
 
-use smartman_engine_wasm::{Answer, ReviewRecord, TodayCard, todays_list};
+use knowno_engine_wasm::{Answer, ReviewRecord, TodayCard, todays_list};
 use tsify::Tsify;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_test::wasm_bindgen_test;

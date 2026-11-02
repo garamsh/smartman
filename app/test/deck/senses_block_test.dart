@@ -2,12 +2,12 @@ import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/deck/deck.dart';
-import 'package:smartman/deck/src/editor_group.dart';
-import 'package:smartman/deck/src/label_presets.dart';
-import 'package:smartman/deck/src/senses_block.dart';
-import 'package:smartman/design/app_chip.dart';
-import 'package:smartman/design/theme.dart';
+import 'package:knowno/deck/deck.dart';
+import 'package:knowno/deck/src/editor_group.dart';
+import 'package:knowno/deck/src/label_presets.dart';
+import 'package:knowno/deck/src/senses_block.dart';
+import 'package:knowno/design/app_chip.dart';
+import 'package:knowno/design/theme.dart';
 
 import '../contrast.dart';
 import '../home/deck_screens.dart';

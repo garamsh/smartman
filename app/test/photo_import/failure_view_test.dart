@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/design/mascot.dart';
-import 'package:smartman/design/theme.dart';
-import 'package:smartman/l10n/app_localizations.dart';
-import 'package:smartman/photo_import/src/failure.dart';
-import 'package:smartman/photo_import/src/failure_message.dart';
-import 'package:smartman/photo_import/src/failure_view.dart';
+import 'package:knowno/design/mascot.dart';
+import 'package:knowno/design/theme.dart';
+import 'package:knowno/l10n/app_localizations.dart';
+import 'package:knowno/photo_import/src/failure.dart';
+import 'package:knowno/photo_import/src/failure_message.dart';
+import 'package:knowno/photo_import/src/failure_view.dart';
 
 import '../word_breaks.dart';
 

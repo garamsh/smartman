@@ -26,7 +26,7 @@ APP_CONFIG := --dart-define-from-file=config/dev.json
 # What make build produces, relative to app/, and the bridge crate library each must hold.
 APK := build/app/outputs/flutter-apk/app-debug.apk
 IOS_APP := build/ios/iphonesimulator/Runner.app
-BRIDGE_LIB := rust_lib_smartman
+BRIDGE_LIB := rust_lib_knowno
 # What make build builds, set on the command line: all (the default), or ios for the iOS simulator
 # app alone, which CI's macOS job builds; CI's ubuntu jobs build the rest.
 BUILD := all
@@ -139,10 +139,10 @@ build-apk:
 build-engine-web:
 	cd engine && cargo build --locked && \
 	RUSTDOCFLAGS='-D warnings' cargo doc --locked --no-deps && \
-	echo "built the library crate smartman_engine and its rustdoc from engine/Cargo.toml"
+	echo "built the library crate knowno_engine and its rustdoc from engine/Cargo.toml"
 	cd engine-wasm && cargo build --locked --release && \
 	RUSTDOCFLAGS='-D warnings' cargo doc --locked --no-deps && \
-	echo "built the crate smartman_engine_wasm for wasm32-unknown-unknown and its rustdoc from engine-wasm/Cargo.toml"
+	echo "built the crate knowno_engine_wasm for wasm32-unknown-unknown and its rustdoc from engine-wasm/Cargo.toml"
 	./web.sh build
 
 ci: lint format test build

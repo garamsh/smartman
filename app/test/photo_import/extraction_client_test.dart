@@ -5,10 +5,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:image/image.dart' as img;
-import 'package:smartman/deck/deck.dart';
-import 'package:smartman/photo_import/photo_import.dart';
-import 'package:smartman/photo_import/src/failure_message.dart';
-import 'package:smartman/photo_import/src/photo.dart';
+import 'package:knowno/deck/deck.dart';
+import 'package:knowno/photo_import/photo_import.dart';
+import 'package:knowno/photo_import/src/failure_message.dart';
+import 'package:knowno/photo_import/src/photo.dart';
 
 final _url = Uri.parse(
   'https://project.supabase.co/functions/v1/extract-cards',

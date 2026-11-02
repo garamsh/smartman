@@ -3,17 +3,17 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/database/database.dart';
-import 'package:smartman/deck/deck.dart';
-import 'package:smartman/design/theme.dart';
-import 'package:smartman/l10n/app_localizations.dart';
-import 'package:smartman/l10n/app_localizations_en.dart';
-import 'package:smartman/study/src/failure.dart';
-import 'package:smartman/study/src/rust/api/engine.dart'
+import 'package:knowno/database/database.dart';
+import 'package:knowno/deck/deck.dart';
+import 'package:knowno/design/theme.dart';
+import 'package:knowno/l10n/app_localizations.dart';
+import 'package:knowno/l10n/app_localizations_en.dart';
+import 'package:knowno/study/src/failure.dart';
+import 'package:knowno/study/src/rust/api/engine.dart'
     show EngineError, Quantity;
-import 'package:smartman/study/src/stats.dart' show StatsPeriod;
-import 'package:smartman/study/src/stats_style.dart';
-import 'package:smartman/study/study.dart';
+import 'package:knowno/study/src/stats.dart' show StatsPeriod;
+import 'package:knowno/study/src/stats_style.dart';
+import 'package:knowno/study/study.dart';
 
 import '../contrast.dart';
 import '../word_breaks.dart';
